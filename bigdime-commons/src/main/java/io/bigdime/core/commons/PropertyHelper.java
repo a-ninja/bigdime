@@ -188,4 +188,18 @@ public final class PropertyHelper {
 			return false;
 		return Boolean.parseBoolean(String.valueOf(value));
 	}
+
+	@SuppressWarnings("rawtypes")
+	public static Map getMapProperty(Map<String, Object> propertyMap, String name) {
+		final Object value = propertyMap.get(name);
+		if (value == null || value.equals("null"))
+			return null;
+		if (value instanceof Map) {
+			return (Map) value;
+		} else {
+			throw new IllegalArgumentException(
+					name + " field in given map is not of type Map, rather is of type: " + value.getClass());
+		}
+
+	}
 }

@@ -80,4 +80,6 @@ public final class ActionEventHeaderConstants {
 	public static final String VALIDATION_READY = "validationReady";
 	public static final String HIVE_METASTORE_URI = "hive.metastore.uris";
 	
+	public static final String HIVE_OUTPUT_DIRECTORY = "hiveOutputDirectory";
+	
 }
