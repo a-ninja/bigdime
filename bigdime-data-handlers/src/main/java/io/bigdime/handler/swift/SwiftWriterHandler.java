@@ -66,13 +66,9 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		outputFilePathPattern = PropertyHelper.getStringProperty(getPropertyMap(),
 				SwiftWriterHandlerConstants.OUTPUT_FILE_PATH_PATTERN);
 
-		final String objType = PropertyHelper.getStringProperty(getPropertyMap(),
-				SwiftWriterHandlerConstants.UPLOAD_OBJECT_TYPE);
-
 		logger.debug(handlerPhase,
 				"username={} authUrl={} tenantId={} tenantName={} containerName={} inputFilePathPattern=\"{}\" outputFilePathPattern=\"{}\"",
-				username, authUrl, tenantId, tenantName, containerName, inputFilePathPattern,
-				outputFilePathPattern);
+				username, authUrl, tenantId, tenantName, containerName, inputFilePathPattern, outputFilePathPattern);
 		config = new AccountConfig();
 		config.setUsername(username);
 		config.setPassword(password);
@@ -98,7 +94,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 	 * 
 	 * 
 	 * In Swift:
-	 * n-data/2016-07-05/lstg_item_cndtn/000188_0.gz
+	 * new-data/2016-07-05/lstg_item_cndtn/000188_0.gz
 	 * 
 	 * container name = new-data
 	 * container name = 2016-07-05
@@ -136,104 +132,6 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		}
 		return null;
 	}
+
 	protected abstract Status process0(List<ActionEvent> actionEvents) throws HandlerException;
-//	private Status process0(List<ActionEvent> actionEvents) throws HandlerException {
-//
-//		SwiftWriterHandlerJournal journal = getJournal(SwiftWriterHandlerJournal.class);
-//		if (journal == null) {
-//			logger.debug(handlerPhase, "jounral is null, initializing");
-//			journal = new SwiftWriterHandlerJournal();
-//			getHandlerContext().setJournal(getId(), journal);
-//		}
-//		Status statusToReturn = Status.READY;
-//		long startTime = System.currentTimeMillis();
-//		// ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//		try {
-//
-//			// String swiftObjectName = null;
-//
-//			boolean writeReady = false;
-//			int eventsToWrite = 0;
-//			ActionEvent actionEventToWrite = null;
-//			for (ActionEvent actionEvent : actionEvents) {
-//				eventsToWrite++;
-//				logger.debug(handlerPhase, "headers={}", actionEvent.getHeaders());
-//
-//				String readCompleteStr = actionEvent.getHeaders().get(ActionEventHeaderConstants.READ_COMPLETE);
-//
-//				if (!StringUtils.isBlank(readCompleteStr) && Boolean.parseBoolean(readCompleteStr) == true) {
-//					writeReady = true;
-//					actionEventToWrite = actionEvent;
-//					break;
-//				}
-//			}
-//
-//			if (writeReady) {
-//				writeToSwift(actionEventToWrite, actionEvents, eventsToWrite);
-//			}
-//			if (!actionEvents.isEmpty()) {
-//				journal.setEventList(actionEvents);
-//			}
-//			journal.setEventList(actionEvents);
-//		} catch (Exception e) {
-//			throw new HandlerException(e.getMessage(), e);
-//		}
-//		long endTime = System.currentTimeMillis();
-//		logger.debug(handlerPhase, "statusToReturn={}", statusToReturn);
-//		logger.info(handlerPhase, "SwiftWriter finished in {} milliseconds", (endTime - startTime));
-//		return statusToReturn;
-//
-//	}
-
-//	private void writeToSwift(final ActionEvent actionEventToWrite, List<ActionEvent> actionEvents,
-//			final int eventsToWrite) throws IOException, HandlerException {
-//		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//		try {
-//			String fileName = actionEventToWrite.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-//			String swiftObjectName = outputFilePathPattern;
-//			Matcher m = inputPattern.matcher(fileName);
-//
-//			while (m.find()) {
-//				logger.debug(handlerPhase, "_message=\"matched filename\" filename={}", m.group());
-//				String key = null;
-//
-//				for (int i = 1; i <= m.groupCount(); i++) {
-//					key = "$" + i;
-//					String temp = m.group(i);
-//					logger.debug(handlerPhase, "file-part={}", temp);
-//					swiftObjectName = swiftObjectName.replace(key, temp);
-//					logger.debug(handlerPhase, "objectName={}", swiftObjectName);
-//				}
-//				logger.debug(handlerPhase, "final objectName={}", swiftObjectName);
-//
-//			}
-//			for (int i = 0; i < eventsToWrite; i++) {
-//				baos.write(actionEvents.remove(0).getBody());
-//			}
-//
-//			if (uploadObjectType == SwiftUploadObjectType.BYTES) {
-//				logger.debug(handlerPhase, "_message=\"writing to swift\" swiftObjectName={}", swiftObjectName);
-//				uploadBytes(container, swiftObjectName, baos.toByteArray());
-//			} else {
-//				throw new HandlerException("SwiftWriterHandler does not support uploading files");
-//			}
-//		} finally {
-//			try {
-//				baos.close();
-//			} catch (IOException e) {
-//				logger.warn(handlerPhase, "exception while trying to close the ByteArrayOutputStream", e);
-//				// duck
-//			}
-//		}
-//	}
-
-//	private void uploadFile(final Container container, final String objectName, final byte[] data) {
-//		throw new UnsupportedOperationException();
-//	}
-//
-//	private void uploadBytes(final Container container, final String objectName, final byte[] data) {
-//		StoredObject object = container.getObject(objectName);
-//		object.uploadObject(data);
-//	}
-
 }
