@@ -116,10 +116,6 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 		this.lazyConnectionDataSourceProxy = dataSource;		
 	}
 	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
 	/**
 	 * This method is get all tables from a source database based on sql query
 	 * @param sqlQuery

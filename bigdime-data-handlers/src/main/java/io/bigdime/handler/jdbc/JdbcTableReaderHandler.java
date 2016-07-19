@@ -151,11 +151,7 @@ public class JdbcTableReaderHandler extends AbstractHandler {
 	public void setDataSource(DataSource dataSource) {
 		this.lazyConnectionDataSourceProxy = dataSource;
 	}
-	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
+		
 	/**
 	 * This preProcess method is get table from previous handler or from inputs, format sql query.
 	 * get source metadata from source database, and put into bigdime metastore

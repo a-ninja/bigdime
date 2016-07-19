@@ -184,10 +184,6 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		}
 	}
 	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
 	long dirtyRecordCount = 0;
 	List<RuntimeInfo> dirtyRecords;
 	private boolean processingDirty = false;

@@ -172,10 +172,6 @@ public class FileInputStreamHandler extends AbstractHandler {
 		}
 	}
 
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-
 	/*
 	 * @formatter:off
 	 * if (firstRun) {

@@ -3,6 +3,7 @@
  */
 package io.bigdime.core.handler;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -176,7 +177,7 @@ public abstract class AbstractHandler implements Handler {
 	 */
 	protected <T> T getNextDescriptorToProcess(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName, List<T> availableDescriptors, final InputDescriptor<T> inputDescriptor)
-					throws RuntimeInfoStoreException {
+			throws RuntimeInfoStoreException {
 		final List<RuntimeInfo> runtimeInfos = runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
 				entityName);
 		logger.debug(getHandlerPhase(), "runtimeInfos=\"{}\"", runtimeInfos);
@@ -245,8 +246,8 @@ public abstract class AbstractHandler implements Handler {
 
 	protected <T> boolean updateRuntimeInfoToStoreAfterValidation(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			boolean validationPassed, ActionEvent actionEvent) throws RuntimeInfoStoreException {
-		
-		String entityName = actionEvent.getHeaders().get(ActionEventHeaderConstants.ENTITY_NAME);	
+
+		String entityName = actionEvent.getHeaders().get(ActionEventHeaderConstants.ENTITY_NAME);
 		String inputDescriptor = actionEvent.getHeaders().get(ActionEventHeaderConstants.INPUT_DESCRIPTOR);
 		Map<String, String> properties = actionEvent.getHeaders();
 		if (validationPassed) {
@@ -258,7 +259,7 @@ public abstract class AbstractHandler implements Handler {
 
 	protected <T> boolean updateRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName, final String inputDescriptor, RuntimeInfoStore.Status status)
-					throws RuntimeInfoStoreException {
+			throws RuntimeInfoStoreException {
 		return updateRuntimeInfo(runtimeInfoStore, entityName, inputDescriptor, status, null);
 	}
 
@@ -382,5 +383,25 @@ public abstract class AbstractHandler implements Handler {
 
 	public void incrementInvocationCount() {
 		this.invocationCount++;
+	}
+
+	public boolean isFirstRun() {
+		return getInvocationCount() == 1;
+	}
+	
+	public String getEntityNameFromHeader() {
+		List<ActionEvent> eventList = getHandlerContext().getEventList();
+		if (eventList!=null && !eventList.isEmpty()) {
+			return eventList.get(0).getHeaders().get(ActionEventHeaderConstants.ENTITY_NAME);
+		}
+		return null;
+	}
+		public List<String> getAvailableDirectoriesFromHeader(final String headerName) {
+		List<ActionEvent> eventList = getHandlerContext().getEventList();
+		List<String> availableHdfsDirectories = new ArrayList<>();
+		for (final ActionEvent inputEvent:eventList) {
+			availableHdfsDirectories.add(inputEvent.getHeaders().get(headerName));
+		}
+		return availableHdfsDirectories;
 	}
 }
