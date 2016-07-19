@@ -1,0 +1,87 @@
+{
+    "name": "bigdime-data-adaptor",
+    "type": "batch",
+    "cron-expression" : "0/30 * * * * ? *",
+    "auto-start" : "true",
+    "namespace": "com.example",
+    "description": "adaptor to ingest the data from bigdime-file into hdfs.",
+    "source": {
+        "name": "bigdime-file-source",
+        "description": "source description",
+        "source-type": "file",
+        "src-desc": {
+            "input1" : {
+                "entity-name": "entity_name",
+	            "hive-query": "INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' select * from sample_07 DISTRIBUTE BY RAND()"
+	        }
+        },
+        "data-handlers": [
+            {
+                "name": "hive-jdbc-reader",
+                "description": "read data using hive queries specified with src-desc field",
+                "handler-class": "io.bigdime.handler.hive.HiveJdbcReaderHandler",
+                "properties": {
+                    "jdbc-connection-url": "jdbc:hive2://sandbox.hortonworks.com:10000/default",
+                    "driver-class-name" : "org.apache.hive.jdbc.HiveDriver",
+                    "user-name": "username",
+                    "auth-choice" : "password",
+                    "base-output-directory": "/user/username/etl/",
+                    "hive-conf" : {
+                        "hive.insert.into.multilevel.dirs" : "true"
+                    }
+                }
+            },
+            {
+                "name": "hdfs-file-reader",
+                "description": "read data from hdfs files",
+                "handler-class": "io.bigdime.handler.webhdfs.WebHDFSReaderHandler",
+                "properties": {
+                        "hostNames"           : "${hdfs_hosts}",
+                        "port"                : "${hdfs_port}",
+                        "hdfsUser"            : "${hdfs_user}",
+                        "readHdfsPathFrom"    : "headers"
+                        
+                    }
+            }
+        ]
+    },
+    "channel": [
+        {
+            "name": "channel1",
+            "description" : "channel for bigdime-file data",
+            "channel-class": "io.bigdime.core.channel.MemoryChannel",
+            "properties": {
+                "print-stats" : "${print_channel_stats}",
+                "print-stats-duration-in-seconds" : "${print_stats_duration_in_seconds}",
+                "channel-capacity" : "${channel_capacity}"
+            }
+        },
+        {
+            "name": "channel2",
+            "description" : "channel for bigdime-file data",
+            "channel-class": "io.bigdime.core.channel.MemoryChannel",
+            "properties": {
+                "print-stats" : "${print_channel_stats}",
+                "print-stats-duration-in-seconds" : "${print_stats_duration_in_seconds}",
+                "channel-capacity" : "${channel_capacity}"
+            }
+        }
+    ],
+    "sink": [
+        {
+            "name": "sink for bigdime-file data adaptor",
+            "description": "hdfs sink for bigdime-file data adaptor",
+            "channel-desc": ["channel1", "channel2"],
+            "data-handlers": [
+                {
+                    "name": "memory-channel-reader",
+                    "description": "read data from channels",
+                    "handler-class": "io.bigdime.core.handler.MemoryChannelInputHandler",
+                    "properties": {
+                        "batchSize" : "128"
+                    }
+                }
+            ]
+        }
+    ]
+}

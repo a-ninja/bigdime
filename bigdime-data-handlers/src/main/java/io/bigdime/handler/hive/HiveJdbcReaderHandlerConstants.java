@@ -18,4 +18,24 @@ public enum HiveJdbcReaderHandlerConstants {
 	public static final String KERBEROS_USER_NAME = "kerberos-user-name";
 	public static final String KERBEROS_KEYTAB_PATH = "kerberos-keytab-path";
 
+	public static final String AUTH_CHOICE = "auth-choice";
+
+	public enum AUTH_OPTION {
+		KERBEROS, PASSWORD;
+
+		public static AUTH_OPTION getByName(final String arg) {
+			if (arg == null)
+				return null;
+			if (arg.equalsIgnoreCase(KERBEROS.toString()))
+				return KERBEROS;
+			if (arg.equalsIgnoreCase(PASSWORD.toString()))
+				return PASSWORD;
+			return null;
+		}
+	}
+	
+	public static final String USER_NAME = "user-name";
+	public static final String PASSWORD = "password";
+	
+
 }

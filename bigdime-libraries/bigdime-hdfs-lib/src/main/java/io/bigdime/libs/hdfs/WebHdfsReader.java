@@ -27,6 +27,14 @@ public class WebHdfsReader {
 	private static final Logger logger = LoggerFactory.getLogger(WebHdfsReader.class);
 
 	public static final String FORWARD_SLASH = "/";
+	private static final String WEBHDFS_PREFIX = "/webhdfs/v1";
+
+	public String prependWebhdfsPrefix(final String hdfsPathWithoutPrefix) {
+		if (!StringUtils.isBlank(hdfsPathWithoutPrefix) && !hdfsPathWithoutPrefix.startsWith(WEBHDFS_PREFIX)) {
+			return "/webhdfs/v1" + hdfsPathWithoutPrefix;
+		}
+		return hdfsPathWithoutPrefix;
+	}
 
 	/**
 	 * Uses "OPEN" operation and returns the InputStream to read the file
@@ -37,33 +45,42 @@ public class WebHdfsReader {
 	 * @return
 	 * @throws IOException
 	 */
-	public InputStream getInputStream(WebHdfs webHdfs, String filePath) throws IOException {
-		HttpResponse response = webHdfs.openFile(filePath);
+	public InputStream getInputStream(WebHdfs webHdfs, String hdfsFilePath) throws IOException {
+		if (StringUtils.isBlank(hdfsFilePath))
+			throw new IllegalArgumentException("invalid filePath: empty or null");
+
+		String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
+		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
+			webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
+
+		HttpResponse response = webHdfs.openFile(webhdfsFilePath);
 		return response.getEntity().getContent();
 	}
 
-//	public static void main(String[] args) {
-//
-//		WebHdfs webHdfs = WebHdfs.getInstance("sandbox.hortonworks.com", 50070);
-//		try {
-//			List<String> files = new WebHdfsReader().list(webHdfs, "/webhdfs/v1/user/ambari-qa", true);
-//
-//			// new WebHdfsReader().getInputStream(webHdfs,
-//			// "/webhdfs/v1/user/scott/sand_genDir/000000_0");
-//
-//			// String fileType = new WebHdfsReader().getFileType(webHdfs,
-//			// "/webhdfs/v1/user/ambari-qa");
-//			// System.out.println("fileType should be DIRECTORY = " + fileType);
-//			//
-//			// fileType = new WebHdfsReader().getFileType(webHdfs,
-//			// "/webhdfs/v1/user/scott/sand_genDir/000000_0");
-//			// System.out.println("fileType should be FILE = " + fileType);
-//
-//		} catch (Exception e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
+	// public static void main(String[] args) {
+	//
+	// WebHdfs webHdfs = WebHdfs.getInstance("sandbox.hortonworks.com", 50070);
+	// try {
+	// List<String> files = new WebHdfsReader().list(webHdfs,
+	// "/webhdfs/v1/user/username", false);
+	// // System.out.println(files);
+	//
+	// // new WebHdfsReader().getInputStream(webHdfs,
+	// // "/webhdfs/v1/user/username/sandbox_dir/000000_0");
+	//
+	// // String fileType = new WebHdfsReader().getFileType(webHdfs,
+	// // "/webhdfs/v1/user/username");
+	// // System.out.println("fileType should be DIRECTORY = " + fileType);
+	// //
+	// // fileType = new WebHdfsReader().getFileType(webHdfs,
+	// // "/webhdfs/v1/user/username/sandbox_dir/000000_0");
+	// // System.out.println("fileType should be FILE = " + fileType);
+	//
+	// } catch (Exception e) {
+	// // TODO Auto-generated catch block
+	// e.printStackTrace();
+	// }
+	// }
 
 	private WebHdfsListStatusResponse parseJson(final InputStream stream) throws JsonProcessingException, IOException {
 		final ObjectMapper mapper = new ObjectMapper();
@@ -88,52 +105,58 @@ public class WebHdfsReader {
 	 * must release the connection.
 	 * 
 	 * @param webHdfs
-	 * @param hdfsPath
+	 * @param hdfsFilePath
 	 * @return
 	 * @throws WebHdfsException
 	 * @throws IOException
 	 * @throws Exception
 	 */
-	public List<String> list(WebHdfs webHdfs, String hdfsPath, boolean recursive) throws IOException, WebHdfsException {
+	public List<String> list(final WebHdfs webHdfs, final String hdfsFilePath, boolean recursive)
+			throws IOException, WebHdfsException {
 		List<String> filesInDir = new ArrayList<>();
-		if (StringUtils.isBlank(hdfsPath))
+		if (StringUtils.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid hdfspath: empty or null");
 
-		if (!hdfsPath.endsWith(FORWARD_SLASH))
-			hdfsPath = hdfsPath + FORWARD_SLASH;
+		String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
+		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
+			webhdfsFilePath = webhdfsFilePath + FORWARD_SLASH;
 
-		String fileType = getFileType(webHdfs, hdfsPath);
+		String fileType = getFileType(webHdfs, webhdfsFilePath);
 		if (!fileType.equalsIgnoreCase("DIRECTORY")) {
+			logger.debug("processing WebHdfsReader", "hdfsPath={} represents a file", webhdfsFilePath);
 			return null;
 		}
 
-		HttpResponse response = webHdfs.listStatus(hdfsPath);
+		HttpResponse response = webHdfs.listStatus(webhdfsFilePath);
 
 		if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 201) {
 			logger.debug("file exists", "responseCode={} hdfsPath={} responseMessage={}",
-					response.getStatusLine().getStatusCode(), hdfsPath, response.getStatusLine().getReasonPhrase());
+					response.getStatusLine().getStatusCode(), webhdfsFilePath,
+					response.getStatusLine().getReasonPhrase());
 			WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
 			List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
 
 			for (FileStatus fs : fileStatuses) {
 				if (fs.getType().equals("FILE")) {
-					filesInDir.add(hdfsPath + fs.getPathSuffix());
+					filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
 
 				}
 				if (recursive && fs.getType().equals("DIRECTORY")) {
-					filesInDir.addAll(list(webHdfs, hdfsPath + fs.getPathSuffix(), recursive));
+					filesInDir.addAll(list(webHdfs, webhdfsFilePath + fs.getPathSuffix(), recursive));
 				}
 			}
 
 		} else if (response.getStatusLine().getStatusCode() == 404) {
 			logger.debug("file does not exist", "responseCode={} hdfsPath={} responseMessage={}",
-					response.getStatusLine().getStatusCode(), hdfsPath, response.getStatusLine().getReasonPhrase());
+					response.getStatusLine().getStatusCode(), webhdfsFilePath,
+					response.getStatusLine().getReasonPhrase());
 			throw new FileNotFoundException("File not found");
 		} else {
 			logger.warn("file existence not known, responseCode={} hdfsPath={} responseMessage={}",
-					response.getStatusLine().getStatusCode(), hdfsPath, response.getStatusLine().getReasonPhrase());
+					response.getStatusLine().getStatusCode(), webhdfsFilePath,
+					response.getStatusLine().getReasonPhrase());
 			throw new WebHdfsException("file existence not known, responseCode="
-					+ response.getStatusLine().getStatusCode() + ", filePath=" + hdfsPath);
+					+ response.getStatusLine().getStatusCode() + ", filePath=" + webhdfsFilePath);
 		}
 		return filesInDir;
 	}
@@ -141,33 +164,89 @@ public class WebHdfsReader {
 	/**
 	 * Check to see whether the file exists or not.
 	 * 
-	 * @param filePath
+	 * @param hdfsFilePath
 	 *            absolute filepath
 	 * @return "FILE" if the file is
 	 * @throws WebHDFSSinkException
 	 */
-	public String getFileType(WebHdfs webHdfs, String filePath) throws IOException, WebHdfsException {
+	public String getFileType(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(webHdfs, hdfsFilePath).getType();
+		// try {
+		// if (StringUtils.isBlank(hdfsFilePath))
+		// throw new IllegalArgumentException("invalid filePath: empty or
+		// null");
+		//
+		// String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
+		// if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
+		// webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
+		//
+		// HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
+		// if (response.getStatusLine().getStatusCode() == 200 ||
+		// response.getStatusLine().getStatusCode() == 201) {
+		// logger.debug("file exists", "responseCode={} filePath={}
+		// responseMessage={}",
+		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
+		// response.getStatusLine().getReasonPhrase());
+		// final ObjectMapper mapper = new ObjectMapper();
+		// WebHdfsGetFileStatusResponse fs =
+		// mapper.readValue(response.getEntity().getContent(),
+		// WebHdfsGetFileStatusResponse.class);
+		// return fs.getFileStatus().getType();
+		// } else if (response.getStatusLine().getStatusCode() == 404) {
+		// logger.debug("file does not exist", "responseCode={} filePath={}
+		// responseMessage={}",
+		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
+		// response.getStatusLine().getReasonPhrase());
+		// throw new FileNotFoundException("File not found");
+		// } else {
+		// logger.warn("file existence not known, responseCode={} filePath={}
+		// responseMessage={}",
+		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
+		// response.getStatusLine().getReasonPhrase());
+		// throw new WebHdfsException("file existence not known, responseCode="
+		// + response.getStatusLine().getStatusCode() + ", filePath=" +
+		// webhdfsFilePath);
+		// }
+		// } catch (Exception e) {
+		// logger.warn("file creation", "_message=\"Unable to check the status
+		// of the file:\" retry={} error={}", e);
+		// throw new WebHdfsException("could not get the file status", e);
+		// }
+	}
+
+	public long getFileLength(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(webHdfs, hdfsFilePath).getLength();
+	}
+
+	public FileStatus getFileStatus(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
 		try {
-			if (StringUtils.isBlank(filePath))
+			if (StringUtils.isBlank(hdfsFilePath))
 				throw new IllegalArgumentException("invalid filePath: empty or null");
 
-			HttpResponse response = webHdfs.fileStatus(filePath);
+			String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
+			if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
+				webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
+
+			HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
 			if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 201) {
 				logger.debug("file exists", "responseCode={} filePath={} responseMessage={}",
-						response.getStatusLine().getStatusCode(), filePath, response.getStatusLine().getReasonPhrase());
+						response.getStatusLine().getStatusCode(), webhdfsFilePath,
+						response.getStatusLine().getReasonPhrase());
 				final ObjectMapper mapper = new ObjectMapper();
 				WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
 						WebHdfsGetFileStatusResponse.class);
-				return fs.getFileStatus().getType();
+				return fs.getFileStatus();
 			} else if (response.getStatusLine().getStatusCode() == 404) {
 				logger.debug("file does not exist", "responseCode={} filePath={} responseMessage={}",
-						response.getStatusLine().getStatusCode(), filePath, response.getStatusLine().getReasonPhrase());
+						response.getStatusLine().getStatusCode(), webhdfsFilePath,
+						response.getStatusLine().getReasonPhrase());
 				throw new FileNotFoundException("File not found");
 			} else {
 				logger.warn("file existence not known, responseCode={} filePath={} responseMessage={}",
-						response.getStatusLine().getStatusCode(), filePath, response.getStatusLine().getReasonPhrase());
+						response.getStatusLine().getStatusCode(), webhdfsFilePath,
+						response.getStatusLine().getReasonPhrase());
 				throw new WebHdfsException("file existence not known, responseCode="
-						+ response.getStatusLine().getStatusCode() + ", filePath=" + filePath);
+						+ response.getStatusLine().getStatusCode() + ", filePath=" + webhdfsFilePath);
 			}
 		} catch (Exception e) {
 			logger.warn("file creation", "_message=\"Unable to check the status of the file:\" retry={} error={}", e);

@@ -3,14 +3,12 @@ package io.bigdime.handler.hive;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +16,8 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import io.bigdime.alert.LoggerFactory;
-import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.ActionEvent;
+import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
@@ -28,6 +26,7 @@ import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.handler.hive.HiveJdbcReaderHandlerConstants.AUTH_OPTION;
 
 /**
  * 
@@ -40,9 +39,8 @@ import io.bigdime.core.handler.AbstractHandler;
  * 
  * src-desc : { entity-name query
  * 
- * "input1": { "entity-name": "tracking_events", "hive-query":
- * "INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' SELECT dw_lstg_gen.* FROM dw_lstg_gen JOIN dw_lstg_item ON dw_lstg_gen.item_id = dw_lstg_item.item_id AND dw_lstg_gen.auct_end_dt = dw_lstg_item.auct_end_dt WHERE dw_lstg_item.auct_type_code IN (1, 7, 9, 12) AND dw_lstg_gen.upd_date > '${hiveconf:DATE}' DISTRIBUTE BY RAND()"
- * "hive-conf": { "mapred.job.queue.name" : "hdlq-other-default",
+ * "input1": { "entity-name": "tracking_events", "hive-query": "query"
+ * "hive-conf": { "mapred.job.queue.name" : "queuename",
  * "mapred.output.compress" : "true", "hive.exec.compress.output" : "true",
  * "mapred.output.compression.codec" :
  * "org.apache.hadoop.io.compress.GzipCodec", "io.compression.codecs" :
@@ -50,10 +48,8 @@ import io.bigdime.core.handler.AbstractHandler;
  * 
  * "schemaFileName" :"${hive_schema_file_name}" },
  * 
- * "input1" :
- * "dw_lstg_gen: INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' SELECT dw_lstg_gen.* FROM dw_lstg_gen JOIN dw_lstg_item ON dw_lstg_gen.item_id = dw_lstg_item.item_id AND dw_lstg_gen.auct_end_dt = dw_lstg_item.auct_end_dt WHERE dw_lstg_item.auct_type_code IN (1, 7, 9, 12) AND dw_lstg_gen.upd_date > '${hiveconf:DATE}' DISTRIBUTE BY RAND();"
- * "input2" :
- * "dw_lstg_item: hINSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' SELECT dw_lstg_item.* FROM dw_lstg_item WHERE dw_lstg_item.upd_date > '${hiveconf:DATE}' AND dw_lstg_item.auct_type_code IN (1, 7, 9, 12) DISTRIBUTE BY RAND();"
+ * "input1" : "table1: table1 ", "input2" : "table2: table2"
+ * 
  * 
  * }
  * 
@@ -72,8 +68,14 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private String jdbcUrl = null;// e.g.
 									// jdbc:hive2://host:10000/default;principal=hadoop/host@DOMAIN.COM
 	private String driverClassName = null;
-	private String kerberosUserName = null;// e.g. username
-	private String kerberosKeytabPath = null; // e.g. password
+	private AUTH_OPTION authOption;
+
+	private String kerberosUserName = null;// e.g. user@domain.com
+	private String kerberosKeytabPath = null; // e.g. /tmp/user.keytab
+
+	private String userName = null;// e.g. username
+	private String password = null; // e.g. password
+
 	private String baseOutputDirectory = null;
 
 	private String entityName = null;
@@ -124,14 +126,23 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		jdbcUrl = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.JDBC_URL);
 		driverClassName = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.DRIVER_CLASS_NAME);
+		final String authChoice = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.AUTH_CHOICE, AUTH_OPTION.KERBEROS.toString());
+
+		authOption = AUTH_OPTION.getByName(authChoice);
+
 		kerberosUserName = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.KERBEROS_USER_NAME);
 		kerberosKeytabPath = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.KERBEROS_KEYTAB_PATH);
 
+		userName = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.USER_NAME);
+		password = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.PASSWORD);
+
 		logger.debug(handlerPhase,
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" kerberosUserName=\"{}\" kerberosKeytabPath=\"{}\"", jdbcUrl,
-				driverClassName, kerberosUserName, kerberosKeytabPath);
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} kerberosUserName=\"{}\" kerberosKeytabPath=\"{}\" userName=\"{}\" password=\"{}\"",
+				jdbcUrl, driverClassName, authChoice, authOption, kerberosUserName, kerberosKeytabPath, userName,
+				password);
 
 		baseOutputDirectory = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.BASE_OUTPUT_DIRECTORY, "/");
@@ -156,7 +167,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 
 	}
 
-	private void setOutputDirectory() {
+	private void setHdfsOutputDirectory() {
 		final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyyMMdd");
 		if (!baseOutputDirectory.endsWith(File.separator))
 			outputDirectory = baseOutputDirectory + File.separator;
@@ -167,8 +178,8 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		logger.debug(handlerPhase, "outputDirectory=\"{}\"", outputDirectory);
 
 		// hiveConfigurations.put(dataset, dataset)
-//		hiveConfigurations.put("DIRECTORY", outputDirectory);
-//		hiveConfigurations.put("DATE", dateTime);
+		hiveConfigurations.put("DIRECTORY", outputDirectory);
+		hiveConfigurations.put("DATE", dateTime);
 	}
 
 	@Override
@@ -177,25 +188,20 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		incrementInvocationCount();
 		logger.debug(handlerPhase, "_message=\"entering process\"");
 		try {
-			setOutputDirectory();
-			connectToDB();
-
+			setHdfsOutputDirectory();
+			setupConnection();
 			ActionEvent outputEvent = new ActionEvent();
 			final Statement stmt = connection.createStatement();
+			runHiveConfs(stmt);
+
 			logger.debug(handlerPhase, "hiveQuery=\"{}\" hiveConfigurations=\"{}\"", hiveQuery, hiveConfigurations);
-			stmt.execute(hiveQuery);
+			// stmt.execute(hiveQuery);// no resultset is returned
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.HIVE_OUTPUT_DIRECTORY, outputDirectory);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			// ResultSet res = stmt.executeQuery(hiveQuery);
-			// while (res.next()) {
-			// logger.debug(handlerPhase, "_message=\"field-1:{}\"",
-			// res.getString(1));
-			// logger.debug(handlerPhase, "_message=\"field-2:{}\"",
-			// res.getString(2));
-			// }
+			logger.debug(handlerPhase, "_message=\"completed process\"");
 		} catch (final Exception e) {
-			throw new HandlerException("unable to connect to DB", e);
+			throw new HandlerException("unable to process", e);
 		} finally {
 			closeConnection();
 		}
@@ -203,11 +209,27 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		return Status.READY;
 	}
 
-	private void connectToDB() throws SQLException, IOException, ClassNotFoundException {
+	private void runHiveConfs(final Statement stmt) throws SQLException {
+		if (hiveConfigurations != null) {
+			for (final String prop : hiveConfigurations.keySet()) {
+				String sql = "set " + prop + " = " + hiveConfigurations.get(prop);
+				logger.debug(handlerPhase, "running sql to set hiveconf: \"{}\"", sql);
+				stmt.execute(sql);
+			}
+		}
+	}
+
+	private void setupConnection() throws SQLException, IOException, ClassNotFoundException {
 		if (connection == null) {
-			connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(driverClassName, jdbcUrl,
-					kerberosUserName, kerberosKeytabPath, hiveConfigurations);
-			logger.debug(handlerPhase, "_message=\"connected to db\"");
+			if (authOption == AUTH_OPTION.KERBEROS) {
+				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(driverClassName, jdbcUrl,
+						kerberosUserName, kerberosKeytabPath, hiveConfigurations);
+				logger.debug(handlerPhase, "_message=\"connected to db\"");
+			} else if (authOption == AUTH_OPTION.PASSWORD) {
+				connection = hiveJdbcConnectionFactory.getConnection(driverClassName, jdbcUrl, userName, password,
+						hiveConfigurations);
+				logger.debug(handlerPhase, "_message=\"connected to db\"");
+			}
 		}
 	}
 

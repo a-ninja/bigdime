@@ -2,10 +2,8 @@ package io.bigdime.handler.hive;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.hadoop.conf.Configuration;
@@ -54,24 +52,25 @@ public class HiveJdbcConnectionFactory {
 			jdbcUrlWithConf = jdbcUrl + QUESTION_MARK + hiveConfVars.toString();
 		}
 
-		logger.debug("connecting to db", "jdbcUrl=\"{}\" driverClassName=\"{}\" keytabUser=\"{}\" keytabPath=\"{}\"",
-				jdbcUrlWithConf, driverClassName, keytabUser, keytabPath);
-		
-//		BasicDataSource datasource = new BasicDataSource();
-//		datasource.setDriverClassName(driverClassName);
-//		datasource.setUrl(jdbcUrlWithConf);
+		logger.debug("connecting to db, using kerberos auth",
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" keytabUser=\"{}\" keytabPath=\"{}\"", jdbcUrlWithConf,
+				driverClassName, keytabUser, keytabPath);
+
+		BasicDataSource datasource = new BasicDataSource();
+		datasource.setDriverClassName(driverClassName);
+		datasource.setUrl(jdbcUrlWithConf);
 		loginUserFromKeytab(conf, keytabUser, keytabPath);
-//
-//		datasource.setConnectionProperties("mapred.job.queue.name=hdlq-other-default");
-//		return datasource.getConnection();
-		
-		Class.forName(driverClassName);
-		Properties p = new Properties();
-		p.put("mapred.job.queue.name", "hdlq-other-default");
-		p.put("mapred.job.queuename", "hdlq-other-default");
-		p.put("mapreduce.job.queuename", "hdlq-other-default");
-		return DriverManager.getConnection(jdbcUrlWithConf, p);
-		
+
+		// datasource.setConnectionProperties("mapred.job.queue.name=default");
+		return datasource.getConnection();
+
+		// Class.forName(driverClassName);
+		// Properties p = new Properties();
+		// p.put("mapred.job.queue.name", "default");
+		// p.put("mapred.job.queuename", "default");
+		// p.put("mapreduce.job.queuename", "default");
+		// return DriverManager.getConnection(jdbcUrlWithConf, p);
+
 	}
 
 	private void loginUserFromKeytab(final Configuration conf, final String keytabUser, final String keytabPath)
@@ -82,15 +81,30 @@ public class HiveJdbcConnectionFactory {
 	}
 
 	public Connection getConnection(final String driverClassName, final String jdbcUrl, final String username,
-			final String password) throws IOException, SQLException {
-		return getConnection0(driverClassName, jdbcUrl, username, password);
+			final String password, final Map<String, String> hiveConfigurations) throws IOException, SQLException {
+		return getConnection0(driverClassName, jdbcUrl, username, password, hiveConfigurations);
 	}
 
 	private Connection getConnection0(final String driverClassName, final String jdbcUrl, final String username,
-			final String password) throws IOException, SQLException {
+			final String password, final Map<String, String> hiveConfigurations) throws IOException, SQLException {
+
+		String jdbcUrlWithConf = jdbcUrl;
+
+		StringBuilder hiveConfVars = new StringBuilder();
+		for (String key : hiveConfigurations.keySet()) {
+			hiveConfVars.append(key).append("=").append(hiveConfigurations.get(key)).append(SEMI_COLON);
+		}
+		if (hiveConfVars.length() > 0) {
+			jdbcUrlWithConf = jdbcUrl + QUESTION_MARK + hiveConfVars.toString();
+		}
+
+		logger.debug("connecting to db, using username and password",
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" username=\"{}\" password=\"{}\"", jdbcUrlWithConf,
+				driverClassName, username, "*****");
+
 		BasicDataSource datasource = new BasicDataSource();
 		datasource.setDriverClassName(driverClassName);
-		datasource.setUrl(jdbcUrl);
+		datasource.setUrl(jdbcUrlWithConf);
 		datasource.setUsername(username);
 		datasource.setPassword(password);
 		return datasource.getConnection();
