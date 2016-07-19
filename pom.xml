@@ -97,6 +97,7 @@
 		<!-- avro -->
 		<avro.org.apache.avro>1.7.7</avro.org.apache.avro>
 		<com.google.guava-guava.version>18.0</com.google.guava-guava.version>
+		<org.javaswift.joss.version>0.9.7</org.javaswift.joss.version>
 	</properties>
 
 	<build>
@@ -385,6 +386,11 @@
 				<artifactId>guava</artifactId>
 				<version>${com.google.guava-guava.version}</version>
 			</dependency>
+                        <dependency>
+			        <groupId>org.javaswift</groupId>
+			        <artifactId>joss</artifactId>
+			        <version>${org.javaswift.joss.version}</version>
+		        </dependency>
 
 		</dependencies>
 	</dependencyManagement>

@@ -186,7 +186,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 				nextIndexToRead, bufferSize, fileChannel.isOpen());
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(bufferSize);
-
+		Status statustoReturn = Status.READY;
 		/////////////////
 
 		int bytesRead = fileChannel.read(readInto);
@@ -203,7 +203,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			outputEvent.setBody(readBody);
 
 			outputEvent.setBody(readBody);
-
+			statustoReturn = Status.CALLBACK;
 			if (readAll()) {
 				getSimpleJournal().reset();
 				// logger.debug(handlerPhase,
@@ -213,12 +213,15 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 				// currentFile.getAbsolutePath(), getId(),
 				// outputEvent.getHeaders());
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
-				return Status.CALLBACK;
+
 			} else {
 				logger.debug(handlerPhase, "\"there is more data to process, returning CALLBACK\" handler_id={}",
 						getId());
-				return Status.CALLBACK;
 			}
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
+
+			processChannelSubmission(outputEvent);
+			return statustoReturn;
 		} else {
 			logger.debug(handlerPhase, "returning READY, no data read from the file");
 			return Status.READY;
@@ -353,7 +356,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		currentFileStatus = getFileStatusFromWebhdfs(nextDescriptorToProcess);
 		fileChannel = Channels.newChannel(inputStream);
 
-		logger.debug(handlerPhase, "absolute_path={} is_channel_open={}", currentFilePath, fileChannel.isOpen());
+		logger.debug(handlerPhase, "current_file_path={} is_channel_open={}", currentFilePath, fileChannel.isOpen());
 	}
 
 	private FileStatus getFileStatusFromWebhdfs(final String hdfsFilePath) throws IOException, WebHdfsException {
@@ -371,7 +374,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	}
 
-	private Status process0(final ActionEvent actionEvent) throws HandlerException, IOException, WebHdfsException {
+	/*private Status process0(final ActionEvent actionEvent) throws HandlerException, IOException, WebHdfsException {
 		// if (webHdfs == null) {
 		// webHdfs = WebHdfs.getInstance(hostNames, port)
 		// .addHeader(WebHDFSConstants.CONTENT_TYPE,
@@ -429,7 +432,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		}
 
 	}
-
+*/
 	private long getTotalReadFromJournal() throws HandlerException {
 		return getSimpleJournal().getTotalRead();
 	}

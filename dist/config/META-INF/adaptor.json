@@ -1,5 +1,5 @@
 {
-    "name": "bigdime-data-adaptor",
+    "name": "bigdime-ndata-adaptor",
     "type": "batch",
     "cron-expression" : "0/30 * * * * ? *",
     "auto-start" : "true",
@@ -11,7 +11,7 @@
         "source-type": "file",
         "src-desc": {
             "input1" : {
-                "entity-name": "entity_name",
+                "entity-name": "dw_lstg_gen",
 	            "hive-query": "INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' select * from sample_07 DISTRIBUTE BY RAND()"
 	        }
         },
@@ -21,11 +21,11 @@
                 "description": "read data using hive queries specified with src-desc field",
                 "handler-class": "io.bigdime.handler.hive.HiveJdbcReaderHandler",
                 "properties": {
-                    "jdbc-connection-url": "jdbc:hive2://sandbox.hortonworks.com:10000/default",
+                    "jdbc-connection-url": "${hive-jdbc-connection-url}",
                     "driver-class-name" : "org.apache.hive.jdbc.HiveDriver",
-                    "user-name": "username",
+                    "user-name": "${hive-jdbc-user-name}",
                     "auth-choice" : "password",
-                    "base-output-directory": "/user/username/etl/",
+                    "base-output-directory": "${hive-base-output-directory}",
                     "hive-conf" : {
                         "hive.insert.into.multilevel.dirs" : "true"
                     }
@@ -39,7 +39,8 @@
                         "hostNames"           : "${hdfs_hosts}",
                         "port"                : "${hdfs_port}",
                         "hdfsUser"            : "${hdfs_user}",
-                        "readHdfsPathFrom"    : "headers"
+                        "readHdfsPathFrom"    : "headers",
+                        "channel-map"         : "input1:channel1"
                         
                     }
             }
@@ -55,23 +56,13 @@
                 "print-stats-duration-in-seconds" : "${print_stats_duration_in_seconds}",
                 "channel-capacity" : "${channel_capacity}"
             }
-        },
-        {
-            "name": "channel2",
-            "description" : "channel for bigdime-file data",
-            "channel-class": "io.bigdime.core.channel.MemoryChannel",
-            "properties": {
-                "print-stats" : "${print_channel_stats}",
-                "print-stats-duration-in-seconds" : "${print_stats_duration_in_seconds}",
-                "channel-capacity" : "${channel_capacity}"
-            }
         }
     ],
     "sink": [
         {
             "name": "sink for bigdime-file data adaptor",
             "description": "hdfs sink for bigdime-file data adaptor",
-            "channel-desc": ["channel1", "channel2"],
+            "channel-desc": ["channel1"],
             "data-handlers": [
                 {
                     "name": "memory-channel-reader",
@@ -79,6 +70,22 @@
                     "handler-class": "io.bigdime.core.handler.MemoryChannelInputHandler",
                     "properties": {
                         "batchSize" : "128"
+                    }
+                },
+                {
+                    "name": "swift sink for bigdime-ndata adaptor",
+                    "description": "swift sink for bigdime-ndata adaptor",
+                    "handler-class": "io.bigdime.handler.swift.SwiftWriterHandler",
+                    "properties": {
+                        "user-name"           : "${swift-user-name}",
+                        "password"            : "${swift-password}",
+                        "auth-url"            : "${swift-auth-url}",
+                        "tenant-id"           : "${swift-tenant-id}",
+                        "tenant-name"         : "${swift-tenant-name}",
+                        "container-name"      : "${swift-container-name}",
+                        "upload-object-type"  : "bytes",
+                        "input-file-path-pattern" : "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)",
+                        "output-file-path-pattern" : "$1__$2/$3"
                     }
                 }
             ]
