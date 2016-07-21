@@ -1,6 +1,7 @@
 package io.bigdime.handler.swift;
 
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.javaswift.joss.client.factory.AccountConfig;
@@ -127,10 +128,36 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 			logger.info(handlerPhase, "journal is not null, actionEvents==null={}", (actionEvents == null));
 			if (actionEvents != null && !actionEvents.isEmpty()) {
 				// process for CALLBACK status.
+				List<ActionEvent> moreEvents = getHandlerContext().getEventList();
+				if (moreEvents!=null) journal.getEventList().addAll(moreEvents);
+				
+				getHandlerContext().setEventList(null);
+				
 				return process0(journal.getEventList());
 			}
 		}
 		return null;
+	}
+
+	protected String computeSwiftObjectName(final String fileName, final String outPattern, final Pattern inPattern) {
+		String swiftObjectName = outPattern;
+		Matcher m = inPattern.matcher(fileName);
+		while (m.find()) {
+			logger.debug(handlerPhase, "_message=\"matched filename\" filename={}", m.group());
+			String key = null;
+
+			for (int i = 1; i <= m.groupCount(); i++) {
+				key = "$" + i;
+				String temp = m.group(i);
+				logger.debug(handlerPhase, "file-part={}", temp);
+				swiftObjectName = swiftObjectName.replace(key, temp);
+				logger.debug(handlerPhase, "objectName={}", swiftObjectName);
+			}
+			logger.debug(handlerPhase, "final objectName={}", swiftObjectName);
+
+		}
+		return swiftObjectName;
+
 	}
 
 	protected abstract Status process0(List<ActionEvent> actionEvents) throws HandlerException;

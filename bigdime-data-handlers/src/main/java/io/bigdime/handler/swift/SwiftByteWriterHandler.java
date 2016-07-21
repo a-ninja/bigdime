@@ -3,7 +3,6 @@ package io.bigdime.handler.swift;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.regex.Matcher;
 
 import org.apache.commons.lang3.StringUtils;
 import org.javaswift.joss.model.Container;
@@ -51,9 +50,9 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				eventsToWrite++;
 				logger.debug(handlerPhase, "headers={} uploadObjectType={}", actionEvent.getHeaders());
 
-				String readCompleteStr = actionEvent.getHeaders().get(ActionEventHeaderConstants.READ_COMPLETE);
+				String readCompleteFlag = actionEvent.getHeaders().get(ActionEventHeaderConstants.READ_COMPLETE);
 
-				if (!StringUtils.isBlank(readCompleteStr) && Boolean.parseBoolean(readCompleteStr) == true) {
+				if (!StringUtils.isBlank(readCompleteFlag) && Boolean.parseBoolean(readCompleteFlag) == true) {
 					writeReady = true;
 					actionEventToWrite = actionEvent;
 					break;
@@ -61,12 +60,24 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 			}
 
 			if (writeReady) {
-				writeToSwift(actionEventToWrite, actionEvents, eventsToWrite);
+				ActionEvent outputEvent = writeToSwift(actionEventToWrite, actionEvents, eventsToWrite);
+				getHandlerContext().createSingleItemEventList(outputEvent);
 			}
+
 			if (!actionEvents.isEmpty()) {
 				journal.setEventList(actionEvents);
 			}
-			journal.setEventList(actionEvents);
+
+			// if we wrote and there is more data to write, callback
+			if (writeReady) {
+				if (!actionEvents.isEmpty()) {
+					statusToReturn = Status.CALLBACK;
+				} else {
+					statusToReturn = Status.READY; // need to call net handler in chain					
+				}
+			} else {
+				statusToReturn = Status.BACKOFF;
+			}
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);
 		}
@@ -77,35 +88,22 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 
 	}
 
-	private void writeToSwift(final ActionEvent actionEvent, List<ActionEvent> actionEvents,
+	private ActionEvent writeToSwift(final ActionEvent actionEvent, List<ActionEvent> actionEvents,
 			final int eventsToWrite) throws IOException, HandlerException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-			String swiftObjectName = outputFilePathPattern;
-			Matcher m = inputPattern.matcher(fileName);
-
-			while (m.find()) {
-				logger.debug(handlerPhase, "_message=\"matched filename\" filename={}", m.group());
-				String key = null;
-
-				for (int i = 1; i <= m.groupCount(); i++) {
-					key = "$" + i;
-					String temp = m.group(i);
-					logger.debug(handlerPhase, "file-part={}", temp);
-					swiftObjectName = swiftObjectName.replace(key, temp);
-					logger.debug(handlerPhase, "objectName={}", swiftObjectName);
-				}
-				logger.debug(handlerPhase, "final objectName={}", swiftObjectName);
-
-			}
+			String swiftObjectName = computeSwiftObjectName(fileName, outputFilePathPattern, inputPattern);
 			for (int i = 0; i < eventsToWrite; i++) {
 				baos.write(actionEvents.remove(0).getBody());
 			}
 
 			logger.debug(handlerPhase, "_message=\"writing to swift\" swiftObjectName={}", swiftObjectName);
-			uploadBytes(container, swiftObjectName, baos.toByteArray());
-
+			byte[] dataToWrite = baos.toByteArray();
+			uploadBytes(container, swiftObjectName, dataToWrite);
+			final ActionEvent outputEvent = new ActionEvent(actionEvent);
+			outputEvent.setBody(dataToWrite);
+			return outputEvent;
 		} finally {
 			try {
 				baos.close();

@@ -70,9 +70,6 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private String driverClassName = null;
 	private AUTH_OPTION authOption;
 
-	private String kerberosUserName = null;// e.g. user@domain.com
-	private String kerberosKeytabPath = null; // e.g. /tmp/user.keytab
-
 	private String userName = null;// e.g. username
 	private String password = null; // e.g. password
 
@@ -131,18 +128,13 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 
 		authOption = AUTH_OPTION.getByName(authChoice);
 
-		kerberosUserName = PropertyHelper.getStringProperty(getPropertyMap(),
-				HiveJdbcReaderHandlerConstants.KERBEROS_USER_NAME);
-		kerberosKeytabPath = PropertyHelper.getStringProperty(getPropertyMap(),
-				HiveJdbcReaderHandlerConstants.KERBEROS_KEYTAB_PATH);
-
-		userName = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.USER_NAME);
-		password = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.PASSWORD);
+		userName = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.HIVE_JDBC_USER_NAME);
+		password = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.HIVE_JDBC_SECRET);
 
 		logger.debug(handlerPhase,
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} kerberosUserName=\"{}\" kerberosKeytabPath=\"{}\" userName=\"{}\" password=\"{}\"",
-				jdbcUrl, driverClassName, authChoice, authOption, kerberosUserName, kerberosKeytabPath, userName,
-				password);
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\"",
+				jdbcUrl, driverClassName, authChoice, authOption, userName);
 
 		baseOutputDirectory = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.BASE_OUTPUT_DIRECTORY, "/");
@@ -175,6 +167,9 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			outputDirectory = baseOutputDirectory;
 		String dateTime = dtf.print(System.currentTimeMillis());
 		outputDirectory = outputDirectory + dateTime + File.separator + entityName;
+		
+		//TODO: remove harcoding
+		outputDirectory = "/user/b_ndata/bigdime/newdir2/20160720/dw_lstg_gen";
 		logger.debug(handlerPhase, "outputDirectory=\"{}\"", outputDirectory);
 
 		// hiveConfigurations.put(dataset, dataset)
@@ -186,7 +181,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	public Status process() throws HandlerException {
 		handlerPhase = "processing HiveJdbcReaderHandler";
 		incrementInvocationCount();
-		logger.debug(handlerPhase, "_message=\"entering process\"");
+		logger.debug(handlerPhase, "entering process");
 		try {
 			setHdfsOutputDirectory();
 			setupConnection();
@@ -195,11 +190,12 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			runHiveConfs(stmt);
 
 			logger.debug(handlerPhase, "hiveQuery=\"{}\" hiveConfigurations=\"{}\"", hiveQuery, hiveConfigurations);
-			// stmt.execute(hiveQuery);// no resultset is returned
+			//TODO: remove harcoding
+//			stmt.execute(hiveQuery);// no resultset is returned
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			logger.debug(handlerPhase, "_message=\"completed process\"");
+			logger.debug(handlerPhase, "completed process");
 		} catch (final Exception e) {
 			throw new HandlerException("unable to process", e);
 		} finally {
@@ -223,7 +219,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		if (connection == null) {
 			if (authOption == AUTH_OPTION.KERBEROS) {
 				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(driverClassName, jdbcUrl,
-						kerberosUserName, kerberosKeytabPath, hiveConfigurations);
+						userName, password, hiveConfigurations);
 				logger.debug(handlerPhase, "_message=\"connected to db\"");
 			} else if (authOption == AUTH_OPTION.PASSWORD) {
 				connection = hiveJdbcConnectionFactory.getConnection(driverClassName, jdbcUrl, userName, password,

@@ -3,7 +3,6 @@ package io.bigdime.handler.swift;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.regex.Matcher;
 
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
@@ -61,27 +60,13 @@ public class SwiftFileWriterHandler extends SwiftWriterHandler {
 	private void writeToSwift(final ActionEvent actionEvent) throws IOException, HandlerException {
 
 		String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-		String swiftObjectName = outputFilePathPattern;
-		Matcher m = inputPattern.matcher(fileName);
-
-		while (m.find()) {
-			logger.debug(handlerPhase, "_message=\"matched filename\" filename={}", m.group());
-			String key = null;
-
-			for (int i = 1; i <= m.groupCount(); i++) {
-				key = "$" + i;
-				String temp = m.group(i);
-				logger.debug(handlerPhase, "file-part={}", temp);
-				swiftObjectName = swiftObjectName.replace(key, temp);
-				logger.debug(handlerPhase, "objectName={}", swiftObjectName);
-			}
-			logger.debug(handlerPhase, "final objectName={}", swiftObjectName);
-		}
+		String swiftObjectName = computeSwiftObjectName(fileName, outputFilePathPattern, inputPattern);
 		uploadFile(container, swiftObjectName, new String(fileName));
 	}
 
 	private void uploadFile(final Container container, final String objectName, final String fileName) {
 		StoredObject object = container.getObject(objectName);
 		object.uploadObject(new File(fileName));
+		// object.get
 	}
 }

@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -17,16 +18,25 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.AuthSchemes;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.config.Lookup;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.entity.FileEntity;
+import org.apache.http.impl.auth.SPNegoSchemeFactory;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.codehaus.jackson.JsonNode;
@@ -45,15 +55,15 @@ public class WebHdfs {
 	private static Logger logger = LoggerFactory.getLogger(WebHdfs.class);
 	private String host = null;
 	private int port = 0;
-	private HttpClient httpClient = null;
-	private URI uri = null;
-	private HttpRequestBase httpRequest = null;
+	protected HttpClient httpClient = null;
+	protected URI uri = null;
+	protected HttpRequestBase httpRequest = null;
 	private ObjectNode jsonParameters = null;
 	// private final String SANDBOX = "sandbox";
 	// private final String SANDBOX_HDP = "sandbox.hortonworks.com";
 	private RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
 	private List<Header> headers;
-
+	private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
 	public WebHdfs setParameters(ObjectNode jsonParameters) {
 		Iterator<String> keys = jsonParameters.getFieldNames();
 		while (keys.hasNext()) {
@@ -100,21 +110,37 @@ public class WebHdfs {
 		jsonParameters.put(key, value);
 		return this;
 	}
-
+	protected WebHdfs() {
+		
+	}
 	protected WebHdfs(String host, int port) {
 		this.host = host;
 		this.port = port;
 		this.httpClient = HttpClientBuilder.create().build();// new
+		
 		// DefaultHttpClient();
 		// httpClient.clearResponseInterceptors();
 		ObjectMapper mapper = new ObjectMapper();
 		this.jsonParameters = mapper.createObjectNode();
 		roundRobinStrategy.setHosts(host);
 	}
-
+	
 	public static WebHdfs getInstance(String host, int port) {
 		return new WebHdfs(host, port);
 	}
+//	public static WebHdfs getInstanceWithKerberosAuth(String host, int port) {
+//		String krb5ConfigPath = System.getProperty("java.security.krb5.conf");
+//		if (krb5ConfigPath == null) {
+//			krb5ConfigPath = DEFAULT_KRB5_CONFIG_LOCATION;
+//		}
+//		boolean skipPortAtKerberosDatabaseLookup = true;
+//		System.setProperty("java.security.krb5.conf", krb5ConfigPath);
+//		System.setProperty("sun.security.krb5.debug", "true");
+//		System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+//		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+//				.register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
+//		return new WebHdfs(host, port, authSchemeRegistry);
+//	}
 
 	public String getHost() {
 		return roundRobinStrategy.getNextServiceHost();
@@ -256,10 +282,11 @@ public class WebHdfs {
 	}
 
 	// LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
-	private HttpResponse get() throws ClientProtocolException, IOException {
+	protected HttpResponse get() throws ClientProtocolException, IOException {
 		httpRequest = new HttpGet(uri);
 		logger.debug("File status request: {}", httpRequest.getURI());
 		uri = null;
+		
 		return httpClient.execute(httpRequest);
 	}
 
@@ -391,5 +418,13 @@ public class WebHdfs {
 	}
 	public URI getURI(){
 		return uri;
+	}
+
+	protected HttpClient getHttpClient() {
+		return httpClient;
+	}
+
+	protected void setHttpClient(HttpClient httpClient) {
+		this.httpClient = httpClient;
 	}
 }

@@ -39,11 +39,12 @@ public final class ActionEventHeaderConstants {
 
 	public static final String SOURCE_FILE_NAME = "sourceFileName";
 
-//	public static final String ABSOLUTE_FILE_PATH = "absoluteFilePath"; // absolute
-																		// file
-																		// path
-																		// with
-																		// name
+	// public static final String ABSOLUTE_FILE_PATH = "absoluteFilePath"; //
+	// absolute
+	// file
+	// path
+	// with
+	// name
 	public static final String PRESERVE_BASE_PATH = "preserveBasePath";
 	public static final String PRESERVE_RELATIVE_PATH = "preserveRelativePath";
 	public static final String BASE_PATH = "basePath";
@@ -52,10 +53,10 @@ public final class ActionEventHeaderConstants {
 	public static final String SOURCE_FILE_TOTAL_READ = "sourceFileTotalRead";
 	public static final String USER_NAME = "user.name";
 	public static final String DB_NAME = "databaseName";
-	
+
 	public static final String HDFS_FILE_LOCATION = "fileLocation";
 	public static final String HDFS_BAST_PATH = "basePath";
-	
+
 	public static final String HIVE_TABLE_LOCATION = "hiveTableLocation";
 
 	public static final String SKIP_DATABASE_CREATION = "skipDatabaseCreation";
@@ -64,14 +65,14 @@ public final class ActionEventHeaderConstants {
 	public static final String LINES_TERMINATED_BY = "linesTerminatedBy";
 	public static final String HIVE_PARTITION_LOCATION = "hivePartitionLocation";
 	public static final String CLEANUP_REQUIRED = "cleanupRequired";
-	public static final String READ_COMPLETE = "readComplete";	
-	
+	public static final String READ_COMPLETE = "readComplete";
+
 	public static final String DATE = "dt";
 	public static final String SNAPSHOT = "SNAPSHOT";
 	public static final String TARGET_ENTITY_NAME = "targetEntityName";
 	public static final String HIVE_NON_PARTITION_NAMES = "hive_nonpartition_names";
 	public static final String HIVE_PARTITION_REQUIRED = "hivePartitionRequired";
-	
+
 	public static final String SCHEMA_TYPE_HIVE = "HIVE";
 	public static final String HIVE_HOST_NAME = "hiveHostName";
 	public static final String HIVE_PORT = "hivePort";
@@ -79,7 +80,17 @@ public final class ActionEventHeaderConstants {
 	public static final String HIVE_TABLE_NAME = "hiveTableName";
 	public static final String VALIDATION_READY = "validationReady";
 	public static final String HIVE_METASTORE_URI = "hive.metastore.uris";
-	
+
 	public static final String HDFS_OUTPUT_DIRECTORY = "hdfsOutputDirectory";
-	
+
+	public static class SwiftHeaders {
+		public static final String USER_NAME = "swiftUserName";
+		public static final String SECRET = "swiftSecret";
+		public static final String AUTH_URL = "swiftAuthUrl";
+		public static final String TENANT_ID = "tenantId";
+		public static final String TENANT_NAME = "tenantName";
+		public static final String CONTAINER_NAME = "swiftContainerName";
+		public static final String OBJECT_NAME = "swiftObjectName";
+	}
+
 }

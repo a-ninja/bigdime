@@ -34,6 +34,7 @@ import io.bigdime.libs.hdfs.WebHDFSConstants;
 import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.libs.hdfs.WebHdfsException;
 import io.bigdime.libs.hdfs.WebHdfsReader;
+import io.bigdime.libs.hdfs.WebHdfsWithKerberosAuth;
 
 /**
  * @formatter:off
@@ -77,6 +78,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 	private long fileLength = -1;
 	ReadableByteChannel fileChannel;
 
+	private InputStream inputStream;
 	@Autowired
 	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 
@@ -143,42 +145,9 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		} catch (RuntimeInfoStoreException e) {
 			throw new HandlerException("Unable to process message from file", e);
 		}
-		// try {
-		// handlerPhase = "processing WebHDFSReaderHandler";
-		// incrementInvocationCount();
-		// logger.info(handlerPhase, "entring WebHDFSReaderHandler");
-		//
-		// Status status = preProcess();
-		//
-		// if (status == Status.BACKOFF) {
-		// logger.debug(handlerPhase, "returning BACKOFF");
-		// return status;
-		// }
-		// return doProcess();
-		// } catch (IOException e) {
-		// logger.alert(ALERT_TYPE.INGESTION_FAILED,
-		// ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
-		// "error during reading file", e);
-		// throw new HandlerException("Unable to process message from file",
-		// e);
-		// } catch (RuntimeInfoStoreException e) {
-		// throw new HandlerException("Unable to process message from file",
-		// e);
-		// }
-
-		// List<ActionEvent> actionEvents = getHandlerContext().getEventList();
-		//
-		// logger.info(handlerPhase, "actionEvents={}", actionEvents);
-		//
-		// for (final ActionEvent inputEvent : actionEvents) {
-		// logger.info(handlerPhase, "inputEvent={}", inputEvent.getHeaders());
-		// process0(inputEvent);
-		// }
-		// } catch (Exception e) {
-		// throw new HandlerException("Unable to process message from file", e);
-		// }
-		// return Status.READY;
 	}
+
+	boolean ranOnce = false;
 
 	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		long nextIndexToRead = getTotalReadFromJournal();
@@ -189,37 +158,46 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		Status statustoReturn = Status.READY;
 		/////////////////
 
+		logger.debug(handlerPhase, "handler_id={} ranOnce={} readAll={}", getId(), ranOnce, readAll());
+		if (ranOnce) {
+			try {
+				Thread.sleep(5000);
+				return Status.READY;
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		// final byte[] readBody = new byte[bufferSize];
+		// int bytesRead = inputStream.read(readBody);
 		int bytesRead = fileChannel.read(readInto);
 		logger.debug(handlerPhase, "handler_id={} bytes_read={}", getId(), bytesRead);
 		if (bytesRead > 0) {
 			getSimpleJournal().setTotalRead((nextIndexToRead + bytesRead));
 			ActionEvent outputEvent = new ActionEvent();
 			byte[] readBody = new byte[bytesRead];
-			logger.debug(handlerPhase, "handler_id={} readBody.length={} remaining={} fileLength={}", getId(),
-					readBody.length, readInto.remaining(), fileLength);
+			logger.debug(handlerPhase, "handler_id={} readBody.length={} fileLength={} data_read", getId(),
+					readBody.length, fileLength);
 
 			readInto.flip();
 			readInto.get(readBody, 0, bytesRead);
-			outputEvent.setBody(readBody);
+			// outputEvent.setBody(readBody);
 
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
 			if (readAll()) {
+				logger.debug(handlerPhase, "\"read all data\" handler_id={}", getId());
 				getSimpleJournal().reset();
-				// logger.debug(handlerPhase,
-				// "_message=\"done reading file={}, there might be more files
-				// to process, returning CALLBACK\" handler_id={}
-				// headers_from_file_handler={}",
-				// currentFile.getAbsolutePath(), getId(),
-				// outputEvent.getHeaders());
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
-
+				ranOnce = true;
 			} else {
 				logger.debug(handlerPhase, "\"there is more data to process, returning CALLBACK\" handler_id={}",
 						getId());
 			}
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
 
+			logger.debug(handlerPhase, "_message=\"checking process submission, headers={}\" handler_id={}",
+					outputEvent.getHeaders(), getId());
 			processChannelSubmission(outputEvent);
 			return statustoReturn;
 		} else {
@@ -318,9 +296,8 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 				return false;
 			}
 			if (webHdfs1 == null) {
-				webHdfs1 = WebHdfs.getInstance(hostNames, port)
-						.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
-						.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
+				webHdfs1 = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
+						WebHDFSConstants.APPLICATION_OCTET_STREAM);
 			}
 			for (String directoryPath : availableHdfsDirectories) {
 				final WebHdfsReader webHdfsReader = new WebHdfsReader();
@@ -340,14 +317,13 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	private void initFile(String nextDescriptorToProcess) throws IOException, WebHdfsException {
 		if (webHdfs == null) {
-			webHdfs = WebHdfs.getInstance(hostNames, port)
-					.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
-					.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
+			webHdfs = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
+					WebHDFSConstants.APPLICATION_OCTET_STREAM);
 		}
 
 		WebHdfsReader webHdfsReader = new WebHdfsReader();
 
-		InputStream inputStream = webHdfsReader.getInputStream(webHdfs, nextDescriptorToProcess);
+		inputStream = webHdfsReader.getInputStream(webHdfs, nextDescriptorToProcess);
 
 		if (fileChannel != null) { // closing the channel explicitly
 			fileChannel.close();
@@ -362,9 +338,8 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 	private FileStatus getFileStatusFromWebhdfs(final String hdfsFilePath) throws IOException, WebHdfsException {
 		WebHdfs webHdfs1 = null;
 		try {
-			webHdfs1 = WebHdfs.getInstance(hostNames, port)
-					.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
-					.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
+			webHdfs1 = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
+					WebHDFSConstants.APPLICATION_OCTET_STREAM);
 			WebHdfsReader webHdfsReader = new WebHdfsReader();
 			FileStatus fileStatus = webHdfsReader.getFileStatus(webHdfs1, hdfsFilePath);
 			return fileStatus;
@@ -374,65 +349,53 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	}
 
-	/*private Status process0(final ActionEvent actionEvent) throws HandlerException, IOException, WebHdfsException {
-		// if (webHdfs == null) {
-		// webHdfs = WebHdfs.getInstance(hostNames, port)
-		// .addHeader(WebHDFSConstants.CONTENT_TYPE,
-		// WebHDFSConstants.APPLICATION_OCTET_STREAM)
-		// .addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
-		// }
-
-		if (readHdfsPathFrom.equalsIgnoreCase("headers")) {
-			hdfsPath = actionEvent.getHeaders().get(WebHDFSReaderHandlerConstants.HDFS_PATH);
-			logger.info(handlerPhase, "From headers, hdfsPath={}", hdfsPath);
-			hdfsPath = "/webhdfs/v1" + hdfsPath;
-			logger.info(handlerPhase, "From headers, hdfsPathWithWebhdfs={}", "/webhdfs/v1" + hdfsPath);
-		}
-		// WebHdfsReader webHdfsReader = new WebHdfsReader();
-
-		// List<String> fileNames = webHdfsReader.list(webHdfs, hdfsPath,
-		// false);
-		// logger.warn(handlerPhase, "directory={} files={}", hdfsPath,
-		// fileNames);
-
-		// InputStream inputStream = webHdfsReader.getInputStream(webHdfs,
-		// hdfsPath);
-		// ReadableByteChannel channel = Channels.newChannel(inputStream);
-		final ByteBuffer readInto = ByteBuffer.allocate(bufferSize);
-
-		int bytesRead = fileChannel.read(readInto);
-		if (bytesRead > 0) {
-			ActionEvent outputEvent = new ActionEvent();
-			byte[] readBody = new byte[bytesRead];
-
-			readInto.flip();
-			readInto.get(readBody, 0, bytesRead);
-			outputEvent.setBody(readBody);
-
-			outputEvent.setBody(readBody);
-
-			if (readAll()) {
-				getSimpleJournal().reset();
-				// logger.debug(handlerPhase,
-				// "_message=\"done reading file={}, there might be more files
-				// to process, returning CALLBACK\" handler_id={}
-				// headers_from_file_handler={}",
-				// currentFile.getAbsolutePath(), getId(),
-				// outputEvent.getHeaders());
-				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
-				return Status.CALLBACK;
-			} else {
-				logger.debug(handlerPhase, "\"there is more data to process, returning CALLBACK\" handler_id={}",
-						getId());
-				return Status.CALLBACK;
-			}
-		} else {
-			logger.debug(handlerPhase, "returning READY, no data read from the file");
-			return Status.READY;
-		}
-
-	}
-*/
+	/*
+	 * private Status process0(final ActionEvent actionEvent) throws
+	 * HandlerException, IOException, WebHdfsException { // if (webHdfs == null)
+	 * { // webHdfs = WebHdfs.getInstance(hostNames, port) //
+	 * .addHeader(WebHDFSConstants.CONTENT_TYPE, //
+	 * WebHDFSConstants.APPLICATION_OCTET_STREAM) //
+	 * .addParameter(WebHDFSConstants.USER_NAME, hdfsUser); // }
+	 * 
+	 * if (readHdfsPathFrom.equalsIgnoreCase("headers")) { hdfsPath =
+	 * actionEvent.getHeaders().get(WebHDFSReaderHandlerConstants.HDFS_PATH);
+	 * logger.info(handlerPhase, "From headers, hdfsPath={}", hdfsPath);
+	 * hdfsPath = "/webhdfs/v1" + hdfsPath; logger.info(handlerPhase,
+	 * "From headers, hdfsPathWithWebhdfs={}", "/webhdfs/v1" + hdfsPath); } //
+	 * WebHdfsReader webHdfsReader = new WebHdfsReader();
+	 * 
+	 * // List<String> fileNames = webHdfsReader.list(webHdfs, hdfsPath, //
+	 * false); // logger.warn(handlerPhase, "directory={} files={}", hdfsPath,
+	 * // fileNames);
+	 * 
+	 * // InputStream inputStream = webHdfsReader.getInputStream(webHdfs, //
+	 * hdfsPath); // ReadableByteChannel channel =
+	 * Channels.newChannel(inputStream); final ByteBuffer readInto =
+	 * ByteBuffer.allocate(bufferSize);
+	 * 
+	 * int bytesRead = fileChannel.read(readInto); if (bytesRead > 0) {
+	 * ActionEvent outputEvent = new ActionEvent(); byte[] readBody = new
+	 * byte[bytesRead];
+	 * 
+	 * readInto.flip(); readInto.get(readBody, 0, bytesRead);
+	 * outputEvent.setBody(readBody);
+	 * 
+	 * outputEvent.setBody(readBody);
+	 * 
+	 * if (readAll()) { getSimpleJournal().reset(); //
+	 * logger.debug(handlerPhase, // "_message=\"done reading file={}, there
+	 * might be more files // to process, returning CALLBACK\" handler_id={} //
+	 * headers_from_file_handler={}", // currentFile.getAbsolutePath(), getId(),
+	 * // outputEvent.getHeaders());
+	 * outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE,
+	 * Boolean.TRUE.toString()); return Status.CALLBACK; } else {
+	 * logger.debug(handlerPhase,
+	 * "\"there is more data to process, returning CALLBACK\" handler_id={}",
+	 * getId()); return Status.CALLBACK; } } else { logger.debug(handlerPhase,
+	 * "returning READY, no data read from the file"); return Status.READY; }
+	 * 
+	 * }
+	 */
 	private long getTotalReadFromJournal() throws HandlerException {
 		return getSimpleJournal().getTotalRead();
 	}

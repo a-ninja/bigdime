@@ -15,8 +15,6 @@ public enum HiveJdbcReaderHandlerConstants {
 
 	public static final String JDBC_URL = "jdbc-connection-url";
 	public static final String DRIVER_CLASS_NAME = "driver-class-name";
-	public static final String KERBEROS_USER_NAME = "kerberos-user-name";
-	public static final String KERBEROS_KEYTAB_PATH = "kerberos-keytab-path";
 
 	public static final String AUTH_CHOICE = "auth-choice";
 
@@ -33,9 +31,8 @@ public enum HiveJdbcReaderHandlerConstants {
 			return null;
 		}
 	}
-	
-	public static final String USER_NAME = "user-name";
-	public static final String PASSWORD = "password";
-	
+
+	public static final String HIVE_JDBC_USER_NAME = "hive-jdbc-user-name";
+	public static final String HIVE_JDBC_SECRET = "hive-jdbc-secret";
 
 }
