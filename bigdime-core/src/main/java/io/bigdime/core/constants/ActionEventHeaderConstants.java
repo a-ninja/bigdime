@@ -91,6 +91,7 @@ public final class ActionEventHeaderConstants {
 		public static final String TENANT_NAME = "tenantName";
 		public static final String CONTAINER_NAME = "swiftContainerName";
 		public static final String OBJECT_NAME = "swiftObjectName";
+		public static final String OBJECT_ETAG = "swiftEtag";
 	}
 
 }

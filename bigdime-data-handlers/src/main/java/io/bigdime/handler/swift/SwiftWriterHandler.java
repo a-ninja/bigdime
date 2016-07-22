@@ -79,10 +79,11 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		account = new AccountFactory(config).createAccount();
 		container = account.getContainer(containerName);
 
-		String pattern = "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)";
+		// String pattern =
+		// "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)";
 		logger.debug(handlerPhase, "_message=\"created account\"");
 
-		inputPattern = Pattern.compile(pattern);
+		inputPattern = Pattern.compile(inputFilePathPattern);
 	}
 
 	/**
@@ -132,7 +133,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 				if (moreEvents != null)
 					journal.getEventList().addAll(moreEvents);
 
-				getHandlerContext().setEventList(null);
+				// getHandlerContext().setEventList(null);
 
 				return process0(journal.getEventList());
 			} else {
@@ -146,7 +147,8 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		String swiftObjectName = outPattern;
 		Matcher m = inPattern.matcher(fileName);
 		while (m.find()) {
-			logger.debug(handlerPhase, "_message=\"matched filename\" filename={}", m.group());
+			logger.debug(handlerPhase, "_message=\"matched filename\" fileName={} matched_filename={}", fileName,
+					m.group());
 			String key = null;
 
 			for (int i = 1; i <= m.groupCount(); i++) {

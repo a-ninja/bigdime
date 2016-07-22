@@ -51,7 +51,7 @@ public class DataValidationHandler extends AbstractHandler {
 	@Autowired
 	private ValidatorFactory validatorFactory;
 	private List<Validator> validators = new ArrayList<>();
-	
+
 	@Autowired
 	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 
@@ -83,6 +83,8 @@ public class DataValidationHandler extends AbstractHandler {
 		Preconditions.checkArgument(!actionEvents.isEmpty(), "eventList in HandlerContext can't be empty");
 		ActionEvent actionEvent = actionEvents.get(0);
 		process0(actionEvent);
+		getHandlerContext().setEventList(null);// clear the context, assuming
+												// this is the last handler
 		return Status.READY;
 	}
 

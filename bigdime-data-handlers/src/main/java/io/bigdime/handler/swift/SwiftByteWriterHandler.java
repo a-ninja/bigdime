@@ -126,11 +126,14 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 			actionEvents.clear();
 			byte[] dataToWrite = baos.toByteArray();
 			baos.close();
-			logger.debug(handlerPhase, "_message=\"writing to swift\" swiftObjectName={} object_length={}",
+			logger.debug(handlerPhase, "_message=\"writing to swift\" swift_object_name={} object_length={}",
 					swiftObjectName, dataToWrite.length);
-			uploadBytes(container, swiftObjectName, dataToWrite);
+			StoredObject object = uploadBytes(container, swiftObjectName, dataToWrite);
 			final ActionEvent outputEvent = new ActionEvent();
 			outputEvent.setHeaders(actionEvent.getHeaders());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME, object.getName());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG, object.getEtag());
+			outputEvent.setBody(dataToWrite);
 			return outputEvent;
 		} finally {
 			try {
@@ -142,11 +145,12 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 		}
 	}
 
-	private void uploadBytes(final Container container, final String objectName, final byte[] data) {
+	private StoredObject uploadBytes(final Container container, final String objectName, final byte[] data) {
 		StoredObject object = container.getObject(objectName);
 		object.uploadObject(data);
-		logger.debug(handlerPhase, "_message=\"wrote to swift\" object_etag={} object_public_url={}", object.getEtag(),
-				object.getPublicURL());
+		logger.debug(handlerPhase,
+				"_message=\"wrote to swift\" swift_object_name={} object_etag={} object_public_url={}", objectName,
+				object.getEtag(), object.getPublicURL());
+		return object;
 	}
-
 }
