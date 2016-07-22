@@ -44,24 +44,41 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 		try {
 
 			boolean writeReady = false;
-			int eventsToWrite = 0;
+			int numEventsToWrite = 0;
 			ActionEvent actionEventToWrite = null;
 			for (ActionEvent actionEvent : actionEvents) {
-				eventsToWrite++;
-				logger.debug(handlerPhase, "headers={} uploadObjectType={}", actionEvent.getHeaders());
-
+				numEventsToWrite++;
 				String readCompleteFlag = actionEvent.getHeaders().get(ActionEventHeaderConstants.READ_COMPLETE);
 
 				if (!StringUtils.isBlank(readCompleteFlag) && Boolean.parseBoolean(readCompleteFlag) == true) {
 					writeReady = true;
 					actionEventToWrite = actionEvent;
+					logger.debug(handlerPhase, "_message=\"found readComplete\" headers={} eventsToWrite={}",
+							actionEvent.getHeaders(), numEventsToWrite);
 					break;
 				}
 			}
 
+			// If writeReady, write to swift and clear those events from list.
 			if (writeReady) {
-				ActionEvent outputEvent = writeToSwift(actionEventToWrite, actionEvents, eventsToWrite);
+				logger.debug(handlerPhase, "_message=\"calling writeToSwift\" numEventsToWrite={}", numEventsToWrite);
+				List<ActionEvent> eventListToWrite = actionEvents.subList(0, numEventsToWrite);
+				ActionEvent outputEvent = writeToSwift(actionEventToWrite, eventListToWrite);
 				getHandlerContext().createSingleItemEventList(outputEvent);
+				journal.reset();
+				eventListToWrite.clear();// clear the processed events from the
+											// list
+				/*
+				 * just return callback, dont worry about READY. Let there be an
+				 * extra iteration.
+				 */
+				statusToReturn = Status.CALLBACK;
+			} else {
+				/*
+				 * If there is nothing to write, need to backoff and get more
+				 * data from channel.
+				 */
+				statusToReturn = Status.BACKOFF;
 			}
 
 			if (!actionEvents.isEmpty()) {
@@ -69,15 +86,16 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 			}
 
 			// if we wrote and there is more data to write, callback
-			if (writeReady) {
-				if (!actionEvents.isEmpty()) {
-					statusToReturn = Status.CALLBACK;
-				} else {
-					statusToReturn = Status.READY; // need to call net handler in chain					
-				}
-			} else {
-				statusToReturn = Status.BACKOFF;
-			}
+			// if (writeReady) {
+			// if (!actionEvents.isEmpty()) {
+			// statusToReturn = Status.CALLBACK;
+			// } else {
+			// statusToReturn = Status.READY; // need to call next handler
+			// // in chain
+			// }
+			// } else {
+			// statusToReturn = Status.BACKOFF;
+			// }
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);
 		}
@@ -88,21 +106,31 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 
 	}
 
-	private ActionEvent writeToSwift(final ActionEvent actionEvent, List<ActionEvent> actionEvents,
-			final int eventsToWrite) throws IOException, HandlerException {
+	private ActionEvent writeToSwift(final ActionEvent actionEvent, List<ActionEvent> actionEvents)
+			throws IOException, HandlerException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
 			String swiftObjectName = computeSwiftObjectName(fileName, outputFilePathPattern, inputPattern);
-			for (int i = 0; i < eventsToWrite; i++) {
-				baos.write(actionEvents.remove(0).getBody());
+			long sizeToWrite = 0;
+			// long count = 0;
+			for (final ActionEvent thisEvent : actionEvents) {
+				// count++;
+				sizeToWrite = sizeToWrite + thisEvent.getBody().length;
+				// logger.debug(handlerPhase, "_message=\"before write to
+				// swift\" sizeToWrite={} count={}", sizeToWrite,
+				// count);
+				baos.write(thisEvent.getBody());
 			}
 
-			logger.debug(handlerPhase, "_message=\"writing to swift\" swiftObjectName={}", swiftObjectName);
+			actionEvents.clear();
 			byte[] dataToWrite = baos.toByteArray();
+			baos.close();
+			logger.debug(handlerPhase, "_message=\"writing to swift\" swiftObjectName={} object_length={}",
+					swiftObjectName, dataToWrite.length);
 			uploadBytes(container, swiftObjectName, dataToWrite);
-			final ActionEvent outputEvent = new ActionEvent(actionEvent);
-			outputEvent.setBody(dataToWrite);
+			final ActionEvent outputEvent = new ActionEvent();
+			outputEvent.setHeaders(actionEvent.getHeaders());
 			return outputEvent;
 		} finally {
 			try {
@@ -117,6 +145,8 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 	private void uploadBytes(final Container container, final String objectName, final byte[] data) {
 		StoredObject object = container.getObject(objectName);
 		object.uploadObject(data);
+		logger.debug(handlerPhase, "_message=\"wrote to swift\" object_etag={} object_public_url={}", object.getEtag(),
+				object.getPublicURL());
 	}
 
 }

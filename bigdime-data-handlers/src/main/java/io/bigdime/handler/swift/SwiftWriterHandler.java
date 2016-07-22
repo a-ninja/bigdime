@@ -129,14 +129,17 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 			if (actionEvents != null && !actionEvents.isEmpty()) {
 				// process for CALLBACK status.
 				List<ActionEvent> moreEvents = getHandlerContext().getEventList();
-				if (moreEvents!=null) journal.getEventList().addAll(moreEvents);
-				
+				if (moreEvents != null)
+					journal.getEventList().addAll(moreEvents);
+
 				getHandlerContext().setEventList(null);
-				
+
 				return process0(journal.getEventList());
+			} else {
+				// Found journal with no events, backoff.
+				return Status.BACKOFF;
 			}
 		}
-		return null;
 	}
 
 	protected String computeSwiftObjectName(final String fileName, final String outPattern, final Pattern inPattern) {

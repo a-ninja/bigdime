@@ -147,7 +147,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		}
 	}
 
-	boolean ranOnce = false;
+	// boolean ranOnce = false;
 
 	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		long nextIndexToRead = getTotalReadFromJournal();
@@ -158,26 +158,29 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		Status statustoReturn = Status.READY;
 		/////////////////
 
-		logger.debug(handlerPhase, "handler_id={} ranOnce={} readAll={}", getId(), ranOnce, readAll());
-		if (ranOnce) {
-			try {
-				Thread.sleep(5000);
-				return Status.READY;
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+		// logger.debug(handlerPhase, "handler_id={} ranOnce={} readAll={}",
+		// getId(), ranOnce, readAll());
+		// if (ranOnce) {
+		// try {
+		// Thread.sleep(5000);
+		// return Status.READY;
+		// } catch (InterruptedException e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// }
+		// }
 		// final byte[] readBody = new byte[bufferSize];
 		// int bytesRead = inputStream.read(readBody);
 		int bytesRead = fileChannel.read(readInto);
 		logger.debug(handlerPhase, "handler_id={} bytes_read={}", getId(), bytesRead);
 		if (bytesRead > 0) {
 			getSimpleJournal().setTotalRead((nextIndexToRead + bytesRead));
+			long readCount = getSimpleJournal().getReadCount();
+			getSimpleJournal().setReadCount(readCount + 1);
 			ActionEvent outputEvent = new ActionEvent();
 			byte[] readBody = new byte[bytesRead];
-			logger.debug(handlerPhase, "handler_id={} readBody.length={} fileLength={} data_read", getId(),
-					readBody.length, fileLength);
+			logger.debug(handlerPhase, "handler_id={} readBody.length={} fileLength={} readCount={}", getId(),
+					readBody.length, fileLength, getSimpleJournal().getReadCount());
 
 			readInto.flip();
 			readInto.get(readBody, 0, bytesRead);
@@ -186,15 +189,17 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
 			if (readAll()) {
-				logger.debug(handlerPhase, "\"read all data\" handler_id={}", getId());
+				logger.debug(handlerPhase, "\"read all data\" handler_id={} readCount={}", getId(),
+						getSimpleJournal().getReadCount());
 				getSimpleJournal().reset();
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
-				ranOnce = true;
+				// ranOnce = true;
 			} else {
 				logger.debug(handlerPhase, "\"there is more data to process, returning CALLBACK\" handler_id={}",
 						getId());
 			}
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
+			outputEvent.getHeaders().put("read_count", "" + getSimpleJournal().getReadCount());
 
 			logger.debug(handlerPhase, "_message=\"checking process submission, headers={}\" handler_id={}",
 					outputEvent.getHeaders(), getId());
