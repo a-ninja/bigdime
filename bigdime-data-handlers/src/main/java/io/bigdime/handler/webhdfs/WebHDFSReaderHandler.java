@@ -200,6 +200,8 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			}
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
 			outputEvent.getHeaders().put("read_count", "" + getSimpleJournal().getReadCount());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
 			logger.debug(handlerPhase, "_message=\"checking process submission, headers={}\" handler_id={}",
 					outputEvent.getHeaders(), getId());

@@ -131,5 +131,9 @@
 			<artifactId>jackson-core-asl</artifactId>
 			<groupId>org.codehaus.jackson</groupId>
 		</dependency>
+		<dependency>
+			<groupId>org.javaswift</groupId>
+			<artifactId>joss</artifactId>
+		</dependency>
 	</dependencies>
 </project>

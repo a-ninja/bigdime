@@ -72,30 +72,31 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				 * just return callback, dont worry about READY. Let there be an
 				 * extra iteration.
 				 */
-				statusToReturn = Status.CALLBACK;
-			} else {
+//				statusToReturn = Status.CALLBACK;
+			} 
+//			else {
 				/*
 				 * If there is nothing to write, need to backoff and get more
 				 * data from channel.
 				 */
-				statusToReturn = Status.BACKOFF;
-			}
+//				statusToReturn = Status.BACKOFF;
+//			}
 
 			if (!actionEvents.isEmpty()) {
 				journal.setEventList(actionEvents);
 			}
 
 			// if we wrote and there is more data to write, callback
-			// if (writeReady) {
-			// if (!actionEvents.isEmpty()) {
-			// statusToReturn = Status.CALLBACK;
-			// } else {
-			// statusToReturn = Status.READY; // need to call next handler
-			// // in chain
-			// }
-			// } else {
-			// statusToReturn = Status.BACKOFF;
-			// }
+			if (writeReady) {
+				if (!actionEvents.isEmpty()) {
+					statusToReturn = Status.CALLBACK;
+				} else {
+					statusToReturn = Status.READY; // need to call next handler
+					// in chain
+				}
+			} else {
+				statusToReturn = Status.BACKOFF;
+			}
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);
 		}

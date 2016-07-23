@@ -2,6 +2,7 @@ package io.bigdime.handler.hive;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -79,6 +80,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private String hiveQuery = null;
 	private final Map<String, String> hiveConfigurations = new HashMap<>();
 
+	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMddHHmmssSSS");
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
 
@@ -160,21 +162,21 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	}
 
 	private void setHdfsOutputDirectory() {
-		final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyyMMdd");
+		final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 		if (!baseOutputDirectory.endsWith(File.separator))
 			outputDirectory = baseOutputDirectory + File.separator;
 		else
 			outputDirectory = baseOutputDirectory;
 		String dateTime = dtf.print(System.currentTimeMillis());
 		outputDirectory = outputDirectory + dateTime + File.separator + entityName;
-		
-		//TODO: remove harcoding
-		outputDirectory = "/user/b_ndata/bigdime/newdir2/20160720/dw_lstg_gen";
+
+		// TODO: remove harcoding
+//		outputDirectory = "/user/b_ndata/bigdime/newdir3/20160720/dw_lstg_gen";
 		logger.debug(handlerPhase, "outputDirectory=\"{}\"", outputDirectory);
 
 		// hiveConfigurations.put(dataset, dataset)
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
-		hiveConfigurations.put("DATE", dateTime);
+		hiveConfigurations.put("DATE", dateTime);// todo: remove hardcoding
 	}
 
 	@Override
@@ -189,9 +191,12 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			final Statement stmt = connection.createStatement();
 			runHiveConfs(stmt);
 
-			logger.debug(handlerPhase, "hiveQuery=\"{}\" hiveConfigurations=\"{}\"", hiveQuery, hiveConfigurations);
-			//TODO: remove harcoding
-//			stmt.execute(hiveQuery);// no resultset is returned
+			String jobName = "bigdime-dw" + "." + getProcessId() + "." + jobDtf.print(System.currentTimeMillis());
+			logger.debug(handlerPhase, "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", hiveQuery,
+					hiveConfigurations, jobName);
+			// TODO: remove harcoding
+			stmt.execute("set mapred.job.name=" + jobName);
+			stmt.execute(hiveQuery);// no resultset is returned
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			getHandlerContext().createSingleItemEventList(outputEvent);
@@ -241,4 +246,24 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		}
 	}
 
+	private String getProcessId() {
+
+		try {
+			final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+			final int index = jvmName.indexOf('@');
+
+			if (index < 1) {
+				return "unknown";
+			}
+
+			try {
+				return Long.toString(Long.parseLong(jvmName.substring(0, index)));
+			} catch (NumberFormatException e) {
+			}
+			return "unknown";
+		} catch (Exception ex) {
+			logger.warn(handlerPhase, "_message=\"unable to obtain the process_id\"", ex);
+			return "unknown";
+		}
+	}
 }
