@@ -388,18 +388,22 @@ public abstract class AbstractHandler implements Handler {
 	public boolean isFirstRun() {
 		return getInvocationCount() == 1;
 	}
-	
+
 	public String getEntityNameFromHeader() {
 		List<ActionEvent> eventList = getHandlerContext().getEventList();
-		if (eventList!=null && !eventList.isEmpty()) {
+		if (eventList != null && !eventList.isEmpty()) {
 			return eventList.get(0).getHeaders().get(ActionEventHeaderConstants.ENTITY_NAME);
 		}
 		return null;
 	}
-		public List<String> getAvailableDirectoriesFromHeader(final String headerName) {
+
+	public List<String> getAvailableDirectoriesFromHeader(final String headerName) {
+		logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\"", getId(), headerName);
 		List<ActionEvent> eventList = getHandlerContext().getEventList();
 		List<String> availableHdfsDirectories = new ArrayList<>();
-		for (final ActionEvent inputEvent:eventList) {
+		for (final ActionEvent inputEvent : eventList) {
+			logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\" header_value={}", getId(),
+					headerName, inputEvent.getHeaders().get(headerName));
 			availableHdfsDirectories.add(inputEvent.getHeaders().get(headerName));
 		}
 		return availableHdfsDirectories;
