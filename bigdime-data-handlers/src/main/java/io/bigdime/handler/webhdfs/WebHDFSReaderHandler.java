@@ -32,11 +32,11 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.handler.file.FileInputStreamReaderHandlerConstants;
 import io.bigdime.libs.hdfs.FileStatus;
-import io.bigdime.libs.hdfs.WebHDFSConstants;
+import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
 import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.libs.hdfs.WebHdfsException;
+import io.bigdime.libs.hdfs.WebHdfsFactory;
 import io.bigdime.libs.hdfs.WebHdfsReader;
-import io.bigdime.libs.hdfs.WebHdfsWithKerberosAuth;
 
 /**
  * @formatter:off
@@ -70,7 +70,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 	private String hdfsUser;
 	private WebHdfs webHdfs;
 	private String entityName;
-
+	private HDFS_AUTH_OPTION authOption;
 	private int bufferSize;
 
 	private String readHdfsPathFrom; // CONFIG | HEADERS
@@ -104,11 +104,13 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			bufferSize = PropertyHelper.getIntProperty(getPropertyMap(),
 					FileInputStreamReaderHandlerConstants.BUFFER_SIZE, DEFAULT_BUFFER_SIZE);
 
-			logger.info(handlerPhase, "hdfsUser={} hdfsPath={} readHdfsPathFrom={}", hdfsUser, hdfsPath,
-					readHdfsPathFrom);
+			final String authChoice = PropertyHelper.getStringProperty(getPropertyMap(),
+					WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString());
 
-			logger.info(handlerPhase, "hostNames={} port={} hdfsFileName={} hdfsPath={} hdfsUser={}", hostNames, port,
-					hdfsFileName, hdfsPath, hdfsUser);
+			authOption = HDFS_AUTH_OPTION.getByName(authChoice);
+			logger.info(handlerPhase,
+					"hostNames={} port={} hdfsUser={} hdfsPath={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={}",
+					hostNames, port, hdfsUser, hdfsPath, hdfsFileName, readHdfsPathFrom, authChoice, authOption);
 		} catch (final Exception ex) {
 			throw new AdaptorConfigurationException(ex);
 		}
@@ -310,8 +312,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 				return false;
 			}
 			if (webHdfs1 == null) {
-				webHdfs1 = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
-						WebHDFSConstants.APPLICATION_OCTET_STREAM);
+				webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 			}
 			for (String directoryPath : availableHdfsDirectories) {
 				final WebHdfsReader webHdfsReader = new WebHdfsReader();
@@ -331,8 +332,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	private void initFile(String nextDescriptorToProcess) throws IOException, WebHdfsException {
 		if (webHdfs == null) {
-			webHdfs = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
-					WebHDFSConstants.APPLICATION_OCTET_STREAM);
+			webHdfs = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 		}
 
 		WebHdfsReader webHdfsReader = new WebHdfsReader();
@@ -352,8 +352,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 	private FileStatus getFileStatusFromWebhdfs(final String hdfsFilePath) throws IOException, WebHdfsException {
 		WebHdfs webHdfs1 = null;
 		try {
-			webHdfs1 = WebHdfsWithKerberosAuth.getInstance(hostNames, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
-					WebHDFSConstants.APPLICATION_OCTET_STREAM);
+			webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 			WebHdfsReader webHdfsReader = new WebHdfsReader();
 			FileStatus fileStatus = webHdfsReader.getFileStatus(webHdfs1, hdfsFilePath);
 			return fileStatus;

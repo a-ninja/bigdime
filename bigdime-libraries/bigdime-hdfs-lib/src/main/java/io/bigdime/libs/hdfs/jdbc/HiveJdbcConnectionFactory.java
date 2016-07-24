@@ -1,4 +1,4 @@
-package io.bigdime.handler.hive;
+package io.bigdime.libs.hdfs.jdbc;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -8,17 +8,15 @@ import java.util.Map;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.core.commons.AdaptorLogger;
 
 @Component
 @Scope("prototype")
 public class HiveJdbcConnectionFactory {
-	private static final AdaptorLogger logger = new AdaptorLogger(
-			LoggerFactory.getLogger(HiveJdbcConnectionFactory.class));
+	private static final Logger logger = LoggerFactory.getLogger(HiveJdbcConnectionFactory.class);
 
 	private static final String SEMI_COLON = ";";
 	private static final String QUESTION_MARK = "?";
@@ -61,15 +59,7 @@ public class HiveJdbcConnectionFactory {
 		datasource.setUrl(jdbcUrlWithConf);
 		loginUserFromKeytab(conf, keytabUser, keytabPath);
 
-		// datasource.setConnectionProperties("mapred.job.queue.name=default");
 		return datasource.getConnection();
-
-		// Class.forName(driverClassName);
-		// Properties p = new Properties();
-		// p.put("mapred.job.queue.name", "default");
-		// p.put("mapred.job.queuename", "default");
-		// p.put("mapreduce.job.queuename", "default");
-		// return DriverManager.getConnection(jdbcUrlWithConf, p);
 
 	}
 

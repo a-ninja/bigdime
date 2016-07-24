@@ -10,8 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -79,31 +77,6 @@ public class WebHdfsReader {
 
 		return response.getEntity().getContent();
 	}
-
-	// public static void main(String[] args) {
-	//
-	// WebHdfs webHdfs = WebHdfs.getInstance("sandbox.hortonworks.com", 50070);
-	// try {
-	// List<String> files = new WebHdfsReader().list(webHdfs,
-	// "/webhdfs/v1/user/username", false);
-	// // System.out.println(files);
-	//
-	// // new WebHdfsReader().getInputStream(webHdfs,
-	// // "/webhdfs/v1/user/username/sandbox_dir/000000_0");
-	//
-	// // String fileType = new WebHdfsReader().getFileType(webHdfs,
-	// // "/webhdfs/v1/user/username");
-	// // System.out.println("fileType should be DIRECTORY = " + fileType);
-	// //
-	// // fileType = new WebHdfsReader().getFileType(webHdfs,
-	// // "/webhdfs/v1/user/username/sandbox_dir/000000_0");
-	// // System.out.println("fileType should be FILE = " + fileType);
-	//
-	// } catch (Exception e) {
-	// // TODO Auto-generated catch block
-	// e.printStackTrace();
-	// }
-	// }
 
 	private WebHdfsListStatusResponse parseJson(final InputStream stream) throws JsonProcessingException, IOException {
 		final ObjectMapper mapper = new ObjectMapper();

@@ -93,6 +93,7 @@ public final class ActionEventHeaderConstants {
 		public static final String OBJECT_NAME = "swiftObjectName";
 		public static final String OBJECT_ETAG = "swiftEtag";
 		public static final String SOURCE_CHECKSUM = "sourceChecksum";
+		public static final String VALIDATION_RETRIES = "validationRetries";
 	}
 
 }

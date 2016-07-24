@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 
- * @author adwang, Neeraj Jain, mnamburi
+ * @author Neeraj Jain
  *
  */
 public class WebHdfsWithKerberosAuth extends WebHdfs {

@@ -32,5 +32,5 @@ public final class WebHDFSReaderHandlerConstants {
 	 * specified, the path and partitions are left unchanged.
 	 */
 	public static final String HDFS_PATH_LOWER_UPPER_CASE = "hdfs-path-lower-upper-case";
-
+	public static final String AUTH_CHOICE = "auth-choice";
 }

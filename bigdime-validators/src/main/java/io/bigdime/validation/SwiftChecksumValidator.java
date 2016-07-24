@@ -37,7 +37,7 @@ public class SwiftChecksumValidator implements Validator {
 	private Account account;
 	private Container container;
 
-	protected void init(ActionEvent actionEvent) {
+	protected void setupContainer(ActionEvent actionEvent) {
 
 		username = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.USER_NAME);
 		password = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.SECRET);
@@ -62,40 +62,53 @@ public class SwiftChecksumValidator implements Validator {
 	 */
 	@Override
 	public ValidationResponse validate(ActionEvent actionEvent) throws DataValidationException {
+		return validateWithRetry(actionEvent);
+	}
+
+	public ValidationResponse validateWithRetry(ActionEvent actionEvent) throws DataValidationException {
+		String sourceChecksum = DigestUtils.md5Hex(actionEvent.getBody());
+		String objectEtag = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG);
+
+		actionEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SOURCE_CHECKSUM, sourceChecksum);
+
+		ValidationResponse validationResponse = doValidate(actionEvent);
+		if (validationResponse.getValidationResult() == ValidationResult.FAILED) {
+			String objectName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME);
+			setupContainer(actionEvent);
+			StoredObject object = container.getObject(objectName);
+			final String newEtag = object.getEtag();
+			// save the old etag
+			actionEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG + "_0", objectEtag);
+			// setup the new etag for validation
+			actionEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG, newEtag);
+			logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
+					"processing SwiftChecksumValidator", "_message=\"validation retry\" objectEtag={}", newEtag);
+			validationResponse = doValidate(actionEvent);
+		}
+		return validationResponse;
+	}
+
+	public ValidationResponse doValidate(ActionEvent actionEvent) throws DataValidationException {
 
 		String objectName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME);
 		String objectEtag = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG);
+		String sourceChecksum = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.SOURCE_CHECKSUM);
 
-		String sourceChecksum = DigestUtils.md5Hex(actionEvent.getBody());
-		// StoredObject storedObject = container.getObject(objectName);
 		logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
-				"processing SwiftChecksumValidator", "objectEtag={} sourceChecksum={}", objectEtag, sourceChecksum);
+				"processing SwiftChecksumValidator", "objectName={] objectEtag={} sourceChecksum={}", objectName,
+				objectEtag, sourceChecksum);
 
-		actionEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SOURCE_CHECKSUM, sourceChecksum);
 		ValidationResponse validationResponse = new ValidationResponse();
 		if (objectEtag.equalsIgnoreCase(sourceChecksum))
 			validationResponse.setValidationResult(ValidationResult.PASSED);
 		else {
-			logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
+			logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
 					"processing SwiftChecksumValidator",
-					"_message=\"validation failed, will be retried\" objectEtag={} sourceChecksum={}", objectEtag,
-					sourceChecksum);
-			StoredObject object = container.getObject(objectName);
-			final String newEtag = object.getEtag();
-			logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
-					"processing SwiftChecksumValidator",
-					"_message=\"validation retry\" objectEtag={} sourceChecksum={}", newEtag, sourceChecksum);
-			if (objectEtag.equalsIgnoreCase(sourceChecksum)) {
-				validationResponse.setValidationResult(ValidationResult.PASSED);
-			} else {
-				logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
-						"processing SwiftChecksumValidator",
-						"_message=\"validation failed after retry\" objectEtag={} sourceChecksum={}", newEtag,
-						sourceChecksum);
-				validationResponse.setValidationResult(ValidationResult.FAILED);
-			}
-		}
+					"_message=\"validation failed\" objectName={} objectEtag={} sourceChecksum={}", objectName,
+					objectEtag, sourceChecksum);
+			validationResponse.setValidationResult(ValidationResult.FAILED);
 
+		}
 		return validationResponse;
 	}
 

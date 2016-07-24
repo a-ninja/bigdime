@@ -18,19 +18,7 @@ public enum HiveJdbcReaderHandlerConstants {
 
 	public static final String AUTH_CHOICE = "auth-choice";
 
-	public enum AUTH_OPTION {
-		KERBEROS, PASSWORD;
-
-		public static AUTH_OPTION getByName(final String arg) {
-			if (arg == null)
-				return null;
-			if (arg.equalsIgnoreCase(KERBEROS.toString()))
-				return KERBEROS;
-			if (arg.equalsIgnoreCase(PASSWORD.toString()))
-				return PASSWORD;
-			return null;
-		}
-	}
+	public static final String GO_BACK_DAYS = "go-back-days";
 
 	public static final String HIVE_JDBC_USER_NAME = "hive-jdbc-user-name";
 	public static final String HIVE_JDBC_SECRET = "hive-jdbc-secret";

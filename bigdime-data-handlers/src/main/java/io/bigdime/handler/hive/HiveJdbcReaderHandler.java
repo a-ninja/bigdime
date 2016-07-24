@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import com.google.common.base.Preconditions;
+
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
@@ -27,7 +29,8 @@ import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
-import io.bigdime.handler.hive.HiveJdbcReaderHandlerConstants.AUTH_OPTION;
+import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
+import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
 
 /**
  * 
@@ -69,7 +72,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private String jdbcUrl = null;// e.g.
 									// jdbc:hive2://host:10000/default;principal=hadoop/host@DOMAIN.COM
 	private String driverClassName = null;
-	private AUTH_OPTION authOption;
+	private HDFS_AUTH_OPTION authOption;
 
 	private String userName = null;// e.g. username
 	private String password = null; // e.g. password
@@ -84,12 +87,21 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 
 	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 	final DateTimeFormatter hdfsOutputPathDtf = DateTimeFormat.forPattern("yyyyMMdd");
+
+	final private int DEFAULT_GO_BACK_DAYS = 1;
+
+	/**
+	 * How many days should we go back to process the records. 0 means process
+	 * todays records, 1 means process yesterdays records
+	 */
+	private int goBackDays = DEFAULT_GO_BACK_DAYS;
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
 
 	private Connection connection = null;
 
 	private long processEntryTime = 0;
+	private long goBackDaysSameTime = 0;
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -114,11 +126,19 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 				srcDescEntry.getValue());
 
 		@SuppressWarnings("unchecked")
-		Map<String, Object> srcDescValueMap = (Map) srcDescEntry.getKey();
+		Map<String, Object> srcDescValueMap = (Map<String, Object>) srcDescEntry.getKey();
 
 		entityName = PropertyHelper.getStringProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.ENTITY_NAME);
 		hiveQuery = PropertyHelper.getStringProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.HIVE_QUERY);
-		logger.debug(handlerPhase, "entityName=\"{}\" hiveQuery=\"{}\"", entityName, hiveQuery);
+
+		goBackDays = PropertyHelper.getIntProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.GO_BACK_DAYS,
+				DEFAULT_GO_BACK_DAYS);
+
+		logger.debug(handlerPhase, "entityName=\"{}\" hiveQuery=\"{}\" goBackDays={}", entityName, hiveQuery,
+				goBackDays);
+
+		Preconditions.checkArgument(goBackDays >= 0,
+				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS + " has to be a non-negative value.");
 
 		for (String key : srcDescValueMap.keySet()) {
 			logger.debug(handlerPhase, "srcDesc-key=\"{}\" srcDesc-value=\"{}\"", key, srcDescValueMap.get(key));
@@ -131,9 +151,9 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		driverClassName = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.DRIVER_CLASS_NAME);
 		final String authChoice = PropertyHelper.getStringProperty(getPropertyMap(),
-				HiveJdbcReaderHandlerConstants.AUTH_CHOICE, AUTH_OPTION.KERBEROS.toString());
+				HiveJdbcReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString());
 
-		authOption = AUTH_OPTION.getByName(authChoice);
+		authOption = HDFS_AUTH_OPTION.getByName(authChoice);
 
 		userName = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.HIVE_JDBC_USER_NAME);
@@ -172,8 +192,8 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		else
 			outputDirectory = baseOutputDirectory;
 
-		final String hiveConfDate = hiveQueryDtf.print(processEntryTime);
-		final String hdfsOutputPathDate = hdfsOutputPathDtf.print(processEntryTime);
+		final String hiveConfDate = getHiveConfDate();
+		final String hdfsOutputPathDate = getProcessMethodEntryDateTime();
 		outputDirectory = outputDirectory + hdfsOutputPathDate + File.separator + entityName;
 
 		logger.debug(handlerPhase, "hiveConfDate={} hdfsOutputPathDate={} outputDirectory=\"{}\"", hiveConfDate,
@@ -184,9 +204,29 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 		hiveConfigurations.put("DATE", hiveConfDate);
 	}
 
+	private String getHiveConfDate() {
+		final String hiveConfDate = hiveQueryDtf.print(goBackDaysSameTime);
+		return hiveConfDate;
+	}
+
+	private String getProcessMethodEntryDateTime() {
+		final String processMethodEntryDateTime = hdfsOutputPathDtf.print(processEntryTime);
+		return processMethodEntryDateTime;
+	}
+
+	private void setProcessMethodEntryDateTime() {
+		processEntryTime = System.currentTimeMillis();
+	}
+
+	private void setHiveConfDateTime() {
+		goBackDaysSameTime = processEntryTime - goBackDays * 24 * 60 * 60 * 1000;
+	}
+
 	@Override
 	public Status process() throws HandlerException {
-		processEntryTime = System.currentTimeMillis();
+		setProcessMethodEntryDateTime();
+		setHiveConfDateTime();
+
 		handlerPhase = "processing HiveJdbcReaderHandler";
 		incrementInvocationCount();
 		logger.debug(handlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
@@ -229,11 +269,11 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 
 	private void setupConnection() throws SQLException, IOException, ClassNotFoundException {
 		if (connection == null) {
-			if (authOption == AUTH_OPTION.KERBEROS) {
+			if (authOption == HDFS_AUTH_OPTION.KERBEROS) {
 				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(driverClassName, jdbcUrl,
 						userName, password, hiveConfigurations);
 				logger.debug(handlerPhase, "_message=\"connected to db\"");
-			} else if (authOption == AUTH_OPTION.PASSWORD) {
+			} else if (authOption == HDFS_AUTH_OPTION.PASSWORD) {
 				connection = hiveJdbcConnectionFactory.getConnection(driverClassName, jdbcUrl, userName, password,
 						hiveConfigurations);
 				logger.debug(handlerPhase, "_message=\"connected to db\"");
