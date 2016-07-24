@@ -64,6 +64,7 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				logger.debug(handlerPhase, "_message=\"calling writeToSwift\" numEventsToWrite={}", numEventsToWrite);
 				List<ActionEvent> eventListToWrite = actionEvents.subList(0, numEventsToWrite);
 				ActionEvent outputEvent = writeToSwift(actionEventToWrite, eventListToWrite);
+
 				getHandlerContext().createSingleItemEventList(outputEvent);
 				journal.reset();
 				eventListToWrite.clear();// clear the processed events from the
@@ -79,11 +80,10 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				if (!actionEvents.isEmpty()) {
 					statusToReturn = Status.CALLBACK;
 				} else {
-					statusToReturn = Status.READY; // need to call next handler
-					// in chain
+					statusToReturn = Status.READY;
 				}
 			} else {
-				statusToReturn = Status.BACKOFF;
+				statusToReturn = Status.BACKOFF; // no need to call next handler
 			}
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);
@@ -122,6 +122,7 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 			outputEvent.setHeaders(actionEvent.getHeaders());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME, object.getName());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG, object.getEtag());
+			setOutputEventHeaders(outputEvent);
 			outputEvent.setBody(dataToWrite);
 			return outputEvent;
 		} finally {
@@ -142,4 +143,5 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				object.getEtag(), object.getPublicURL());
 		return object;
 	}
+
 }

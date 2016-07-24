@@ -1,6 +1,11 @@
 package io.bigdime.validation;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.javaswift.joss.client.factory.AccountConfig;
+import org.javaswift.joss.client.factory.AccountFactory;
+import org.javaswift.joss.model.Account;
+import org.javaswift.joss.model.Container;
+import org.javaswift.joss.model.StoredObject;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -20,39 +25,36 @@ import io.bigdime.core.validation.Validator;
 @Scope("prototype")
 
 public class SwiftChecksumValidator implements Validator {
-	// protected String containerName;
-	// protected String username;
-	// protected String password; // make it char[]
-	// protected String authUrl;
-	// protected String tenantId;
-	// protected String tenantName;
-	// private AccountConfig config;
-	// private Account account;
-	// private Container container;
+	// @Autowired
 
-	// protected void init(ActionEvent actionEvent) {
-	//
-	// username =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.USER_NAME);
-	// password =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.SECRET);
-	// authUrl =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.AUTH_URL);
-	// tenantId =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID);
-	// tenantName =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME);
-	// containerName =
-	// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME);
-	// config = new AccountConfig();
-	// config.setUsername(username);
-	// config.setPassword(password);
-	// config.setAuthUrl(authUrl);
-	// config.setTenantId(tenantId);
-	// config.setTenantName(tenantName);
-	// account = new AccountFactory(config).createAccount();
-	// container = account.getContainer(containerName);
-	// }
+	private String containerName;
+	private String username;
+	private String password; // make it char[]
+	private String authUrl;
+	private String tenantId;
+	private String tenantName;
+	private AccountConfig config;
+	private Account account;
+	private Container container;
+
+	protected void init(ActionEvent actionEvent) {
+
+		username = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.USER_NAME);
+		password = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.SECRET);
+		authUrl = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.AUTH_URL);
+		tenantId = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID);
+		tenantName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME);
+		containerName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME);
+		config = new AccountConfig();
+		config.setUsername(username);
+		config.setPassword(password);
+		config.setAuthUrl(authUrl);
+		config.setTenantId(tenantId);
+		config.setTenantName(tenantName);
+		account = new AccountFactory(config).createAccount();
+		container = account.getContainer(containerName);
+	}
+
 	private static final Logger logger = LoggerFactory.getLogger(SwiftChecksumValidator.class);
 
 	/**
@@ -61,8 +63,7 @@ public class SwiftChecksumValidator implements Validator {
 	@Override
 	public ValidationResponse validate(ActionEvent actionEvent) throws DataValidationException {
 
-		// String objectName =
-		// actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME);
+		String objectName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_NAME);
 		String objectEtag = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.OBJECT_ETAG);
 
 		String sourceChecksum = DigestUtils.md5Hex(actionEvent.getBody());
@@ -70,19 +71,37 @@ public class SwiftChecksumValidator implements Validator {
 		logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
 				"processing SwiftChecksumValidator", "objectEtag={} sourceChecksum={}", objectEtag, sourceChecksum);
 
+		actionEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SOURCE_CHECKSUM, sourceChecksum);
 		ValidationResponse validationResponse = new ValidationResponse();
 		if (objectEtag.equalsIgnoreCase(sourceChecksum))
 			validationResponse.setValidationResult(ValidationResult.PASSED);
-		else
-			validationResponse.setValidationResult(ValidationResult.FAILED);
+		else {
+			logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
+					"processing SwiftChecksumValidator",
+					"_message=\"validation failed, will be retried\" objectEtag={} sourceChecksum={}", objectEtag,
+					sourceChecksum);
+			StoredObject object = container.getObject(objectName);
+			final String newEtag = object.getEtag();
+			logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
+					"processing SwiftChecksumValidator",
+					"_message=\"validation retry\" objectEtag={} sourceChecksum={}", newEtag, sourceChecksum);
+			if (objectEtag.equalsIgnoreCase(sourceChecksum)) {
+				validationResponse.setValidationResult(ValidationResult.PASSED);
+			} else {
+				logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
+						"processing SwiftChecksumValidator",
+						"_message=\"validation failed after retry\" objectEtag={} sourceChecksum={}", newEtag,
+						sourceChecksum);
+				validationResponse.setValidationResult(ValidationResult.FAILED);
+			}
+		}
 
 		return validationResponse;
 	}
 
 	@Override
 	public String getName() {
-		// TODO Auto-generated method stub
-		return null;
+		return "swift-checksum-validator";
 	}
 
 }

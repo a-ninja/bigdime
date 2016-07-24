@@ -197,7 +197,8 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			final Statement stmt = connection.createStatement();
 			runHiveConfs(stmt);
 
-			String jobName = "bigdime-dw" + "." + getProcessId() + "." + jobDtf.print(System.currentTimeMillis());
+			String jobName = "bigdime-dw" + "." + entityName + "." + getProcessId() + "."
+					+ jobDtf.print(System.currentTimeMillis());
 			logger.debug(handlerPhase, "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", hiveQuery,
 					hiveConfigurations, jobName);
 			// TODO: remove harcoding

@@ -20,6 +20,7 @@ import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
 
 /**
@@ -166,4 +167,15 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 	}
 
 	protected abstract Status process0(List<ActionEvent> actionEvents) throws HandlerException;
+
+	protected void setOutputEventHeaders(final ActionEvent outputEvent) {
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.USER_NAME, username);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SECRET, password);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.AUTH_URL, authUrl);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID, tenantId);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME, tenantName);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME, containerName);
+
+	}
+
 }
