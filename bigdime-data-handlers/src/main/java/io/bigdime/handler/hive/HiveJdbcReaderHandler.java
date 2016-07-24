@@ -81,10 +81,15 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private final Map<String, String> hiveConfigurations = new HashMap<>();
 
 	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMddHHmmssSSS");
+
+	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
+	final DateTimeFormatter hdfsOutputPathDtf = DateTimeFormat.forPattern("yyyyMMdd");
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
 
 	private Connection connection = null;
+
+	private long processEntryTime = 0;
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -162,28 +167,29 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	}
 
 	private void setHdfsOutputDirectory() {
-		final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 		if (!baseOutputDirectory.endsWith(File.separator))
 			outputDirectory = baseOutputDirectory + File.separator;
 		else
 			outputDirectory = baseOutputDirectory;
-		String dateTime = dtf.print(System.currentTimeMillis());
-		outputDirectory = outputDirectory + dateTime + File.separator + entityName;
 
-		// TODO: remove harcoding
-//		outputDirectory = "/user/b_ndata/bigdime/newdir3/20160720/dw_lstg_gen";
-		logger.debug(handlerPhase, "outputDirectory=\"{}\"", outputDirectory);
+		final String hiveConfDate = hiveQueryDtf.print(processEntryTime);
+		final String hdfsOutputPathDate = hdfsOutputPathDtf.print(processEntryTime);
+		outputDirectory = outputDirectory + hdfsOutputPathDate + File.separator + entityName;
+
+		logger.debug(handlerPhase, "hiveConfDate={} hdfsOutputPathDate={} outputDirectory=\"{}\"", hiveConfDate,
+				hdfsOutputPathDate, outputDirectory);
 
 		// hiveConfigurations.put(dataset, dataset)
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
-		hiveConfigurations.put("DATE", dateTime);// todo: remove hardcoding
+		hiveConfigurations.put("DATE", hiveConfDate);
 	}
 
 	@Override
 	public Status process() throws HandlerException {
+		processEntryTime = System.currentTimeMillis();
 		handlerPhase = "processing HiveJdbcReaderHandler";
 		incrementInvocationCount();
-		logger.debug(handlerPhase, "entering process");
+		logger.debug(handlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
 		try {
 			setHdfsOutputDirectory();
 			setupConnection();

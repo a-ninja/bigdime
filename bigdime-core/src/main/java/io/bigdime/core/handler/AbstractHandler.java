@@ -200,7 +200,8 @@ public abstract class AbstractHandler implements Handler {
 			final String entityName) throws RuntimeInfoStoreException {
 		final List<RuntimeInfo> runtimeInfos = runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
 				entityName, RuntimeInfoStore.Status.QUEUED);
-		logger.debug(getHandlerPhase(), "queued_runtimeInfos=\"{}\"", runtimeInfos);
+		logger.debug(getHandlerPhase(), "found queued_runtimeInfos=\"{}\"",
+				(runtimeInfos != null && !runtimeInfos.isEmpty()));
 		if (runtimeInfos != null && !runtimeInfos.isEmpty()) {
 			return runtimeInfos.get(0);
 		}
@@ -272,8 +273,18 @@ public abstract class AbstractHandler implements Handler {
 		startingRuntimeInfo.setInputDescriptor(inputDescriptor);
 		startingRuntimeInfo.setStatus(status);
 		startingRuntimeInfo.setProperties(properties);
-		logger.debug(getHandlerPhase(), "updating runtime info store, calling put");
-		return runtimeInfoStore.put(startingRuntimeInfo);
+		logger.debug(getHandlerPhase(),
+				"_message=\"updating runtime info store, calling put\" inputDescriptor={} status={} startingRuntimeInfo={}",
+				inputDescriptor, status, startingRuntimeInfo);
+
+		boolean updated = runtimeInfoStore.put(startingRuntimeInfo);
+		RuntimeInfo afterUpdate = runtimeInfoStore.get(AdaptorConfig.getInstance().getName(), entityName,
+				inputDescriptor);
+		logger.debug(getHandlerPhase(),
+				"_message=\"updating runtime info store, calling put\" inputDescriptor={} status={} startingRuntimeInfo={} afterUpdate={} updated={}",
+				inputDescriptor, status, startingRuntimeInfo, afterUpdate, updated);
+		return updated;
+
 	}
 
 	/**

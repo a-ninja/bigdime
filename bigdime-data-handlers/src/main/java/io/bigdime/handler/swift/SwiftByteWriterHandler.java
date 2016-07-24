@@ -28,7 +28,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 public class SwiftByteWriterHandler extends SwiftWriterHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(SwiftByteWriterHandler.class));
-	private String handlerPhase = "building SwiftByteWriterHandler";
+	private String handlerPhase = "processing SwiftByteWriterHandler";
 
 	@Override
 	protected Status process0(List<ActionEvent> actionEvents) throws HandlerException {
@@ -68,19 +68,7 @@ public class SwiftByteWriterHandler extends SwiftWriterHandler {
 				journal.reset();
 				eventListToWrite.clear();// clear the processed events from the
 											// list
-				/*
-				 * just return callback, dont worry about READY. Let there be an
-				 * extra iteration.
-				 */
-//				statusToReturn = Status.CALLBACK;
-			} 
-//			else {
-				/*
-				 * If there is nothing to write, need to backoff and get more
-				 * data from channel.
-				 */
-//				statusToReturn = Status.BACKOFF;
-//			}
+			}
 
 			if (!actionEvents.isEmpty()) {
 				journal.setEventList(actionEvents);

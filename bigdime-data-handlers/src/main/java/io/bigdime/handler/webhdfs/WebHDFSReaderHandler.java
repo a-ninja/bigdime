@@ -5,7 +5,9 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,6 +133,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 		handlerPhase = "processing WebHDFSReaderHandler";
 		incrementInvocationCount();
+		logger.debug(handlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
 		try {
 			Status status = preProcess();
 			if (status == Status.BACKOFF) {
@@ -151,8 +154,9 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		long nextIndexToRead = getTotalReadFromJournal();
-		logger.debug(handlerPhase, "handler_id={} next_index_to_read={} buffer_size={} is_channel_open={}", getId(),
-				nextIndexToRead, bufferSize, fileChannel.isOpen());
+		logger.debug(handlerPhase,
+				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={}", getId(),
+				nextIndexToRead, bufferSize, fileChannel.isOpen(), currentFilePath);
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(bufferSize);
 		Status statustoReturn = Status.READY;
@@ -237,7 +241,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		if (readAll()) {
 			setNextFileToProcess();
 			if (currentFilePath == null) {
-				logger.info(handlerPhase, "_message=\"no file to process\" handler_id={} ", getId());
+				logger.info(handlerPhase, "_message=\"no file to process\" handler_id={} descriptor={}", getId());
 				return Status.BACKOFF;
 			}
 
@@ -285,9 +289,12 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 				queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName);
 		}
 		if (queuedRecord != null) {
+			logger.info(handlerPhase, "_message=\"found a queued record\" queued_record={}", queuedRecord);
 			initFile(queuedRecord.getInputDescriptor());
+			Map<String, String> properties = new HashMap<>();
+			properties.put("handlerName", this.getClass().getName());
 			updateRuntimeInfo(runtimeInfoStore, entityName, queuedRecord.getInputDescriptor(),
-					RuntimeInfoStore.Status.STARTED);
+					RuntimeInfoStore.Status.STARTED, properties);
 		} else {
 			// file = null;
 		}
