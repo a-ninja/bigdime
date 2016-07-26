@@ -200,7 +200,8 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		}
 	}
 
-	private Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
+	@Override
+	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
 		
 		if(isFirstRun()){
 			getStartedRecordsFromRuntimeInfos();
@@ -230,7 +231,8 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		return Status.READY;
 	}
 
-	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
+	@Override
+	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		
 		byte[] data ;
 		long bytesReadCount=0;

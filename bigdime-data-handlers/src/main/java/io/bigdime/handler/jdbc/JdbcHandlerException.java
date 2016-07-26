@@ -3,7 +3,7 @@
  */
 package io.bigdime.handler.jdbc;
 
-
+import io.bigdime.core.HandlerException;
 
 /**
  * Jdbc Handler Exception is thrown when the application is not able to
@@ -12,17 +12,14 @@ package io.bigdime.handler.jdbc;
  * @author Pavan Sabinikari
  * 
  */
-public class JdbcHandlerException extends Exception {
+public class JdbcHandlerException extends HandlerException {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private Throwable sourceException;
-
 	public JdbcHandlerException(Throwable sourceException) {
-		this.sourceException = sourceException;
-
+		super(sourceException);
 	}
 
 	public JdbcHandlerException(String errorMessage) {

@@ -134,7 +134,8 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 	 * @throws JdbcHandlerException
 	 * @throws HandlerException
 	 */
-	private Status preProcess() throws JdbcHandlerException{
+	@Override
+	protected Status preProcess() throws JdbcHandlerException{
 		String dbSql = jdbcInputDescriptor.formatQuery(jdbcInputDescriptor.getInputType(), jdbcInputDescriptor.getInputValue(), driverName);
 		logger.debug("Formatted Jdbc DB Reader Handler Query", "dbSql={}", dbSql);
 		try{
@@ -188,7 +189,8 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 	 * if no table needs to process, return BACKOFF, else return READY
 	 * @return Status
 	 */
-	private Status doProcess() {
+	@Override
+	protected Status doProcess() {
 		currentTableToProcess = getNextTableToProcess(processTable);
 		if(currentTableToProcess == null){
 			logger.info("no table need to process", "return BACKOFF");

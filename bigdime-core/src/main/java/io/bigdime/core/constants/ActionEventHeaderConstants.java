@@ -83,6 +83,10 @@ public final class ActionEventHeaderConstants {
 
 	public static final String HDFS_OUTPUT_DIRECTORY = "hdfsOutputDirectory";
 
+	public static class HiveJDBCReaderHeaders {
+		public static final String HIVE_QUERY = "hiveQuery";
+	}
+
 	public static class SwiftHeaders {
 		public static final String USER_NAME = "swiftUserName";
 		public static final String SECRET = "swiftSecret";

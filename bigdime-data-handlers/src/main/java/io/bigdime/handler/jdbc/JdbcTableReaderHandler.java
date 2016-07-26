@@ -162,7 +162,8 @@ public class JdbcTableReaderHandler extends AbstractHandler {
 	 * @throws RuntimeInfoStoreException
 	 * @throws JdbcHandlerException
 	 */
-	private Status preProcess() throws RuntimeInfoStoreException, JdbcHandlerException {
+	@Override
+	protected Status preProcess() throws RuntimeInfoStoreException, JdbcHandlerException {
 		List<ActionEvent> actionEvents = null;
 		//this is for database level, process tables from a database, check table name, if null, get from event list
 		if(jdbcInputDescriptor.getEntityName() == null && jdbcInputDescriptor.getTargetEntityName() == null){

@@ -166,6 +166,7 @@ public class HandlerManager {
 							handlerChainName, handler.getId(), handler.getName(), iteration);
 					currentHandlerName = handler.getName();
 					status = handler.process();
+					//TODO: handle the null status
 					switch (status) {
 					case BACKOFF:
 						logger.debug("handler chain executing",

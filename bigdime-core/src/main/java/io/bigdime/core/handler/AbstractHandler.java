@@ -3,13 +3,22 @@
  */
 package io.bigdime.core.handler;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import io.bigdime.alert.LoggerFactory;
+import io.bigdime.alert.Logger.ALERT_CAUSE;
+import io.bigdime.alert.Logger.ALERT_SEVERITY;
+import io.bigdime.alert.Logger.ALERT_TYPE;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.DataChannel;
@@ -24,6 +33,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status;
+import io.bigdime.libs.hdfs.WebHdfsException;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 
 /**
@@ -61,6 +71,8 @@ public abstract class AbstractHandler implements Handler {
 	 * @formatter:on
 	 */
 	private DataChannel outputChannel;
+
+	private String handlerPhase = "";
 
 	private String[] getInputChannelArray(String channelMapValue) {
 		return channelMapValue.split(","); // spilt "input1:channel1,
@@ -197,15 +209,35 @@ public abstract class AbstractHandler implements Handler {
 	}
 
 	protected RuntimeInfo getOneQueuedRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
-			final String entityName) throws RuntimeInfoStoreException {
+			final String entityName, final String inputDescriptorPrefix) throws RuntimeInfoStoreException {
 		final List<RuntimeInfo> runtimeInfos = runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
 				entityName, RuntimeInfoStore.Status.QUEUED);
 		logger.debug(getHandlerPhase(), "found queued_runtimeInfos=\"{}\"",
 				(runtimeInfos != null && !runtimeInfos.isEmpty()));
 		if (runtimeInfos != null && !runtimeInfos.isEmpty()) {
-			return runtimeInfos.get(0);
+			if (StringUtils.isBlank(inputDescriptorPrefix)) {
+				return runtimeInfos.get(0);
+			}
+			for (RuntimeInfo runtimeInfo : runtimeInfos) {
+				if (runtimeInfo.getInputDescriptor().startsWith(inputDescriptorPrefix))
+					return runtimeInfo;
+			}
 		}
 		return null;
+	}
+
+	protected RuntimeInfo getOneQueuedRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
+			final String entityName) throws RuntimeInfoStoreException {
+		// final List<RuntimeInfo> runtimeInfos =
+		// runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
+		// entityName, RuntimeInfoStore.Status.QUEUED);
+		// logger.debug(getHandlerPhase(), "found queued_runtimeInfos=\"{}\"",
+		// (runtimeInfos != null && !runtimeInfos.isEmpty()));
+		// if (runtimeInfos != null && !runtimeInfos.isEmpty()) {
+		// return runtimeInfos.get(0);
+		// }
+		// return null;
+		return getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, null);
 	}
 
 	protected List<RuntimeInfo> getAllStartedRuntimeInfos(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
@@ -240,6 +272,32 @@ public abstract class AbstractHandler implements Handler {
 		} else {
 			logger.debug(getHandlerPhase(), "already in progress, adaptorName=\"{}\" entityName={} inputDescriptor={}",
 					AdaptorConfig.getInstance().getName(), entityName, inputDescriptor);
+
+		}
+		return false;
+	}
+
+	/**
+	 * This method is used by handlers that have a complex inputDescriptor, one
+	 * which has string and properties.
+	 * 
+	 * @param runtimeInfoStore
+	 * @param entityName
+	 * @param runtimeInfo
+	 * @return
+	 * @throws RuntimeInfoStoreException
+	 */
+	protected <T> boolean queueRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
+			final String entityName, final String inputDescriptor, final Map<String, String> properties)
+			throws RuntimeInfoStoreException {
+		if (runtimeInfoStore.get(AdaptorConfig.getInstance().getName(), entityName, inputDescriptor) == null) {
+			logger.info(getHandlerPhase(), "queueing adaptorName=\"{}\" entityName={} inputDescriptor={}",
+					AdaptorConfig.getInstance().getName(), entityName, inputDescriptor);
+			return updateRuntimeInfo(runtimeInfoStore, entityName, inputDescriptor, RuntimeInfoStore.Status.QUEUED,
+					properties);
+		} else {
+			logger.debug(getHandlerPhase(), "already in progress, adaptorName=\"{}\" entityName={} inputDescriptor={}",
+					AdaptorConfig.getInstance().getName(), entityName, inputDescriptor, properties);
 
 		}
 		return false;
@@ -333,8 +391,12 @@ public abstract class AbstractHandler implements Handler {
 		getHandlerContext().setJournal(getId(), journal);
 	}
 
+	protected void setHandlerPhase(final String _handlerPhase) {
+		handlerPhase = _handlerPhase;
+	}
+
 	protected String getHandlerPhase() {
-		return "processing abstractHandler";
+		return handlerPhase;
 	}
 
 	/**
@@ -419,4 +481,111 @@ public abstract class AbstractHandler implements Handler {
 		}
 		return availableHdfsDirectories;
 	}
+
+	@Override
+	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
+		setHandlerPhase("processing " + getName());
+		incrementInvocationCount();
+		logger.debug(handlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
+		try {
+			io.bigdime.core.ActionEvent.Status status = preProcess();
+			if (status == io.bigdime.core.ActionEvent.Status.BACKOFF) {
+				logger.debug(handlerPhase, "returning BACKOFF");
+				return status;
+			}
+			return doProcess();
+		} catch (IOException e) {
+			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
+					"error during process", e);
+			throw new HandlerException("Unable to process", e);
+		} catch (RuntimeInfoStoreException e) {
+			throw new HandlerException("Unable to process", e);
+		}
+	}
+	
+
+	
+	protected io.bigdime.core.ActionEvent.Status preProcess()
+			throws IOException, RuntimeInfoStoreException, HandlerException {
+		return io.bigdime.core.ActionEvent.Status.READY;
+	}
+
+	protected io.bigdime.core.ActionEvent.Status doProcess()
+			throws IOException, RuntimeInfoStoreException, HandlerException {
+		return io.bigdime.core.ActionEvent.Status.READY;
+	}
+	
+//	protected List<RuntimeInfo> dirtyRecords;
+//	private boolean processingDirty = false;
+//
+//	protected void setNextDescriptorToProcess()
+//			throws IOException, RuntimeInfoStoreException, HandlerException, WebHdfsException {
+//
+//		if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
+//			RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
+//			logger.info(getHandlerPhase(), "\"processing a dirty record\" dirtyRecord=\"{}\"", dirtyRecord);
+//			String nextDescriptorToProcess = dirtyRecord.getInputDescriptor();
+//			initRecordToProcess(nextDescriptorToProcess);
+//			processingDirty = true;
+//			return;
+//		} else {
+//			logger.info(getHandlerPhase(), "processing a clean record");
+//			processingDirty = false;
+//			RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
+//			if (queuedRecord == null) {
+//				boolean foundRecordsToProcess = initializeRuntimeInfoRecords();
+//				if (foundRecordsToProcess)
+//					queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
+//			}
+//			if (queuedRecord != null) {
+//				logger.info(getHandlerPhase(), "_message=\"found a queued record, will process this\" queued_record={}",
+//						queuedRecord);
+//				initRecordToProcess(queuedRecord.getInputDescriptor());
+//				Map<String, String> properties = new HashMap<>();
+//				properties.put("handlerName", this.getClass().getName());
+//				updateRuntimeInfo(runtimeInfoStore, entityName, queuedRecord.getInputDescriptor(),
+//						RuntimeInfoStore.Status.STARTED, properties);
+//			} else {
+//				inputDescriptor = null;
+//			}
+//		}
+//	}
+//
+//	protected abstract void initRecordToProcess(String nextDescriptorToProcess) throws Exception;
+	// Map<String, Long> methodEntryTimeMap = new HashMap<>();
+	//
+	// Map<String, Long> methodElapsedTimeMap = new HashMap<>();
+	//
+	// protected void registerEntry(String methodName) {
+	// long entryTime = System.currentTimeMillis();
+	// methodEntryTimeMap.put(methodName, entryTime);
+	// }
+	//
+	// protected void registerExit(String methodName) {
+	// long exitTime = System.currentTimeMillis();
+	// long entryTime = getLongOrZero(methodEntryTimeMap, methodName);
+	// long elapsedTime = exitTime - entryTime;
+	//
+	// long totalElapsedTime = getLongOrZero(methodElapsedTimeMap, methodName);
+	//
+	// totalElapsedTime += elapsedTime;
+	// methodElapsedTimeMap.put(methodName, totalElapsedTime);
+	// methodEntryTimeMap.remove(methodName);
+	// }
+	//
+	// private long getLongOrZero(Map<String, Long> map, String key) {
+	// if (map.containsKey(key))
+	// return map.get(key);
+	// return 0l;
+	// }
+	//
+	// protected void printStats() {
+	// Set<Entry<String, Long>> entrySet = methodElapsedTimeMap.entrySet();
+	// for (Entry<String, Long> entry : entrySet) {
+	// logger.info(getName(), "methodName={} timeElapsed={} invocationCount={}",
+	// entry.getKey(), entry.getValue(),
+	// getInvocationCount());
+	// }
+	// }
+
 }

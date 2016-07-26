@@ -97,7 +97,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 	 * 
 	 * 
 	 * In Swift:
-	 * new-data/2016-07-05/lstg_item_cndtn/000188_0.gz
+	 * new-data/2016-07-05/items/file.gz
 	 * 
 	 * container name = new-data
 	 * container name = 2016-07-05

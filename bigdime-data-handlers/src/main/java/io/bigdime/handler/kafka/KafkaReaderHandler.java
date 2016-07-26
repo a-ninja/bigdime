@@ -164,7 +164,8 @@ public class KafkaReaderHandler extends AbstractHandler {
 		totalInvocations++;
 	}
 
-	private Status preProcess() throws RuntimeInfoStoreException , HandlerException{
+	@Override
+	protected Status preProcess() throws RuntimeInfoStoreException , HandlerException{
 
 		if (shallProcessNew()) {
 			logger.debug(handlerPhase, "will process new batch");

@@ -197,7 +197,8 @@ public class FileInputStreamHandler extends AbstractHandler {
 	List<RuntimeInfo> dirtyRecords;
 	private boolean processingDirty = false;
 
-	private Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
+	@Override
+	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
 		if (isFirstRun()) {
 			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName);
 			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
@@ -229,7 +230,8 @@ public class FileInputStreamHandler extends AbstractHandler {
 		return Status.READY;
 	}
 
-	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
+	@Override
+	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 
 		long nextIndexToRead = getTotalReadFromJournal();
 		logger.debug(handlerPhase, "handler_id={} next_index_to_read={} buffer_size={}", getId(), nextIndexToRead,
