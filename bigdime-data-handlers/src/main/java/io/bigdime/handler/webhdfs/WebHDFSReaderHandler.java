@@ -144,15 +144,14 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 		Status statustoReturn = Status.READY;
 
 		int bytesRead = fileChannel.read(readInto);
-		logger.debug(getHandlerPhase(), "handler_id={} bytes_read={}", getId(), bytesRead);
 		if (bytesRead > 0) {
 			getSimpleJournal().setTotalRead((nextIndexToRead + bytesRead));
 			long readCount = getSimpleJournal().getReadCount();
 			getSimpleJournal().setReadCount(readCount + 1);
 			ActionEvent outputEvent = new ActionEvent();
 			byte[] readBody = new byte[bytesRead];
-			logger.debug(getHandlerPhase(), "handler_id={} readBody.length={} fileLength={} readCount={}", getId(),
-					readBody.length, fileLength, getSimpleJournal().getReadCount());
+			logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} readBody.length={} fileLength={} readCount={}",
+					getId(), bytesRead, readBody.length, fileLength, getSimpleJournal().getReadCount());
 
 			readInto.flip();
 			readInto.get(readBody, 0, bytesRead);
@@ -164,7 +163,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 						getId(), getSimpleJournal().getReadCount(), currentFilePath);
 				getSimpleJournal().reset();
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
-				// ranOnce = true;
 			} else {
 				logger.debug(getHandlerPhase(), "\"there is more data to process, returning CALLBACK\" handler_id={}",
 						getId());
@@ -174,8 +172,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
-			logger.debug(getHandlerPhase(), "_message=\"checking process submission, headers={}\" handler_id={}",
-					outputEvent.getHeaders(), getId());
 			processChannelSubmission(outputEvent);
 			return statustoReturn;
 		} else {
