@@ -143,12 +143,12 @@ public class WebHdfsReader {
 			}
 
 		} else if (response.getStatusLine().getStatusCode() == 404) {
-			logger.debug("file does not exist", "responseCode={} hdfsPath={} responseMessage={}",
+			logger.debug("_message=\"file does not exist\" responseCode={} hdfsPath={} responseMessage={}",
 					response.getStatusLine().getStatusCode(), webhdfsFilePath,
 					response.getStatusLine().getReasonPhrase());
-			throw new FileNotFoundException("File not found");
+			throw new FileNotFoundException("File not found: filePath=" + webhdfsFilePath);
 		} else {
-			logger.warn("file existence not known, responseCode={} hdfsPath={} responseMessage={}",
+			logger.warn("_message=\"file existence not known\", responseCode={} hdfsPath={} responseMessage={}",
 					response.getStatusLine().getStatusCode(), webhdfsFilePath,
 					response.getStatusLine().getReasonPhrase());
 			throw new WebHdfsException("file existence not known, responseCode="
@@ -167,47 +167,6 @@ public class WebHdfsReader {
 	 */
 	public String getFileType(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
 		return getFileStatus(webHdfs, hdfsFilePath).getType();
-		// try {
-		// if (StringUtils.isBlank(hdfsFilePath))
-		// throw new IllegalArgumentException("invalid filePath: empty or
-		// null");
-		//
-		// String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
-		// if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-		// webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
-		//
-		// HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
-		// if (response.getStatusLine().getStatusCode() == 200 ||
-		// response.getStatusLine().getStatusCode() == 201) {
-		// logger.debug("file exists", "responseCode={} filePath={}
-		// responseMessage={}",
-		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
-		// response.getStatusLine().getReasonPhrase());
-		// final ObjectMapper mapper = new ObjectMapper();
-		// WebHdfsGetFileStatusResponse fs =
-		// mapper.readValue(response.getEntity().getContent(),
-		// WebHdfsGetFileStatusResponse.class);
-		// return fs.getFileStatus().getType();
-		// } else if (response.getStatusLine().getStatusCode() == 404) {
-		// logger.debug("file does not exist", "responseCode={} filePath={}
-		// responseMessage={}",
-		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
-		// response.getStatusLine().getReasonPhrase());
-		// throw new FileNotFoundException("File not found");
-		// } else {
-		// logger.warn("file existence not known, responseCode={} filePath={}
-		// responseMessage={}",
-		// response.getStatusLine().getStatusCode(), webhdfsFilePath,
-		// response.getStatusLine().getReasonPhrase());
-		// throw new WebHdfsException("file existence not known, responseCode="
-		// + response.getStatusLine().getStatusCode() + ", filePath=" +
-		// webhdfsFilePath);
-		// }
-		// } catch (Exception e) {
-		// logger.warn("file creation", "_message=\"Unable to check the status
-		// of the file:\" retry={} error={}", e);
-		// throw new WebHdfsException("could not get the file status", e);
-		// }
 	}
 
 	public long getFileLength(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
@@ -222,14 +181,6 @@ public class WebHdfsReader {
 			String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
 			if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
 				webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
-
-			// Configuration conf = new Configuration();
-			// conf.set("hadoop.security.authentication", "Kerberos");
-			// conf.set("fs.defaultFS",
-			// "webhdfs://apollo-phx-nn-2.vip.ebay.com:50080");
-			// UserGroupInformation.setConfiguration(conf);
-			// UserGroupInformation.loginUserFromKeytab("b_ndata@CORP.EBAY.COM",
-			// "/home/neejain/b_ndata.keytab");
 
 			HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
 			if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 201) {
