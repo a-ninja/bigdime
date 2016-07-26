@@ -61,8 +61,8 @@ public final class DataAdaptor implements Adaptor {
 	@Autowired
 	private DataAdaptorJob dataAdaptorJob;
 	private boolean adaptorStopped = false;
-	private static long DEFAULT_SLEEP_DURATION_SECONDS = 3000;
-	private long heartbeatSleepDurationSecs = DEFAULT_SLEEP_DURATION_SECONDS;
+	private static long DEFAULT_SLEEP_DURATION_SECONDS = 30;
+	private long heartbeatSleepDurationMillis = DEFAULT_SLEEP_DURATION_SECONDS * 1000;
 	private Thread heartbeatThread = null;
 	@Autowired
 	private MetadataStore metadataStore;
@@ -250,12 +250,12 @@ public final class DataAdaptor implements Adaptor {
 						isSinkRunning();
 						logger.debug("heartbeat thread for DataAdaptor", "source_running=\"{}\" sink_running=\"{}\"",
 								sourceRunning, sinkRunning);
-						sleep(heartbeatSleepDurationSecs);
+						sleep(heartbeatSleepDurationMillis);
 					}
 				} catch (Exception e) {
 					logger.warn("heartbeat thread for DataAdaptor",
 							"DataAdaptor heartbeat thread received an exception, will duck it. sleep_duration=\"{}\"",
-							heartbeatSleepDurationSecs, e);
+							heartbeatSleepDurationMillis, e);
 				}
 			}
 		};
