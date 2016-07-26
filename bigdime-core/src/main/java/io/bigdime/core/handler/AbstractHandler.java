@@ -228,15 +228,6 @@ public abstract class AbstractHandler implements Handler {
 
 	protected RuntimeInfo getOneQueuedRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName) throws RuntimeInfoStoreException {
-		// final List<RuntimeInfo> runtimeInfos =
-		// runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
-		// entityName, RuntimeInfoStore.Status.QUEUED);
-		// logger.debug(getHandlerPhase(), "found queued_runtimeInfos=\"{}\"",
-		// (runtimeInfos != null && !runtimeInfos.isEmpty()));
-		// if (runtimeInfos != null && !runtimeInfos.isEmpty()) {
-		// return runtimeInfos.get(0);
-		// }
-		// return null;
 		return getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, null);
 	}
 
@@ -399,17 +390,6 @@ public abstract class AbstractHandler implements Handler {
 		return handlerPhase;
 	}
 
-	/**
-	 * @param outputEvent
-	 */
-	protected void processChannelSubmission(final ActionEvent outputEvent) {
-		logger.debug(getHandlerPhase(), "checking channel submission, output_channel=\"{}\"", getOutputChannel());
-		if (getOutputChannel() != null) {
-			logger.debug(getHandlerPhase(), "submitting to channel");
-			getOutputChannel().put(outputEvent);
-		}
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -470,18 +450,6 @@ public abstract class AbstractHandler implements Handler {
 		return null;
 	}
 
-	public List<String> getAvailableDirectoriesFromHeader(final String headerName) {
-		logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\"", getId(), headerName);
-		List<ActionEvent> eventList = getHandlerContext().getEventList();
-		List<String> availableHdfsDirectories = new ArrayList<>();
-		for (final ActionEvent inputEvent : eventList) {
-			logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\" header_value={}", getId(),
-					headerName, inputEvent.getHeaders().get(headerName));
-			availableHdfsDirectories.add(inputEvent.getHeaders().get(headerName));
-		}
-		return availableHdfsDirectories;
-	}
-
 	@Override
 	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
 		setHandlerPhase("processing " + getName());
@@ -502,9 +470,7 @@ public abstract class AbstractHandler implements Handler {
 			throw new HandlerException("Unable to process", e);
 		}
 	}
-	
 
-	
 	protected io.bigdime.core.ActionEvent.Status preProcess()
 			throws IOException, RuntimeInfoStoreException, HandlerException {
 		return io.bigdime.core.ActionEvent.Status.READY;
@@ -514,44 +480,51 @@ public abstract class AbstractHandler implements Handler {
 			throws IOException, RuntimeInfoStoreException, HandlerException {
 		return io.bigdime.core.ActionEvent.Status.READY;
 	}
-	
-//	protected List<RuntimeInfo> dirtyRecords;
-//	private boolean processingDirty = false;
-//
-//	protected void setNextDescriptorToProcess()
-//			throws IOException, RuntimeInfoStoreException, HandlerException, WebHdfsException {
-//
-//		if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-//			RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
-//			logger.info(getHandlerPhase(), "\"processing a dirty record\" dirtyRecord=\"{}\"", dirtyRecord);
-//			String nextDescriptorToProcess = dirtyRecord.getInputDescriptor();
-//			initRecordToProcess(nextDescriptorToProcess);
-//			processingDirty = true;
-//			return;
-//		} else {
-//			logger.info(getHandlerPhase(), "processing a clean record");
-//			processingDirty = false;
-//			RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-//			if (queuedRecord == null) {
-//				boolean foundRecordsToProcess = initializeRuntimeInfoRecords();
-//				if (foundRecordsToProcess)
-//					queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-//			}
-//			if (queuedRecord != null) {
-//				logger.info(getHandlerPhase(), "_message=\"found a queued record, will process this\" queued_record={}",
-//						queuedRecord);
-//				initRecordToProcess(queuedRecord.getInputDescriptor());
-//				Map<String, String> properties = new HashMap<>();
-//				properties.put("handlerName", this.getClass().getName());
-//				updateRuntimeInfo(runtimeInfoStore, entityName, queuedRecord.getInputDescriptor(),
-//						RuntimeInfoStore.Status.STARTED, properties);
-//			} else {
-//				inputDescriptor = null;
-//			}
-//		}
-//	}
-//
-//	protected abstract void initRecordToProcess(String nextDescriptorToProcess) throws Exception;
+
+	// protected List<RuntimeInfo> dirtyRecords;
+	// private boolean processingDirty = false;
+	//
+	// protected void setNextDescriptorToProcess()
+	// throws IOException, RuntimeInfoStoreException, HandlerException,
+	// WebHdfsException {
+	//
+	// if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
+	// RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
+	// logger.info(getHandlerPhase(), "\"processing a dirty record\"
+	// dirtyRecord=\"{}\"", dirtyRecord);
+	// String nextDescriptorToProcess = dirtyRecord.getInputDescriptor();
+	// initRecordToProcess(nextDescriptorToProcess);
+	// processingDirty = true;
+	// return;
+	// } else {
+	// logger.info(getHandlerPhase(), "processing a clean record");
+	// processingDirty = false;
+	// RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore,
+	// entityName, INPUT_DESCRIPTOR_PREFIX);
+	// if (queuedRecord == null) {
+	// boolean foundRecordsToProcess = initializeRuntimeInfoRecords();
+	// if (foundRecordsToProcess)
+	// queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName,
+	// INPUT_DESCRIPTOR_PREFIX);
+	// }
+	// if (queuedRecord != null) {
+	// logger.info(getHandlerPhase(), "_message=\"found a queued record, will
+	// process this\" queued_record={}",
+	// queuedRecord);
+	// initRecordToProcess(queuedRecord.getInputDescriptor());
+	// Map<String, String> properties = new HashMap<>();
+	// properties.put("handlerName", this.getClass().getName());
+	// updateRuntimeInfo(runtimeInfoStore, entityName,
+	// queuedRecord.getInputDescriptor(),
+	// RuntimeInfoStore.Status.STARTED, properties);
+	// } else {
+	// inputDescriptor = null;
+	// }
+	// }
+	// }
+	//
+	// protected abstract void initRecordToProcess(String
+	// nextDescriptorToProcess) throws Exception;
 	// Map<String, Long> methodEntryTimeMap = new HashMap<>();
 	//
 	// Map<String, Long> methodElapsedTimeMap = new HashMap<>();

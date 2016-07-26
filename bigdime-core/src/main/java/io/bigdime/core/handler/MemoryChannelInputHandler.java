@@ -53,11 +53,6 @@ public class MemoryChannelInputHandler extends AbstractHandler {
 				getName(), channelDesc, inputChannel, batchSize);
 	}
 
-	@Override
-	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		return Status.READY;
-	}
-
 	@SuppressWarnings("unchecked")
 	@Override
 	protected Status doProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
@@ -72,9 +67,9 @@ public class MemoryChannelInputHandler extends AbstractHandler {
 			getHandlerContext().setEventList((List<ActionEvent>) took);
 			return Status.READY;
 		} catch (ChannelException e) {
-			logger.debug(getHandlerPhase(), "_message=\"MemoryChannelInputHandler didn't receive data\"",
-					"consumer_name=\"{}\" channel_name=\"{}\" exception=\"{}\"", getName(), inputChannel.getName(),
-					e.getMessage());
+			logger.debug(getHandlerPhase(),
+					"_message=\"MemoryChannelInputHandler didn't receive data\" consumer_name=\"{}\" channel_name=\"{}\" exception=\"{}\"",
+					getName(), inputChannel.getName(), e.getMessage());
 			return Status.BACKOFF;
 		}
 	}

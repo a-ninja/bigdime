@@ -133,12 +133,8 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 				List<ActionEvent> moreEvents = getHandlerContext().getEventList();
 				if (moreEvents != null)
 					journal.getEventList().addAll(moreEvents);
-
-				// getHandlerContext().setEventList(null);
-
 				return process0(journal.getEventList());
 			} else {
-				// Found journal with no events, backoff.
 				return Status.BACKOFF;
 			}
 		}
@@ -177,5 +173,4 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME, containerName);
 
 	}
-
 }

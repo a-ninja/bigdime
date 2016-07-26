@@ -1,5 +1,6 @@
 package io.bigdime.handler.webhdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -24,7 +25,7 @@ import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
@@ -41,11 +42,6 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
  * @formatter:off
  * Read the directory name from the headers.
  * Read the directory listing.
- * Process like FileInputStreamHandler.
- *    Check if it's a first run.
- *    If it's a first run,
- *    
- *    
  *    
  * The fileLocation is going to contain multiple files.
  *    
@@ -58,7 +54,7 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
  */
 @Component
 @Scope("prototype")
-public class WebHDFSReaderHandler extends AbstractHandler {
+public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSWriterHandler.class));
 	private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
@@ -165,8 +161,8 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
 			if (readAll()) {
-				logger.debug(getHandlerPhase(), "\"read all data\" handler_id={} readCount={}", getId(),
-						getSimpleJournal().getReadCount());
+				logger.debug(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
+						getId(), getSimpleJournal().getReadCount(), currentFilePath);
 				getSimpleJournal().reset();
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
 				// ranOnce = true;
@@ -275,6 +271,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 
 	private boolean initializeRuntimeInfoRecords() throws RuntimeInfoStoreException, IOException, WebHdfsException {
 		WebHdfs webHdfs1 = null;
+		boolean recordsFound = false;
 		try {
 			List<String> availableHdfsDirectories = getAvailableDirectoriesFromHeader(
 					WebHDFSReaderHandlerConstants.HDFS_PATH);
@@ -284,19 +281,29 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 			if (webHdfs1 == null) {
 				webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 			}
-			for (String directoryPath : availableHdfsDirectories) {
+			for (final String directoryPath : availableHdfsDirectories) {
 				final WebHdfsReader webHdfsReader = new WebHdfsReader();
 
-				final List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
+				List<String> fileNames = null;
+				try {
+					fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
+				} catch (FileNotFoundException e) {
+					logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
+							directoryPath, e.getMessage());
+				}
 
 				for (final String fileName : fileNames) {
+					recordsFound = true;
 					queueRuntimeInfo(runtimeInfoStore, entityName, fileName);
 				}
 			}
-			return true;
+			logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
+					recordsFound);
+
+			return recordsFound;
 		} finally {
-			webHdfs1.releaseConnection();
 			logger.debug(getHandlerPhase(), "releasing webhdfs connection");
+			webHdfs1.releaseConnection();
 		}
 	}
 
@@ -316,7 +323,7 @@ public class WebHDFSReaderHandler extends AbstractHandler {
 		currentFileStatus = getFileStatusFromWebhdfs(nextDescriptorToProcess);
 		fileChannel = Channels.newChannel(inputStream);
 
-		logger.debug(getHandlerPhase(), "current_file_path={} is_channel_open={}", currentFilePath,
+		logger.debug(getHandlerPhase(), "current_file_path={} is_file_channel_open={}", currentFilePath,
 				fileChannel.isOpen());
 	}
 

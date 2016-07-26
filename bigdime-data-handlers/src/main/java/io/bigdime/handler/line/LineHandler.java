@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.context.annotation.Scope;
@@ -23,11 +22,11 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.Segment;
 import io.bigdime.core.commons.StringHelper;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 
 @Component
 @Scope("prototype")
-public class LineHandler extends AbstractHandler {
+public class LineHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(LineHandler.class));
 
 	private String handlerPhase;

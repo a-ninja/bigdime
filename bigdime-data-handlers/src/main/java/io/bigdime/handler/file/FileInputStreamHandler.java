@@ -30,7 +30,7 @@ import io.bigdime.core.commons.FileHelper;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
@@ -65,7 +65,7 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
  */
 @Component
 @Scope("prototype")
-public class FileInputStreamHandler extends AbstractHandler {
+public class FileInputStreamHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(FileInputStreamHandler.class));
 	public static final String FILE_LOCATION = "fileLocation";

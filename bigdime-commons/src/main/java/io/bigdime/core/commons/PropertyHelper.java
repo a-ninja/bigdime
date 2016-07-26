@@ -4,6 +4,11 @@
 package io.bigdime.core.commons;
 
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to get the property from the map.
@@ -12,6 +17,7 @@ import java.util.Map;
  *
  */
 public final class PropertyHelper {
+	private static final Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
 	private static final PropertyHelper instance = new PropertyHelper();
 
 	private PropertyHelper() {
@@ -200,6 +206,22 @@ public final class PropertyHelper {
 			throw new IllegalArgumentException(
 					name + " field in given map is not of type Map, rather is of type: " + value.getClass());
 		}
+	}
 
+	public static void redeemTokensFromAppProperties(final Map<String, Object> properties,
+			final Properties applicationProperties) {
+		for (Entry<String, Object> property : properties.entrySet()) {
+			logger.info("property_name=\"{}\" value=\"{}\" isString=\"{}\"", property.getKey(), property.getValue(),
+					(property.getValue() instanceof String));
+			if (property.getValue() instanceof String) {
+				String propValue = property.getValue().toString();
+				String newValue = StringHelper.getInstance().redeemToken(propValue, applicationProperties);
+				if (!propValue.equals(newValue)) {
+					property.setValue(newValue);
+					logger.info("property_name=\"{}\" old_value=\"{}\" new_value=\"{}\"", property.getKey(), propValue,
+							newValue);
+				}
+			}
+		}
 	}
 }

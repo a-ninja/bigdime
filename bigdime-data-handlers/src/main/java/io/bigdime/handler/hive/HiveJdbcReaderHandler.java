@@ -29,7 +29,7 @@ import io.bigdime.core.commons.ProcessHelper;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
@@ -67,9 +67,8 @@ import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
  */
 @Component
 @Scope("prototype")
-public class HiveJdbcReaderHandler extends AbstractHandler {
+public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJdbcReaderHandler.class));
-	// private String handlerPhase = "building HiveReaderHandler";
 
 	private String outputDirectory = "";
 
@@ -87,7 +86,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	private String hiveQuery = null;
 	private final Map<String, String> hiveConfigurations = new HashMap<>();
 
-	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMddHHmmssSSS");
+	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMdd-HHmmss.SSS");
 
 	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 	final DateTimeFormatter hdfsOutputPathDtf = DateTimeFormat.forPattern("yyyyMMdd");
@@ -218,38 +217,6 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	 */
 	@Override
 	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		// if (isFirstRun()) {
-		// dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore,
-		// entityName);
-		//
-		// final Iterator<RuntimeInfo> dirtyRecordIter =
-		// dirtyRecords.iterator();
-		// while (dirtyRecordIter.hasNext()) {
-		// final RuntimeInfo dirtyRecord = dirtyRecordIter.next();
-		//
-		// if
-		// (!dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX))
-		// {
-		// logger.info(getHandlerPhase(),
-		// "_message=\"removing from dirty record list\" handler_id={}
-		// input_descriptor={} startWith={}",
-		// getId(), dirtyRecord.getInputDescriptor(),
-		// dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX));
-		// dirtyRecordIter.remove();
-		// }
-		// }
-		//
-		// if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-		// dirtyRecordCount = dirtyRecords.size();
-		// logger.warn(getHandlerPhase(),
-		// "_message=\"dirty records found\" handler_id={}
-		// dirty_record_count=\"{}\" entityName={}",
-		// getId(), dirtyRecordCount, entityName);
-		// } else {
-		// logger.info(getHandlerPhase(), "_message=\"no dirty records found\"
-		// handler_id={}", getId());
-		// }
-		// }
 		setupFirstRun();
 		setNextDescriptorToProcess();
 		if (inputDescriptor == null) {
@@ -257,14 +224,31 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 					"_message=\"no descriptor to process, still returning READY\" handler_id={} ", getId());
 			// return Status.BACKOFF;
 		}
-		// try {
-		// setupConnection();
-		// } catch (ClassNotFoundException | SQLException e) {
-		// throw new HandlerException("unable to process", e);
-		// }
 		return Status.READY;
 	}
 
+	/**
+	 * @formatter:off
+	 * if first run
+	 *    check for dirty records
+	 *    if dirty records found
+	 *       process them
+	 * 
+	 * Get queued records
+	 * if queued record found
+	 *    process them
+	 * else
+	 *    generate queued record
+	 *    get queued records
+	 *    if queued record found
+	 *      process them
+	 *      return READY
+	 *    else
+	 *      return BACKOFF      
+	 * @formatter:on
+
+	 * @throws RuntimeInfoStoreException
+	 */
 	protected void setupFirstRun() throws RuntimeInfoStoreException {
 		if (isFirstRun()) {
 			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName);
@@ -388,29 +372,11 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 	/**
 	 * Descriptor: entityName, date, outputDirectory, hiveQuery
 	 * 
-	 * tab, 20160724, dir, INSERT OVERWRITE DIRECTORY
-	 * '${hiveconf:DIRECTORY}' SELECT tab.* FROM tab JOIN tab ON tab.fld =
-	 * tab.fld AND tab.fld = tab.fld WHERE tab.fld IN (1,2,3,4) AND tab.fld >
-	 * '${hiveconf:DATE}' DISTRIBUTE BY RAND()
+	 * tab, 20160724, dir, INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}'
+	 * SELECT tab.* FROM tab JOIN tab ON tab.fld = tab.fld AND tab.fld = tab.fld
+	 * WHERE tab.fld IN (1,2,3,4) AND tab.fld > '${hiveconf:DATE}' DISTRIBUTE BY
+	 * RAND()
 	 * 
-	 * @formatter:off
-	 * if first run
-	 *    check for dirty records
-	 *    if dirty records found
-	 *       process them
-	 * 
-	 * Get queued records
-	 * if queued record found
-	 *    process them
-	 * else
-	 *    generate queued record
-	 *    get queued records
-	 *    if queued record found
-	 *      process them
-	 *      return READY
-	 *    else
-	 *      return BACKOFF      
-	 * @formatter:on
 	 * 
 	 */
 
@@ -422,7 +388,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			ActionEvent outputEvent = new ActionEvent();
 			if (inputDescriptor == null) {
 				logger.debug(getHandlerPhase(),
-						"returnung READY, so that next handler can process the pending records");
+						"will return READY, so that next handler can process the pending records");
 			} else {
 
 				final Statement stmt = connection.createStatement();
@@ -432,7 +398,6 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 						+ "." + jobDtf.print(System.currentTimeMillis());
 				logger.debug(getHandlerPhase(), "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", hiveQuery,
 						hiveConfigurations, jobName);
-				// TODO: remove harcoding
 				stmt.execute("set mapred.job.name=" + jobName);
 				stmt.execute(hiveQuery);// no resultset is returned
 				boolean updatedRuntime = updateRuntimeInfo(runtimeInfoStore, entityName,
@@ -444,7 +409,7 @@ public class HiveJdbcReaderHandler extends AbstractHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, hiveQuery);
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			logger.debug(getHandlerPhase(), "completed process");
+			logger.debug(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\"", outputEvent.getHeaders());
 		} catch (final Exception e) {
 			throw new HandlerException("unable to process", e);
 		} finally {
