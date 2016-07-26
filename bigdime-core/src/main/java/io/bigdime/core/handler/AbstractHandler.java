@@ -261,7 +261,7 @@ public abstract class AbstractHandler implements Handler {
 					AdaptorConfig.getInstance().getName(), entityName, inputDescriptor);
 			return updateRuntimeInfo(runtimeInfoStore, entityName, inputDescriptor, RuntimeInfoStore.Status.QUEUED);
 		} else {
-			logger.debug(getHandlerPhase(), "already in progress, adaptorName=\"{}\" entityName={} inputDescriptor={}",
+			logger.debug(getHandlerPhase(), "already in progress entityName={} inputDescriptor={}",
 					AdaptorConfig.getInstance().getName(), entityName, inputDescriptor);
 
 		}
