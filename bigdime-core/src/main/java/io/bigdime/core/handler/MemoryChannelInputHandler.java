@@ -68,7 +68,7 @@ public class MemoryChannelInputHandler extends AbstractHandler {
 			return Status.READY;
 		} catch (ChannelException e) {
 			logger.debug(getHandlerPhase(),
-					"_message=\"MemoryChannelInputHandler didn't receive data\" consumer_name=\"{}\" channel_name=\"{}\" exception=\"{}\"",
+					"_message=\"MemoryChannelInputHandler didn't receive data\" consumer_name=\"{}\" channel_name=\"{}\" reason=\"{}\"",
 					getName(), inputChannel.getName(), e.getMessage());
 			return Status.BACKOFF;
 		}
