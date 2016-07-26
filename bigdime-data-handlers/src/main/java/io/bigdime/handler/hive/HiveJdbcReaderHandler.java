@@ -332,8 +332,14 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		long now = System.currentTimeMillis();
 		if (hiveConfDateTime == 0) {// this is the first time
 			hiveConfDateTime = now - goBackDays * 24 * 60 * 60 * 1000;
+			logger.info(getHandlerPhase(),
+					"_message=\"first run, set hiveConfDateTime done\" hiveConfDateTime={} hiveConfDate={}",
+					hiveConfDateTime, getHiveConfDate());
 		} else if (now - hiveConfDateTime > intervalInMillis) {
 			hiveConfDateTime = hiveConfDateTime + intervalInMillis;
+			logger.info(getHandlerPhase(),
+					"_message=\"time to set hiveConfDateTime.\" now={} hiveConfDateTime={} intervalInMillis={} hiveConfDate={}",
+					now, hiveConfDateTime, intervalInMillis, getHiveConfDate());
 		} else {
 			logger.info("nothing to run", "now={} hiveConfDateTime={} intervalInMillis={}", now, hiveConfDateTime,
 					intervalInMillis);
@@ -386,8 +392,12 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		logger.debug(getHandlerPhase(), "_messagge=\"entering doProcess\" invocation_count={}", getInvocationCount());
 		try {
 			ActionEvent outputEvent = new ActionEvent();
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, hiveQuery);
+
 			if (inputDescriptor == null) {
-				logger.debug(getHandlerPhase(),
+				logger.info(getHandlerPhase(),
 						"will return READY, so that next handler can process the pending records");
 			} else {
 
@@ -396,20 +406,17 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 				String jobName = "bigdime-dw" + "." + entityName + "." + ProcessHelper.getInstance().getProcessId()
 						+ "." + jobDtf.print(System.currentTimeMillis());
-				logger.debug(getHandlerPhase(), "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", hiveQuery,
+				logger.info(getHandlerPhase(), "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", hiveQuery,
 						hiveConfigurations, jobName);
 				stmt.execute("set mapred.job.name=" + jobName);
 				stmt.execute(hiveQuery);// no resultset is returned
 				boolean updatedRuntime = updateRuntimeInfo(runtimeInfoStore, entityName,
 						inputDescriptor.getInputDescriptorString(),
 						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.VALIDATED, outputEvent.getHeaders());
-				logger.debug(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+				logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
 			}
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, hiveQuery);
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			logger.debug(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\"", outputEvent.getHeaders());
+			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\"", outputEvent.getHeaders());
 		} catch (final Exception e) {
 			throw new HandlerException("unable to process", e);
 		} finally {
