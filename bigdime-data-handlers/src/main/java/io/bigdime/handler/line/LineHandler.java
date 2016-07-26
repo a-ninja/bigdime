@@ -150,11 +150,8 @@ public class LineHandler extends AbstractSourceHandler {
 		Map<String, String> headers = null;
 		getHandlerContext().setEventList(null);
 		/*
-		 * For each event
-		 * 	if the event contains a line
-		 * 		process it
-		 * 	else
-		 * 		get next event
+		 * For each event if the event contains a line process it else get next
+		 * event
 		 */
 		while (actionEventIter.hasNext()) {
 			ActionEvent actionEvent = actionEventIter.next();
@@ -198,7 +195,8 @@ public class LineHandler extends AbstractSourceHandler {
 		/*
 		 * If there was an output event
 		 */
-		processChannelSubmission(outputEvent);
+		if (outputEvent != null)
+			processChannelSubmission(outputEvent);
 
 		if (leftoverEvent != null) {
 			journal.setLeftoverEvent(leftoverEvent);
