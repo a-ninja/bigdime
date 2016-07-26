@@ -1,6 +1,5 @@
 package io.bigdime.handler.webhdfs;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -161,7 +160,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
 			if (readAll()) {
-				logger.debug(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
+				logger.info(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
 						getId(), getSimpleJournal().getReadCount(), currentFilePath);
 				getSimpleJournal().reset();
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
@@ -180,7 +179,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			processChannelSubmission(outputEvent);
 			return statustoReturn;
 		} else {
-			logger.debug(getHandlerPhase(), "returning READY, no data read from the file");
+			logger.info(getHandlerPhase(), "returning READY, no data read from the file");
 			return Status.READY;
 		}
 	}
@@ -284,18 +283,17 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			for (final String directoryPath : availableHdfsDirectories) {
 				final WebHdfsReader webHdfsReader = new WebHdfsReader();
 
-				List<String> fileNames = null;
 				try {
-					fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
-				} catch (FileNotFoundException e) {
+					List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
+					for (final String fileName : fileNames) {
+						recordsFound = true;
+						queueRuntimeInfo(runtimeInfoStore, entityName, fileName);
+					}
+				} catch (WebHdfsException e) {
 					logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
 							directoryPath, e.getMessage());
 				}
 
-				for (final String fileName : fileNames) {
-					recordsFound = true;
-					queueRuntimeInfo(runtimeInfoStore, entityName, fileName);
-				}
 			}
 			logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
 					recordsFound);
