@@ -5,6 +5,7 @@ package io.bigdime.core.handler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import io.bigdime.core.Handler;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.CollectionUtil;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.HandlerConfigConstants;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
@@ -232,11 +234,32 @@ public abstract class AbstractHandler implements Handler {
 	}
 
 	protected List<RuntimeInfo> getAllStartedRuntimeInfos(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
-			final String entityName) throws RuntimeInfoStoreException {
+			final String entityName, final String inputDescriptorPrefix) throws RuntimeInfoStoreException {
 		final List<RuntimeInfo> runtimeInfos = runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
 				entityName, RuntimeInfoStore.Status.STARTED);
-		logger.debug(getHandlerPhase(), "started_runtimeInfos=\"{}\"", runtimeInfos);
+		logger.debug(getHandlerPhase(), "started_runtimeInfos.size=\"{}\"", CollectionUtil.getSize(runtimeInfos));
+
+		if (!StringUtils.isBlank(inputDescriptorPrefix) && CollectionUtil.isNotEmpty(runtimeInfos)) {
+			final Iterator<RuntimeInfo> runtimeInfosIter = runtimeInfos.iterator();
+			while (runtimeInfosIter.hasNext()) {
+				final RuntimeInfo runtimeInfo = runtimeInfosIter.next();
+
+				if (!runtimeInfo.getInputDescriptor().startsWith(inputDescriptorPrefix)) {
+					logger.info(getHandlerPhase(),
+							"_message=\"removing from started record list\" handler_id={} input_descriptor={} startWith={}",
+							getId(), runtimeInfo.getInputDescriptor(),
+							runtimeInfo.getInputDescriptor().startsWith(inputDescriptorPrefix));
+					runtimeInfosIter.remove();
+				}
+			}
+		}
 		return runtimeInfos;
+	}
+
+	protected List<RuntimeInfo> getAllStartedRuntimeInfos(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
+			final String entityName) throws RuntimeInfoStoreException {
+
+		return getAllStartedRuntimeInfos(runtimeInfoStore, entityName, null);
 	}
 
 	/**

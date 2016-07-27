@@ -27,7 +27,7 @@ public class AbstractSourceHandler extends AbstractHandler {
 	 */
 	protected void processChannelSubmission(final ActionEvent outputEvent) {
 		logger.debug(getHandlerPhase(), "checking channel submission, headers={} output_channel=\"{}\"",
-				outputEvent.getHeaders(), getOutputChannel());
+				outputEvent.getHeaders(), getOutputChannel().getName());
 		if (getOutputChannel() != null) {
 			logger.debug(getHandlerPhase(), "submitting to channel");
 			getOutputChannel().put(outputEvent);

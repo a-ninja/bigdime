@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -182,32 +181,8 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		if (isFirstRun()) {
-			entityName = getEntityNameFromHeader();
-			logger.info(getHandlerPhase(), "From header, entityName={} ", entityName);
-			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName);
+		setupFirstRun();
 
-			final Iterator<RuntimeInfo> dirtyRecordIter = dirtyRecords.iterator();
-			while (dirtyRecordIter.hasNext()) {
-				final RuntimeInfo dirtyRecord = dirtyRecordIter.next();
-				if (!dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX)) {
-					logger.info(getHandlerPhase(),
-							"_message=\"removing from dirty record list\" handler_id={} input_descriptor={} startWith={}",
-							getId(), dirtyRecord.getInputDescriptor(),
-							dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX));
-					dirtyRecordIter.remove();
-				}
-			}
-
-			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-				dirtyRecordCount = dirtyRecords.size();
-				logger.warn(getHandlerPhase(),
-						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
-						getId(), dirtyRecordCount, entityName);
-			} else {
-				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
-			}
-		}
 		if (readAll()) {
 			try {
 				setNextDescriptorToProcess();
@@ -229,6 +204,23 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			getSimpleJournal().setTotalSize(fileLength);
 		}
 		return Status.READY;
+	}
+
+	protected void setupFirstRun() throws RuntimeInfoStoreException {
+		if (isFirstRun()) {
+			entityName = getEntityNameFromHeader();
+			logger.info(getHandlerPhase(), "From header, entityName={} ", entityName);
+			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
+
+			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
+				dirtyRecordCount = dirtyRecords.size();
+				logger.warn(getHandlerPhase(),
+						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
+						getId(), dirtyRecordCount, entityName);
+			} else {
+				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
+			}
+		}
 	}
 
 	protected void setNextDescriptorToProcess()

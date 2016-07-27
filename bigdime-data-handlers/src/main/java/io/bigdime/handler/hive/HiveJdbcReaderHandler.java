@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -93,6 +92,8 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	final private int DEFAULT_GO_BACK_DAYS = 1;
 
+	private static final int MILLS_IN_A_DAY = 24 * 60 * 60 * 1000;
+
 	/**
 	 * How many days should we go back to process the records. 0 means process
 	 * todays records, 1 means process yesterdays records
@@ -116,7 +117,20 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
-	private long intervalInMins = 24 * 60;
+	/**
+	 * intervalInMins, cron expression and goBackDays properties are highly
+	 * dependent on each other. As a thumb rule, intervalInMins must be same as
+	 * frequency set in cron expression.
+	 * 
+	 * If the cron expression is to run every minute and the intervalInMins is
+	 * set to, say, 1 day, the reader will wait for 1 day to proceed.
+	 * 
+	 * intervalInMins is needed because of the goBackDays property. If
+	 * goBackDays is set to 10 days, then the reader reads the 10 days old data
+	 * during the first run. After the first run, it adds intervalInMins to the
+	 * get to read the 9 days old data and so on.
+	 */
+	private long intervalInMins = 24 * 60;// default to a day
 	private long intervalInMillis = intervalInMins * 60 * 1000;
 
 	private final String INPUT_DESCRIPTOR_PREFIX = "hiveConfDate:";
@@ -251,21 +265,7 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	 */
 	protected void setupFirstRun() throws RuntimeInfoStoreException {
 		if (isFirstRun()) {
-			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName);
-
-			final Iterator<RuntimeInfo> dirtyRecordIter = dirtyRecords.iterator();
-			while (dirtyRecordIter.hasNext()) {
-				final RuntimeInfo dirtyRecord = dirtyRecordIter.next();
-
-				if (!dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX)) {
-					logger.info(getHandlerPhase(),
-							"_message=\"removing from dirty record list\" handler_id={} input_descriptor={} startWith={}",
-							getId(), dirtyRecord.getInputDescriptor(),
-							dirtyRecord.getInputDescriptor().startsWith(INPUT_DESCRIPTOR_PREFIX));
-					dirtyRecordIter.remove();
-				}
-			}
-
+			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
 			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
 				dirtyRecordCount = dirtyRecords.size();
 				logger.warn(getHandlerPhase(),
@@ -282,7 +282,6 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
 			logger.info(getHandlerPhase(), "\"processing a dirty record\" dirtyRecord=\"{}\"", dirtyRecord);
 			initRecordToProcess(dirtyRecord);
-			// setHdfsOutputDirectory();
 			processingDirty = true;
 			return;
 		} else {
@@ -325,13 +324,13 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		} catch (ClassNotFoundException | SQLException | IOException e) {
 			throw new HandlerException("unable to process", e);
 		}
-
 	}
 
 	private boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
 		long now = System.currentTimeMillis();
 		if (hiveConfDateTime == 0) {// this is the first time
-			hiveConfDateTime = now - goBackDays * 24 * 60 * 60 * 1000;
+
+			hiveConfDateTime = now - goBackDays * MILLS_IN_A_DAY;
 			logger.info(getHandlerPhase(),
 					"_message=\"first run, set hiveConfDateTime done\" hiveConfDateTime={} hiveConfDate={}",
 					hiveConfDateTime, getHiveConfDate());
