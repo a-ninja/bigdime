@@ -28,6 +28,7 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.CollectionUtil;
+import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.HandlerConfigConstants;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
@@ -76,6 +77,8 @@ public abstract class AbstractHandler implements Handler {
 
 	private String handlerPhase = "";
 
+	private boolean lastHandler = false;
+
 	private String[] getInputChannelArray(String channelMapValue) {
 		return channelMapValue.split(","); // spilt "input1:channel1,
 											// input2:channel2"
@@ -83,17 +86,17 @@ public abstract class AbstractHandler implements Handler {
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
-		logger.info("building handler", "handler_index=\"{}\" handler_name=\"{}\" properties=\"{}\"", getIndex(),
+		logger.info(getHandlerPhase(), "handler_index=\"{}\" handler_name=\"{}\" properties=\"{}\"", getIndex(),
 				getName(), getPropertyMap());
 		@SuppressWarnings("unchecked")
 		Entry<String, String> srcDesc = (Entry<String, String>) getPropertyMap().get(SourceConfigConstants.SRC_DESC);
-		logger.info("building handler", "handler_name=\"{}\" \"src_desc\"=\"{}\" handler=\"{}\"", getName(), srcDesc,
+		logger.info(getHandlerPhase(), "handler_name=\"{}\" \"src_desc\"=\"{}\" handler=\"{}\"", getName(), srcDesc,
 				this.getId());
 		if (srcDesc != null) {
 			String srcDescInputName = srcDesc.getValue();
 			if (getPropertyMap().containsKey(HandlerConfigConstants.CHANNEL_MAP)) {
 				String channelMapValue = getPropertyMap().get(HandlerConfigConstants.CHANNEL_MAP).toString();
-				logger.debug("building handler", "handler_name=\"{}\" channel_map=\"{}\"", getName(), channelMapValue);
+				logger.debug(getHandlerPhase(), "handler_name=\"{}\" channel_map=\"{}\"", getName(), channelMapValue);
 				String[] inputChannelArray = getInputChannelArray(channelMapValue);
 
 				final Map<String, DataChannel> channelMap = AdaptorConfig.getInstance().getAdaptorContext()
@@ -123,6 +126,9 @@ public abstract class AbstractHandler implements Handler {
 						srcDescInputName, outputChannel.getName());
 			}
 		}
+		lastHandler = PropertyHelper.getBooleanProperty(getPropertyMap(),
+				ActionEventHeaderConstants.LAST_HANDLER_IN_CHAIN);
+		logger.debug(getHandlerPhase(), "lastHandler=\"{}\"", lastHandler);
 	}
 
 	@Override
@@ -477,11 +483,11 @@ public abstract class AbstractHandler implements Handler {
 	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
 		setHandlerPhase("processing " + getName());
 		incrementInvocationCount();
-		logger.debug(handlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
+		logger.debug(getHandlerPhase(), "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
 		try {
 			io.bigdime.core.ActionEvent.Status status = preProcess();
 			if (status == io.bigdime.core.ActionEvent.Status.BACKOFF) {
-				logger.debug(handlerPhase, "returning BACKOFF");
+				logger.debug(getHandlerPhase(), "returning BACKOFF");
 				return status;
 			}
 			return doProcess();
@@ -502,6 +508,13 @@ public abstract class AbstractHandler implements Handler {
 	protected io.bigdime.core.ActionEvent.Status doProcess()
 			throws IOException, RuntimeInfoStoreException, HandlerException {
 		return io.bigdime.core.ActionEvent.Status.READY;
+	}
+
+	protected void processLastHandler() {
+		if (lastHandler) {
+			logger.debug(getHandlerPhase(), "processing last handler's rituals");
+			getHandlerContext().setEventList(null);
+		}
 	}
 
 	// protected List<RuntimeInfo> dirtyRecords;

@@ -11,11 +11,11 @@ public class AbstractSourceHandler extends AbstractHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(AbstractSourceHandler.class));
 
 	public List<String> getAvailableDirectoriesFromHeader(final String headerName) {
-		logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\"", getId(), headerName);
+		logger.info(getHandlerPhase(), "_message=\"getAvailableDirectoriesFromHeader\" handler_id={} headerName=\"{}\"", getId(), headerName);
 		List<ActionEvent> eventList = getHandlerContext().getEventList();
 		List<String> availableHdfsDirectories = new ArrayList<>();
 		for (final ActionEvent inputEvent : eventList) {
-			logger.info("getAvailableDirectoriesFromHeader", "handler_id={} headerName=\"{}\" header_value={}", getId(),
+			logger.info(getHandlerPhase(), "_message=\"getAvailableDirectoriesFromHeader\" handler_id={} headerName=\"{}\" header_value={}", getId(),
 					headerName, inputEvent.getHeaders().get(headerName));
 			availableHdfsDirectories.add(inputEvent.getHeaders().get(headerName));
 		}

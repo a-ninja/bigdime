@@ -144,4 +144,19 @@ public class StringHelperTest {
 				"/unit/test");
 		Assert.assertEquals(relativePath, "/2/testGetRelativePathWithNullBasePath");
 	}
+
+	@Test
+	public void testGetStringAfterLastToken() {
+		String path = StringHelper.getStringAfterLastToken("/unit/test/2/testGetStringAfterLastToken", "/");
+		Assert.assertEquals(path, "testGetStringAfterLastToken");
+
+	}
+
+	@Test
+	public void testGetStringBeforeLastToken() {
+		String path = StringHelper.getStringBeforeLastToken("/unit/test/2/testGetStringAfterLastToken", "/");
+		Assert.assertEquals(path, "/unit/test/2");
+
+	}
+
 }

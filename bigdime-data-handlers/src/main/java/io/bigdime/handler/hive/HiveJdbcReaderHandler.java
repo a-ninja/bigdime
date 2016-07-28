@@ -411,7 +411,7 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				stmt.execute(hiveQuery);// no resultset is returned
 				boolean updatedRuntime = updateRuntimeInfo(runtimeInfoStore, entityName,
 						inputDescriptor.getInputDescriptorString(),
-						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.VALIDATED, outputEvent.getHeaders());
+						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.READY, outputEvent.getHeaders());
 				logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
 			}
 			getHandlerContext().createSingleItemEventList(outputEvent);

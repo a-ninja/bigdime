@@ -157,6 +157,11 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
+			outputEvent.getHeaders().put("read_count", "" + getSimpleJournal().getReadCount());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
+
 			if (readAll()) {
 				logger.info(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
 						getId(), getSimpleJournal().getReadCount(), currentFilePath);
@@ -166,10 +171,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 				logger.debug(getHandlerPhase(), "\"there is more data to process, returning CALLBACK\" handler_id={}",
 						getId());
 			}
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
-			outputEvent.getHeaders().put("read_count", "" + getSimpleJournal().getReadCount());
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
 			processChannelSubmission(outputEvent);
 			return statustoReturn;
@@ -275,7 +276,10 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 					List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
 					for (final String fileName : fileNames) {
 						recordsFound = true;
-						queueRuntimeInfo(runtimeInfoStore, entityName, fileName);
+						Map<String, String> properties = new HashMap<>();
+						properties.put(WebHDFSReaderHandlerConstants.HDFS_PATH, directoryPath);
+						properties.put(WebHDFSReaderHandlerConstants.HDFS_FILE_NAME, fileName);
+						queueRuntimeInfo(runtimeInfoStore, entityName, fileName, properties);
 					}
 				} catch (WebHdfsException e) {
 					logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",

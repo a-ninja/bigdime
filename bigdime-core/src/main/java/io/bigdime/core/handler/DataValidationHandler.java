@@ -21,7 +21,9 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.ValidationHandlerConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.validation.DataValidationException;
@@ -62,14 +64,15 @@ public class DataValidationHandler extends AbstractHandler {
 	@Override
 	public void build() throws AdaptorConfigurationException {
 		super.build();
-		logger.debug("building validation handler", "property_map=\"{}\"", getPropertyMap());
+		setHandlerPhase("building validation handler");
+		logger.debug(getHandlerPhase(), "property_map=\"{}\"", getPropertyMap());
 
 		final String validationTypeProperty = (String) getPropertyMap()
 				.get(ValidationHandlerConfigConstants.VALIDATION_TYPE);
 		final String[] validationTypes = validationTypeProperty.split("\\|");
 		for (String type : validationTypes) {
 			type = type.trim();
-			logger.debug("building validation handler", "validation_type=\"{}\"", type);
+			logger.debug(getHandlerPhase(), "validation_type=\"{}\"", type);
 			validators.add(validatorFactory.getValidator(type.trim()));
 		}
 	}
@@ -83,8 +86,8 @@ public class DataValidationHandler extends AbstractHandler {
 		Preconditions.checkArgument(!actionEvents.isEmpty(), "eventList in HandlerContext can't be empty");
 		ActionEvent actionEvent = actionEvents.get(0);
 		process0(actionEvent);
-		getHandlerContext().setEventList(null);// clear the context, assuming
-												// this is the last handler
+
+		processLastHandler();
 		return Status.READY;
 	}
 

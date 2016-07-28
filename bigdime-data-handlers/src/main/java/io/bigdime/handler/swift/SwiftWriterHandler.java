@@ -1,7 +1,6 @@
 package io.bigdime.handler.swift;
 
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.javaswift.joss.client.factory.AccountConfig;
@@ -33,7 +32,6 @@ import io.bigdime.core.handler.AbstractHandler;
 @Scope("prototype")
 public abstract class SwiftWriterHandler extends AbstractHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(SwiftWriterHandler.class));
-	private String handlerPhase = "building SwiftWriterHandler";
 
 	protected String username;
 	protected String password; // make it char[]
@@ -50,11 +48,13 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 	protected String outputFilePathPattern;
 	protected Pattern inputPattern;
 
+	private boolean initialized = false;
+
 	@Override
 	public void build() throws AdaptorConfigurationException {
 		super.build();
-		handlerPhase = "building SwiftWriterHandler";
-		logger.info(handlerPhase, "properties={}", getPropertyMap());
+		setHandlerPhase("building SwiftWriterHandler");
+		logger.info(getHandlerPhase(), "properties={}", getPropertyMap());
 
 		username = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.USER_NAME);
 		password = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.PASSWORD);
@@ -68,9 +68,15 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		outputFilePathPattern = PropertyHelper.getStringProperty(getPropertyMap(),
 				SwiftWriterHandlerConstants.OUTPUT_FILE_PATH_PATTERN);
 
-		logger.debug(handlerPhase,
+		logger.debug(getHandlerPhase(),
 				"username={} authUrl={} tenantId={} tenantName={} containerName={} inputFilePathPattern=\"{}\" outputFilePathPattern=\"{}\"",
 				username, authUrl, tenantId, tenantName, containerName, inputFilePathPattern, outputFilePathPattern);
+
+		inputPattern = Pattern.compile(inputFilePathPattern);
+	}
+
+	protected void init() {
+		logger.info(getHandlerPhase(), "_message=\"connecting to swift\"");
 		config = new AccountConfig();
 		config.setUsername(username);
 		config.setPassword(password);
@@ -82,9 +88,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 
 		// String pattern =
 		// "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)";
-		logger.debug(handlerPhase, "_message=\"created account\"");
-
-		inputPattern = Pattern.compile(inputFilePathPattern);
+		logger.info(getHandlerPhase(), "_message=\"connected to swift, created account object\"");
 	}
 
 	/**
@@ -109,57 +113,46 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 	@Override
 	public Status process() throws HandlerException {
 
-		handlerPhase = "processing SwiftWriterHandler";
 		incrementInvocationCount();
+		if (!initialized) {
+			init();
+			initialized = true;
+		}
 
 		SwiftWriterHandlerJournal journal = getJournal(SwiftWriterHandlerJournal.class);
-
+		Status returnStatus = Status.READY;
 		if (journal == null || journal.getEventList() == null) {
 			// process for ready status.
 			List<ActionEvent> actionEvents = getHandlerContext().getEventList();
 			Preconditions.checkNotNull(actionEvents, "eventList in HandlerContext can't be null");
-			logger.info(handlerPhase, "journal is null, actionEvents.size={} id={} ", actionEvents.size(), getId());
+			logger.info(getHandlerPhase(), "journal is null, actionEvents.size={} id={} ", actionEvents.size(),
+					getId());
+
 			if (actionEvents.isEmpty())
-				return Status.BACKOFF;
-
-			return process0(actionEvents);
-
+				returnStatus = Status.BACKOFF;
+			else
+				returnStatus = process0(actionEvents);
 		} else {
 			List<ActionEvent> actionEvents = journal.getEventList();
 
-			logger.info(handlerPhase, "journal is not null, actionEvents==null={}", (actionEvents == null));
+			logger.info(getHandlerPhase(), "journal not null, actionEvents==null={}", (actionEvents == null));
 			if (actionEvents != null && !actionEvents.isEmpty()) {
 				// process for CALLBACK status.
+				logger.info(getHandlerPhase(), "journal not null or empty, actionEvents.size={}", actionEvents.size());
 				List<ActionEvent> moreEvents = getHandlerContext().getEventList();
+
+				/*
+				 * TODO: Dangerous code block, try to simplify it.
+				 */
 				if (moreEvents != null)
 					journal.getEventList().addAll(moreEvents);
-				return process0(journal.getEventList());
+				returnStatus = process0(journal.getEventList());
 			} else {
-				return Status.BACKOFF;
+				returnStatus = Status.BACKOFF;
 			}
 		}
-	}
-
-	protected String computeSwiftObjectName(final String fileName, final String outPattern, final Pattern inPattern) {
-		String swiftObjectName = outPattern;
-		Matcher m = inPattern.matcher(fileName);
-		while (m.find()) {
-			logger.debug(handlerPhase, "_message=\"matched filename\" fileName={} matched_filename={}", fileName,
-					m.group());
-			String key = null;
-
-			for (int i = 1; i <= m.groupCount(); i++) {
-				key = "$" + i;
-				String temp = m.group(i);
-				logger.debug(handlerPhase, "file-part={}", temp);
-				swiftObjectName = swiftObjectName.replace(key, temp);
-				logger.debug(handlerPhase, "objectName={}", swiftObjectName);
-			}
-			logger.debug(handlerPhase, "final objectName={}", swiftObjectName);
-
-		}
-		return swiftObjectName;
-
+		processLastHandler();
+		return returnStatus;
 	}
 
 	protected abstract Status process0(List<ActionEvent> actionEvents) throws HandlerException;
@@ -171,6 +164,5 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID, tenantId);
 		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME, tenantName);
 		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME, containerName);
-
 	}
 }

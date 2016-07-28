@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.google.common.base.Preconditions;
@@ -23,6 +25,7 @@ import com.google.common.base.Preconditions;
  */
 @Component
 public final class StringHelper {
+	private static final Logger logger = LoggerFactory.getLogger(StringHelper.class);
 	private static StringHelper instance = new StringHelper();
 
 	private StringHelper() {
@@ -174,4 +177,50 @@ public final class StringHelper {
 			return inputValue;
 		}
 	}
+
+	public static String getStringAfterLastToken(final String inputValue, final String token) {
+		if (token.isEmpty())
+			return inputValue;
+		if (inputValue.isEmpty())
+			return inputValue;
+
+		int index = inputValue.lastIndexOf(token);
+		if (index >= 0 && inputValue.length() > index) {
+			return inputValue.substring(index + 1);
+		} else
+			return null;
+	}
+
+	public static String getStringBeforeLastToken(final String inputValue, final String token) {
+		if (token.isEmpty() || inputValue.isEmpty())
+			return inputValue;
+
+		int index = inputValue.lastIndexOf(token);
+		if (index >= 0) {
+			return inputValue.substring(0, index);
+		} else
+			return null;
+	}
+
+	public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern) {
+
+		Preconditions.checkArgument(inputString != null, "inputString must be not null");
+		Preconditions.checkArgument(outPattern != null, "outPattern must be not null");
+		Preconditions.checkArgument(inPattern != null, "inPattern must be not null");
+
+		String outputString = outPattern;
+		final Matcher m = inPattern.matcher(inputString);
+
+		while (m.find()) {
+			String key = null;
+
+			for (int i = 1; i <= m.groupCount(); i++) {
+				key = "$" + i;
+				String temp = m.group(i);
+				outputString = outputString.replace(key, temp);
+			}
+		}
+		return outputString;
+	}
+
 }

@@ -82,6 +82,8 @@ public final class ActionEventHeaderConstants {
 	public static final String HIVE_METASTORE_URI = "hive.metastore.uris";
 
 	public static final String HDFS_OUTPUT_DIRECTORY = "hdfsOutputDirectory";
+	
+	public static final String LAST_HANDLER_IN_CHAIN = "last-handler-in-chain";
 
 	public static class HiveJDBCReaderHeaders {
 		public static final String HIVE_QUERY = "hiveQuery";

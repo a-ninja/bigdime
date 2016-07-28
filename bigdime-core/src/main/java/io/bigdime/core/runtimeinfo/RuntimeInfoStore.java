@@ -27,6 +27,12 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		STARTED,
 
 		/**
+		 * Ingestion was started and completed, pending for the next steps such
+		 * as staging or validation etc.
+		 */
+		READY,
+
+		/**
 		 * Ingestion has failed for the given source.
 		 */
 		FAILED,

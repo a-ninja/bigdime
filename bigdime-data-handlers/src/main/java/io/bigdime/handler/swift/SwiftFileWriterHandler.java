@@ -14,6 +14,7 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.StringHelper;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 /**
@@ -24,16 +25,21 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 @Component
 @Scope("prototype")
-public class SwiftFileWriterHandler extends SwiftWriterHandler {
+public final class SwiftFileWriterHandler extends SwiftWriterHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(SwiftFileWriterHandler.class));
-	private String handlerPhase = "building SwiftFileWriterHandler";
+
+	@Override
+	public Status process() throws HandlerException {
+		setHandlerPhase("processing SwiftFileWriterHandler");
+		return super.process();
+	}
 
 	protected Status process0(List<ActionEvent> actionEvents) throws HandlerException {
 		long startTime = System.currentTimeMillis();
 		SwiftWriterHandlerJournal journal = getJournal(SwiftWriterHandlerJournal.class);
 		if (journal == null) {
-			logger.debug(handlerPhase, "jounral is null, initializing");
+			logger.debug(getHandlerPhase(), "jounral is null, initializing");
 			journal = new SwiftWriterHandlerJournal();
 			getHandlerContext().setJournal(getId(), journal);
 		}
@@ -51,8 +57,8 @@ public class SwiftFileWriterHandler extends SwiftWriterHandler {
 			throw new HandlerException(e.getMessage(), e);
 		}
 		long endTime = System.currentTimeMillis();
-		logger.debug(handlerPhase, "statusToReturn={}", statusToReturn);
-		logger.info(handlerPhase, "SwiftFileWriterHandler finished in {} milliseconds", (endTime - startTime));
+		logger.debug(getHandlerPhase(), "statusToReturn={}", statusToReturn);
+		logger.info(getHandlerPhase(), "SwiftFileWriterHandler finished in {} milliseconds", (endTime - startTime));
 		return statusToReturn;
 
 	}
@@ -60,7 +66,7 @@ public class SwiftFileWriterHandler extends SwiftWriterHandler {
 	private void writeToSwift(final ActionEvent actionEvent) throws IOException, HandlerException {
 
 		String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-		String swiftObjectName = computeSwiftObjectName(fileName, outputFilePathPattern, inputPattern);
+		String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern);
 		uploadFile(container, swiftObjectName, new String(fileName));
 	}
 
