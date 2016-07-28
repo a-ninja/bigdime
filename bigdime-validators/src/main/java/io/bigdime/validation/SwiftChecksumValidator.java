@@ -95,7 +95,7 @@ public class SwiftChecksumValidator implements Validator {
 		String sourceChecksum = actionEvent.getHeaders().get(ActionEventHeaderConstants.SwiftHeaders.SOURCE_CHECKSUM);
 
 		logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(),
-				"processing SwiftChecksumValidator", "objectName={] objectEtag={} sourceChecksum={}", objectName,
+				"processing SwiftChecksumValidator", "objectName={} objectEtag={} sourceChecksum={}", objectName,
 				objectEtag, sourceChecksum);
 
 		ValidationResponse validationResponse = new ValidationResponse();
