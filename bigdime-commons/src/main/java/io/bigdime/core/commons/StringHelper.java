@@ -11,8 +11,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.google.common.base.Preconditions;
@@ -25,7 +23,6 @@ import com.google.common.base.Preconditions;
  */
 @Component
 public final class StringHelper {
-	private static final Logger logger = LoggerFactory.getLogger(StringHelper.class);
 	private static StringHelper instance = new StringHelper();
 
 	private StringHelper() {
@@ -221,6 +218,16 @@ public final class StringHelper {
 			}
 		}
 		return outputString;
+	}
+
+	/**
+	 * bigdime wrapper for StringUtils.isBlank.
+	 * 
+	 * @param arg
+	 * @return
+	 */
+	public static boolean isBlank(final String arg) {
+		return StringUtils.isBlank(arg);
 	}
 
 }

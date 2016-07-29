@@ -51,9 +51,9 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
+		setHandlerPhase("building WebHDFSReaderHandler");
 		super.build();
 		try {
-			setHandlerPhase("building WebHDFSReaderHandler");
 			logger.info(getHandlerPhase(), "building WebHDFSReaderHandler");
 			hostNames = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HOST_NAMES);
 			port = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.PORT);
@@ -188,7 +188,8 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 				for (final String fileName : fileNames) {
 					fileNamesStringBuilder.append(fileName).append("\n");
 				}
-				logger.debug(getHandlerPhase(), fileNamesStringBuilder.toString());
+				// logger.debug(getHandlerPhase(),
+				// fileNamesStringBuilder.toString());
 			} catch (WebHdfsException e) {
 				logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
 						directoryPath, e.getMessage());

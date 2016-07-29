@@ -22,5 +22,6 @@ public enum HiveJdbcReaderHandlerConstants {
 
 	public static final String HIVE_JDBC_USER_NAME = "hive-jdbc-user-name";
 	public static final String HIVE_JDBC_SECRET = "hive-jdbc-secret";
-
+	
+	public static final String OUTPUT_DIRECTORY_DATE_FORMAT = "output-directory-date-format";
 }

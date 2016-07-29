@@ -86,9 +86,9 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
+		setHandlerPhase("building WebHDFSReaderHandler");
 		super.build();
 		try {
-			setHandlerPhase("building WebHDFSReaderHandler");
 			logger.info(getHandlerPhase(), "building WebHDFSReaderHandler");
 			hostNames = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HOST_NAMES);
 			port = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.PORT);

@@ -66,7 +66,7 @@ import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
  */
 @Component
 @Scope("prototype")
-public class HiveJdbcReaderHandler extends AbstractSourceHandler {
+public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJdbcReaderHandler.class));
 
 	private String outputDirectory = "";
@@ -88,11 +88,13 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMdd-HHmmss.SSS");
 
 	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
-	final DateTimeFormatter hdfsOutputPathDtf = DateTimeFormat.forPattern("yyyyMMdd");
+	private DateTimeFormatter hdfsOutputPathDtf;
 
 	final private int DEFAULT_GO_BACK_DAYS = 1;
 
 	private static final int MILLS_IN_A_DAY = 24 * 60 * 60 * 1000;
+
+	private static final String OUTPUT_DIRECTORY_DATE_FORMAT = "yyyy-MM-dd";
 
 	/**
 	 * How many days should we go back to process the records. 0 means process
@@ -137,9 +139,8 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
-		super.build();
 		setHandlerPhase("building HiveJdbcReaderHandler");
-		// handlerPhase = "building HiveJdbcReaderHandler";
+		super.build();
 		logger.info(getHandlerPhase(), "properties={}", getPropertyMap());
 
 		Map<String, Object> properties = getPropertyMap();
@@ -192,13 +193,16 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				HiveJdbcReaderHandlerConstants.HIVE_JDBC_USER_NAME);
 		password = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.HIVE_JDBC_SECRET);
 
-		logger.debug(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\"",
-				jdbcUrl, driverClassName, authChoice, authOption, userName);
-
 		baseOutputDirectory = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.BASE_OUTPUT_DIRECTORY, "/");
+		String outputDirectoryPattern = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.OUTPUT_DIRECTORY_DATE_FORMAT, OUTPUT_DIRECTORY_DATE_FORMAT);
+		hdfsOutputPathDtf = DateTimeFormat.forPattern(outputDirectoryPattern);
 
+		logger.debug(getHandlerPhase(),
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={}",
+				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory,
+				outputDirectoryPattern);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -471,6 +475,114 @@ public class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		} finally {
 			connection = null;
 		}
+	}
+
+	public String getOutputDirectory() {
+		return outputDirectory;
+	}
+
+	public String getJdbcUrl() {
+		return jdbcUrl;
+	}
+
+	public String getDriverClassName() {
+		return driverClassName;
+	}
+
+	public HDFS_AUTH_OPTION getAuthOption() {
+		return authOption;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public String getBaseOutputDirectory() {
+		return baseOutputDirectory;
+	}
+
+	public String getEntityName() {
+		return entityName;
+	}
+
+	public String getHiveQuery() {
+		return hiveQuery;
+	}
+
+	public Map<String, String> getHiveConfigurations() {
+		return hiveConfigurations;
+	}
+
+	public DateTimeFormatter getJobDtf() {
+		return jobDtf;
+	}
+
+	public DateTimeFormatter getHiveQueryDtf() {
+		return hiveQueryDtf;
+	}
+
+	public DateTimeFormatter getHdfsOutputPathDtf() {
+		return hdfsOutputPathDtf;
+	}
+
+	public int getDEFAULT_GO_BACK_DAYS() {
+		return DEFAULT_GO_BACK_DAYS;
+	}
+
+	public static int getMillsInADay() {
+		return MILLS_IN_A_DAY;
+	}
+
+	public static String getOutputDirectoryDateFormat() {
+		return OUTPUT_DIRECTORY_DATE_FORMAT;
+	}
+
+	public int getGoBackDays() {
+		return goBackDays;
+	}
+
+	public HiveJdbcConnectionFactory getHiveJdbcConnectionFactory() {
+		return hiveJdbcConnectionFactory;
+	}
+
+	public Connection getConnection() {
+		return connection;
+	}
+
+	public RuntimeInfoStore<RuntimeInfo> getRuntimeInfoStore() {
+		return runtimeInfoStore;
+	}
+
+	public long getDirtyRecordCount() {
+		return dirtyRecordCount;
+	}
+
+	public List<RuntimeInfo> getDirtyRecords() {
+		return dirtyRecords;
+	}
+
+	public boolean isProcessingDirty() {
+		return processingDirty;
+	}
+
+	public HiveReaderDescriptor getInputDescriptor() {
+		return inputDescriptor;
+	}
+
+	public long getHiveConfDateTime() {
+		return hiveConfDateTime;
+	}
+
+	public long getIntervalInMins() {
+		return intervalInMins;
+	}
+
+	public long getIntervalInMillis() {
+		return intervalInMillis;
+	}
+
+	public String getINPUT_DESCRIPTOR_PREFIX() {
+		return INPUT_DESCRIPTOR_PREFIX;
 	}
 
 }

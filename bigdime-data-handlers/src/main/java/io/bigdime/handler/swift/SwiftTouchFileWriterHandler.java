@@ -89,7 +89,6 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 						swiftDirListing.size(), swiftPrefix);
 			}
 
-			// boolean writeReady = true;
 			int matchedCount = 0;
 			final Set<String> fileNameListFromSwift = new HashSet<>();
 			if (swiftDirListing != null && swiftDirListing.size() == fileNames.length) {

@@ -4,22 +4,16 @@
 package io.bigdime.core.handler;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.DataChannel;
@@ -29,6 +23,7 @@ import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.CollectionUtil;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.commons.StringHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.HandlerConfigConstants;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
@@ -36,7 +31,6 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status;
-import io.bigdime.libs.hdfs.WebHdfsException;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 
 /**
@@ -86,6 +80,9 @@ public abstract class AbstractHandler implements Handler {
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
+		if (StringHelper.isBlank(handlerPhase)) {
+			setHandlerPhase("building " + getName());
+		}
 		logger.info(getHandlerPhase(), "handler_index=\"{}\" handler_name=\"{}\" properties=\"{}\"", getIndex(),
 				getName(), getPropertyMap());
 		@SuppressWarnings("unchecked")
@@ -223,7 +220,7 @@ public abstract class AbstractHandler implements Handler {
 		logger.debug(getHandlerPhase(), "found queued_runtimeInfos=\"{}\"",
 				(runtimeInfos != null && !runtimeInfos.isEmpty()));
 		if (runtimeInfos != null && !runtimeInfos.isEmpty()) {
-			if (StringUtils.isBlank(inputDescriptorPrefix)) {
+			if (StringHelper.isBlank(inputDescriptorPrefix)) {
 				return runtimeInfos.get(0);
 			}
 			for (RuntimeInfo runtimeInfo : runtimeInfos) {
@@ -245,7 +242,7 @@ public abstract class AbstractHandler implements Handler {
 				entityName, RuntimeInfoStore.Status.STARTED);
 		logger.debug(getHandlerPhase(), "started_runtimeInfos.size=\"{}\"", CollectionUtil.getSize(runtimeInfos));
 
-		if (!StringUtils.isBlank(inputDescriptorPrefix) && CollectionUtil.isNotEmpty(runtimeInfos)) {
+		if (!StringHelper.isBlank(inputDescriptorPrefix) && CollectionUtil.isNotEmpty(runtimeInfos)) {
 			final Iterator<RuntimeInfo> runtimeInfosIter = runtimeInfos.iterator();
 			while (runtimeInfosIter.hasNext()) {
 				final RuntimeInfo runtimeInfo = runtimeInfosIter.next();
