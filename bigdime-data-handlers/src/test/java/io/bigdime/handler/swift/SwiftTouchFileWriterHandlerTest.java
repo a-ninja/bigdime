@@ -58,7 +58,7 @@ public class SwiftTouchFileWriterHandlerTest {
 		String writeData = "unit-test-testProcess";
 		List<ActionEvent> contextEventList = new ArrayList<>();
 		ReturnStatus returnStatus = setupHandler(writeData, contextEventList, getDefaultProperties());
-		Assert.assertEquals(returnStatus.getStatus(), Status.BACKOFF);
+		Assert.assertEquals(returnStatus.getStatus(), Status.BACKOFF_NOW);
 		List<ActionEvent> actionEvents = returnStatus.getEventList();
 		Assert.assertNull(actionEvents);
 	}

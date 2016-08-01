@@ -129,7 +129,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 					getId());
 
 			if (actionEvents.isEmpty())
-				returnStatus = Status.BACKOFF;
+				returnStatus = Status.BACKOFF_NOW;
 			else
 				returnStatus = process0(actionEvents);
 		} else {
@@ -148,7 +148,7 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 					journal.getEventList().addAll(moreEvents);
 				returnStatus = process0(journal.getEventList());
 			} else {
-				returnStatus = Status.BACKOFF;
+				returnStatus = Status.BACKOFF_NOW;
 			}
 		}
 		processLastHandler();

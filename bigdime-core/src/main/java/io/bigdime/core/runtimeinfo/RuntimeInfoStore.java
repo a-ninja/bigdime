@@ -27,10 +27,12 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		STARTED,
 
 		/**
-		 * Ingestion was started and completed, pending for the next steps such
-		 * as staging or validation etc.
+		 * Ingestion was started and partially completed, pending for the next
+		 * steps such as staging or validation etc. This is helpful when we dont
+		 * want to restart the processing from first handler in case of an
+		 * error.
 		 */
-		READY,
+		PENDING,
 
 		/**
 		 * Ingestion has failed for the given source.

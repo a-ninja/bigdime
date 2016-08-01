@@ -159,6 +159,7 @@ public class HandlerManager {
 
 				iteration++;
 				HandlerNode tempHandlerNode = callbackHandlerIndexStack.pop();
+				boolean backoff = false;
 				do {
 					Handler handler = tempHandlerNode.getHandler();
 					logger.debug("handler chain executing",
@@ -169,10 +170,13 @@ public class HandlerManager {
 					//TODO: handle the null status
 					switch (status) {
 					case BACKOFF:
+					case BACKOFF_NOW:
 						logger.debug("handler chain executing",
-								"_message=\"handler will backoff\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\"",
-								handlerChainName, handler.getId(), handler.getName(), iteration);
-						return status;
+								"_message=\"handler will backoff\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\" status=\"\"",
+								handlerChainName, handler.getId(), handler.getName(), iteration, status);
+						backoff = true;
+						break;
+//						return status;
 					case CALLBACK:
 						logger.debug("handler chain executing",
 								"_message=\"pushing handler node stack\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\"",
@@ -188,7 +192,7 @@ public class HandlerManager {
 						// do nothing
 					}
 					tempHandlerNode = tempHandlerNode.getNext();
-				} while (tempHandlerNode != null);
+				} while (tempHandlerNode != null && !backoff);
 			}
 
 			catch (final HandlerException ex) {

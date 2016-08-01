@@ -162,6 +162,11 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
+			if (processingDirty)
+				outputEvent.getHeaders().put(ActionEventHeaderConstants.CLEANUP_REQUIRED, "true");
+			processingDirty = false;// CLEANUP_REQUIRED needs to be done only
+									// for the first time
+
 			if (readAll()) {
 				logger.info(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
 						getId(), getSimpleJournal().getReadCount(), currentFilePath);

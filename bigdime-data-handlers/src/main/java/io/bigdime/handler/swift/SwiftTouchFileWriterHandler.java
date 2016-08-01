@@ -139,7 +139,6 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 				eventListToWrite.clear();
 			}
 
-
 			// if we wrote and there is more data to write, callback
 			if (writeReady) {
 				if (!actionEvents.isEmpty()) {
@@ -153,7 +152,8 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 					statusToReturn = Status.READY;
 				}
 			} else {
-				statusToReturn = Status.BACKOFF; // no need to call next handler
+				statusToReturn = Status.BACKOFF_NOW; // no need to call next
+														// handler
 			}
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);

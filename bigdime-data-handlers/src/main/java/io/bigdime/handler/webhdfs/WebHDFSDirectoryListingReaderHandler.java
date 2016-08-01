@@ -116,7 +116,7 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 			logger.info(getHandlerPhase(), "journal is null, actionEvents.size={} id={} ", actionEvents.size(),
 					getId());
 			if (actionEvents.isEmpty())
-				returnStatus = Status.BACKOFF;
+				returnStatus = Status.BACKOFF_NOW;
 			else
 				returnStatus = process0(actionEvents);
 
@@ -127,7 +127,7 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 			if (CollectionUtil.isEmpty(actionEvents)) {
 				returnStatus = process0(journal.getEventList());
 			} else {
-				returnStatus = Status.BACKOFF;
+				returnStatus = Status.BACKOFF_NOW;
 			}
 		}
 		processLastHandler();

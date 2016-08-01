@@ -338,6 +338,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			logger.info(getHandlerPhase(),
 					"_message=\"first run, set hiveConfDateTime done\" hiveConfDateTime={} hiveConfDate={}",
 					hiveConfDateTime, getHiveConfDate());
+			//now - goBackDays * MILLS_IN_A_DAY; 
 		} else if (now - hiveConfDateTime > intervalInMillis) {
 			hiveConfDateTime = hiveConfDateTime + intervalInMillis;
 			logger.info(getHandlerPhase(),
@@ -415,7 +416,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				stmt.execute(hiveQuery);// no resultset is returned
 				boolean updatedRuntime = updateRuntimeInfo(runtimeInfoStore, entityName,
 						inputDescriptor.getInputDescriptorString(),
-						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.READY, outputEvent.getHeaders());
+						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
 				logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
 			}
 			getHandlerContext().createSingleItemEventList(outputEvent);
