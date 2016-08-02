@@ -4,6 +4,7 @@
 package io.bigdime.core.handler;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -83,8 +84,9 @@ public abstract class AbstractHandler implements Handler {
 		if (StringHelper.isBlank(handlerPhase)) {
 			setHandlerPhase("building " + getName());
 		}
-		logger.info(getHandlerPhase(), "handler_index=\"{}\" handler_name=\"{}\" properties=\"{}\"", getIndex(),
-				getName(), getPropertyMap());
+		logger.info(getHandlerPhase(),
+				"handler_index=\"{}\" handler_name=\"{}\" properties=\"{}\" properties_class={} properties_hashCode={}",
+				getIndex(), getName(), getPropertyMap(), getPropertyMap().getClass(), getPropertyMap().hashCode());
 		@SuppressWarnings("unchecked")
 		Entry<String, String> srcDesc = (Entry<String, String>) getPropertyMap().get(SourceConfigConstants.SRC_DESC);
 		logger.info(getHandlerPhase(), "handler_name=\"{}\" \"src_desc\"=\"{}\" handler=\"{}\"", getName(), srcDesc,
@@ -161,9 +163,13 @@ public abstract class AbstractHandler implements Handler {
 		this.name = name;
 	}
 
+	/**
+	 * Create a new Map backed by. The input map maybe an instance of
+	 * UnmodifiableMap.
+	 */
 	@Override
 	public void setPropertyMap(Map<String, Object> propertyMap) {
-		this.propertyMap = propertyMap;
+		this.propertyMap = new HashMap<>(propertyMap);
 	}
 
 	protected Map<String, Object> getPropertyMap() {

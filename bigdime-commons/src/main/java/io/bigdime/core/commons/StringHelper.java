@@ -253,4 +253,12 @@ public final class StringHelper {
 		}
 		return tokenToTokenNameMap;
 	}
+
+	public static boolean equalsIgnoreCaseAndTrimmed(String arg1, String arg2) {
+		if (arg1 != null)
+			arg1 = StringUtils.trim(arg1);
+		if (arg2 != null)
+			arg2 = StringUtils.trim(arg2);
+		return StringUtils.equalsIgnoreCase(arg1, arg2);
+	}
 }

@@ -46,6 +46,11 @@ public interface Handler extends NamedComponent {
 
 	public void shutdown();
 
+	/**
+	 * The propertyMap is an unmodifiable Map.
+	 * 
+	 * @param propertyMap
+	 */
 	public void setPropertyMap(Map<String, Object> propertyMap);
 
 	public void handleException();

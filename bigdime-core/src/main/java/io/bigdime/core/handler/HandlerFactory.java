@@ -5,6 +5,7 @@ package io.bigdime.core.handler;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
@@ -51,7 +52,7 @@ public final class HandlerFactory {
 
 			Map<String, Object> handlerProperties = handlerConfig.getHandlerProperties();
 			PropertyHelper.redeemTokensFromAppProperties(handlerProperties, appProperties);
-			handler.setPropertyMap(handlerConfig.getHandlerProperties());
+			handler.setPropertyMap(Collections.unmodifiableMap(handlerConfig.getHandlerProperties()));
 			handler.setName(handlerConfig.getName());
 			handler.build();
 			logger.debug("building handler", "handler_name=\"{}\" handler_properties=\"{}\"", handler.getName(),
