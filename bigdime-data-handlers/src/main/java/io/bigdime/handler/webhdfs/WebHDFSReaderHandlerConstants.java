@@ -23,7 +23,7 @@ public final class WebHDFSReaderHandlerConstants {
 	public static final String HDFS_FILE_NAME_PREFIX = "hdfsFileNamePrefix";
 	public static final String HDFS_FILE_NAME_EXTENSION = "hdfsFileNameExtension";
 
-	public static final String HDFS_PATH = "hdfsPath";
+	public static final String HDFS_PATH = "hdfs-path";
 	public static final String HDFS_USER = "hdfsUser";
 	public static final String READ_HDFS_PATH_FROM = "readHdfsPathFrom";
 	/**
@@ -33,4 +33,5 @@ public final class WebHDFSReaderHandlerConstants {
 	 */
 	public static final String HDFS_PATH_LOWER_UPPER_CASE = "hdfs-path-lower-upper-case";
 	public static final String AUTH_CHOICE = "auth-choice";
+	public static final String ENTITY_NAME = "entity-name";
 }

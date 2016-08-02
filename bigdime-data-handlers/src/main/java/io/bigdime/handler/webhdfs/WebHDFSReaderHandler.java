@@ -8,6 +8,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.handler.SimpleJournal;
@@ -43,7 +45,18 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
  *    
  * The fileLocation is going to contain multiple files.
  *    
+ * readHdfsPathFrom can be headers or config
+ * if read
  * 
+ * 
+ * entityName: user_data
+ * readHdfsPathFrom:config
+ * hdfsPath: /apps/path1/path2/path3/${yyyy/mm/dd}/user_data
+ * touchFileCheck : true|false requiredField
+ * touchFileName : /apps/path1/path2/path3/${yyyy/mm/dd}/user_data/_SUCCESS
+ * 
+ * If touchFileName is present, the process will wait for the touch file to be present.
+ * If this field is not present, process will start putting the files immediately.
  * 
  * @formatter:on
  * 
@@ -54,7 +67,7 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
 @Scope("prototype")
 public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
-	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSWriterHandler.class));
+	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSReaderHandler.class));
 	private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 	private String hostNames;
 	private int port;
@@ -65,7 +78,10 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private String entityName;
 	private HDFS_AUTH_OPTION authOption;
 	private int bufferSize;
-
+	private WebHDFSPathParser webHDFSPathParser;
+	/**
+	 * CONFIG or HEADERS
+	 */
 	private String readHdfsPathFrom; // CONFIG | HEADERS
 
 	private FileStatus currentFileStatus;
@@ -83,6 +99,23 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private InputDescriptor<String> inputDescriptor;
 
 	private final String INPUT_DESCRIPTOR_PREFIX = "/webhdfs/v1/";
+	private final String PATH_INPUT_DESCRIPTOR_PREFIX = "::/webhdfs/v1/";
+
+	// handlerName:list:directoryPath
+	// handlerName:file:filePath
+
+	// hive-jdbc-reader:hiveQuery:
+	// Capability to go back
+
+	// webhdfs-file-reader:list:directoryPath
+	// webhdfs-file-reader:file:filePath
+	// if there are files in start status, process them.
+	// If there are directories in start state, process them.
+	// Detect the last successful run date, say 100 days back.
+	// Check the frequency, say 1 day. Compute next run date, say 99 days back.
+	// Look for maxGoBack param. Say, 10 days
+	// If today - next run date is < goBack, set next date as goBack
+	// else
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -90,15 +123,31 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 		super.build();
 		try {
 			logger.info(getHandlerPhase(), "building WebHDFSReaderHandler");
+
+			readHdfsPathFrom = PropertyHelper.getStringProperty(getPropertyMap(),
+					WebHDFSReaderHandlerConstants.READ_HDFS_PATH_FROM);
+
+			if (StringUtils.equalsIgnoreCase(readHdfsPathFrom, "config")) {
+				@SuppressWarnings("unchecked")
+				Entry<Object, String> srcDescEntry = (Entry<Object, String>) getPropertyMap()
+						.get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
+				logger.debug(getHandlerPhase(), "src-desc-node-key=\"{}\" src-desc-node-value=\"{}\"",
+						srcDescEntry.getKey(), srcDescEntry.getValue());
+				@SuppressWarnings("unchecked")
+				Map<String, Object> srcDescValueMap = (Map<String, Object>) srcDescEntry.getKey();
+
+				entityName = PropertyHelper.getStringProperty(srcDescValueMap,
+						WebHDFSReaderHandlerConstants.ENTITY_NAME);
+				hdfsPath = PropertyHelper.getStringProperty(srcDescValueMap, WebHDFSReaderHandlerConstants.HDFS_PATH);
+				getPropertyMap().put(WebHDFSReaderHandlerConstants.ENTITY_NAME, entityName);
+			}
+
+			webHDFSPathParser = WebHDFSPathParserFactory.getWebHDFSPathParser(readHdfsPathFrom);
+
 			hostNames = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HOST_NAMES);
 			port = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.PORT);
 
 			hdfsUser = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HDFS_USER);
-			readHdfsPathFrom = PropertyHelper.getStringProperty(getPropertyMap(),
-					WebHDFSReaderHandlerConstants.READ_HDFS_PATH_FROM);
-			if (StringUtils.equalsIgnoreCase(readHdfsPathFrom, "config")) {
-				hdfsPath = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HDFS_PATH);
-			}
 			bufferSize = PropertyHelper.getIntProperty(getPropertyMap(),
 					FileInputStreamReaderHandlerConstants.BUFFER_SIZE, DEFAULT_BUFFER_SIZE);
 
@@ -106,12 +155,69 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 					WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString());
 
 			authOption = HDFS_AUTH_OPTION.getByName(authChoice);
+
 			logger.info(getHandlerPhase(),
-					"hostNames={} port={} hdfsUser={} hdfsPath={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={}",
-					hostNames, port, hdfsUser, hdfsPath, hdfsFileName, readHdfsPathFrom, authChoice, authOption);
+					"hostNames={} port={} hdfsUser={} hdfsPath={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={}",
+					hostNames, port, hdfsUser, hdfsPath, hdfsFileName, readHdfsPathFrom, authChoice, authOption,
+					entityName, webHDFSPathParser);
 		} catch (final Exception ex) {
 			throw new AdaptorConfigurationException(ex);
 		}
+	}
+
+	/**
+	 * This method is executed when the handler is run the very first time. Use
+	 * it to initialize the connections, find the dirty records etc.
+	 * 
+	 * @return true if the method completed with success, false otherwise.
+	 * @throws RuntimeInfoStoreException
+	 */
+	protected boolean init() throws RuntimeInfoStoreException {
+		if (isFirstRun()) {
+			if (readHdfsPathFrom.equals("headers")) {
+				entityName = getEntityNameFromHeader();
+				logger.info(getHandlerPhase(), "From header, entityName={} ", entityName);
+			} else {
+				logger.info(getHandlerPhase(), "From config, entityName={} ", entityName);
+			}
+			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
+
+			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
+				dirtyRecordCount = dirtyRecords.size();
+				logger.warn(getHandlerPhase(),
+						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
+						getId(), dirtyRecordCount, entityName);
+			} else {
+				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * gets called before process method execution every time.
+	 * 
+	 * 
+	 */
+	protected void pre() {
+
+	}
+
+	/**
+	 * gets called after process method execution every time.
+	 * 
+	 * 
+	 */
+
+	protected void post() {
+
+	}
+
+	/**
+	 * Gets called after pre and before post method execution every time.
+	 */
+	protected void execute() {
+
 	}
 
 	/**
@@ -187,7 +293,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		setupFirstRun();
+		init();
 
 		if (readAll()) {
 			try {
@@ -210,23 +316,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			getSimpleJournal().setTotalSize(fileLength);
 		}
 		return Status.READY;
-	}
-
-	protected void setupFirstRun() throws RuntimeInfoStoreException {
-		if (isFirstRun()) {
-			entityName = getEntityNameFromHeader();
-			logger.info(getHandlerPhase(), "From header, entityName={} ", entityName);
-			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-
-			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-				dirtyRecordCount = dirtyRecords.size();
-				logger.warn(getHandlerPhase(),
-						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
-						getId(), dirtyRecordCount, entityName);
-			} else {
-				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
-			}
-		}
 	}
 
 	protected void setNextDescriptorToProcess()
@@ -265,32 +354,15 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private boolean initializeRuntimeInfoRecords() throws RuntimeInfoStoreException, IOException, WebHdfsException {
 		WebHdfs webHdfs1 = null;
 		boolean recordsFound = false;
+
 		try {
-			List<String> availableHdfsDirectories = getAvailableDirectoriesFromHeader(
-					WebHDFSReaderHandlerConstants.HDFS_PATH);
-			if (availableHdfsDirectories == null || availableHdfsDirectories.isEmpty()) {
-				return false;
-			}
 			if (webHdfs1 == null) {
 				webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 			}
+			List<String> availableHdfsDirectories = webHDFSPathParser.parse(hdfsPath, getPropertyMap(),
+					getHandlerContext().getEventList(), ActionEventHeaderConstants.HDFS_PATH);
 			for (final String directoryPath : availableHdfsDirectories) {
-				final WebHdfsReader webHdfsReader = new WebHdfsReader();
-
-				try {
-					List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
-					for (final String fileName : fileNames) {
-						recordsFound = true;
-						Map<String, String> properties = new HashMap<>();
-						properties.put(WebHDFSReaderHandlerConstants.HDFS_PATH, directoryPath);
-						properties.put(WebHDFSReaderHandlerConstants.HDFS_FILE_NAME, fileName);
-						queueRuntimeInfo(runtimeInfoStore, entityName, fileName, properties);
-					}
-				} catch (WebHdfsException e) {
-					logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
-							directoryPath, e.getMessage());
-				}
-
+				recordsFound |= initializeRuntimeInfoRecords(webHdfs1, directoryPath);
 			}
 			logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
 					recordsFound);
@@ -300,6 +372,28 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			logger.debug(getHandlerPhase(), "releasing webhdfs connection");
 			webHdfs1.releaseConnection();
 		}
+	}
+
+	private boolean initializeRuntimeInfoRecords(WebHdfs webHdfs1, String directoryPath)
+			throws RuntimeInfoStoreException, IOException, WebHdfsException {
+		boolean recordsFound = false;
+		final WebHdfsReader webHdfsReader = new WebHdfsReader();
+
+		try {
+			List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
+			for (final String fileName : fileNames) {
+				Map<String, String> properties = new HashMap<>();
+				recordsFound = true;
+				properties.put(WebHDFSReaderHandlerConstants.HDFS_PATH, directoryPath);
+				properties.put(WebHDFSReaderHandlerConstants.HDFS_FILE_NAME, fileName);
+				queueRuntimeInfo(runtimeInfoStore, entityName, fileName, properties);
+			}
+
+		} catch (WebHdfsException e) {
+			logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
+					directoryPath, e.getMessage());
+		}
+		return recordsFound;
 	}
 
 	protected void initRecordToProcess(String nextDescriptorToProcess) throws IOException, WebHdfsException {
@@ -354,6 +448,54 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	private SimpleJournal getSimpleJournal() throws HandlerException {
 		return getNonNullJournal(SimpleJournal.class);
+	}
+
+	public String getHostNames() {
+		return hostNames;
+	}
+
+	public void setHostNames(String hostNames) {
+		this.hostNames = hostNames;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public String getHdfsPath() {
+		return hdfsPath;
+	}
+
+	public void setHdfsPath(String hdfsPath) {
+		this.hdfsPath = hdfsPath;
+	}
+
+	public String getEntityName() {
+		return entityName;
+	}
+
+	public void setEntityName(String entityName) {
+		this.entityName = entityName;
+	}
+
+	public HDFS_AUTH_OPTION getAuthOption() {
+		return authOption;
+	}
+
+	public void setAuthOption(HDFS_AUTH_OPTION authOption) {
+		this.authOption = authOption;
+	}
+
+	public String getReadHdfsPathFrom() {
+		return readHdfsPathFrom;
+	}
+
+	public void setReadHdfsPathFrom(String readHdfsPathFrom) {
+		this.readHdfsPathFrom = readHdfsPathFrom;
 	}
 
 }
