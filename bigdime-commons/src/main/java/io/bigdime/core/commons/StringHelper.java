@@ -5,6 +5,8 @@ package io.bigdime.core.commons;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -230,4 +232,25 @@ public final class StringHelper {
 		return StringUtils.isBlank(arg);
 	}
 
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString) {
+		Pattern p = Pattern.compile("\\$\\{(\\w+)\\}+");
+		return getTokenToTokenNameMap(tokenizedString, p);
+	}
+
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString, final String pattern) {
+		Pattern p = Pattern.compile(pattern);
+		return getTokenToTokenNameMap(tokenizedString, p);
+	}
+
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString, final Pattern pattern) {
+		final Map<String, String> tokenToTokenNameMap = new HashMap<>();
+		Matcher m = pattern.matcher(tokenizedString);
+
+		while (m.find()) {
+			String token = m.group();// e.g. token=${yyyy}
+			String tokenName = m.group(1);// e.g.tokenName=yyyy
+			tokenToTokenNameMap.put(token, tokenName);
+		}
+		return tokenToTokenNameMap;
+	}
 }
