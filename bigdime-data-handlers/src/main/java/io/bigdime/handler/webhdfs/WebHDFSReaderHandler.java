@@ -116,6 +116,10 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	// Look for maxGoBack param. Say, 10 days
 	// If today - next run date is < goBack, set next date as goBack
 	// else
+	// Compute hdfsPath for Today - maxGoBackDays
+	// if the descriptor is present and not in QUEUED/START/PENDING for that old
+	// date, add frequency to the datetime and compute the next hdfs path.
+	// else process for that date.
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -352,17 +356,21 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	}
 
 	private boolean initializeRuntimeInfoRecords() throws RuntimeInfoStoreException, IOException, WebHdfsException {
-		WebHdfs webHdfs1 = null;
 		boolean recordsFound = false;
 
 		try {
-			if (webHdfs1 == null) {
-				webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
-			}
 			List<String> availableHdfsDirectories = webHDFSPathParser.parse(hdfsPath, getPropertyMap(),
 					getHandlerContext().getEventList(), ActionEventHeaderConstants.HDFS_PATH);
 			for (final String directoryPath : availableHdfsDirectories) {
-				recordsFound |= initializeRuntimeInfoRecords(webHdfs1, directoryPath);
+				WebHdfs webHdfs1 = null;
+				try {
+					webHdfs1 = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
+					recordsFound |= initializeRuntimeInfoRecords(webHdfs1, directoryPath);
+
+				} finally {
+					if (webHdfs1 != null)
+						webHdfs1.releaseConnection();
+				}
 			}
 			logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
 					recordsFound);
@@ -370,7 +378,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			return recordsFound;
 		} finally {
 			logger.debug(getHandlerPhase(), "releasing webhdfs connection");
-			webHdfs1.releaseConnection();
 		}
 	}
 
@@ -397,6 +404,10 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	}
 
 	protected void initRecordToProcess(String nextDescriptorToProcess) throws IOException, WebHdfsException {
+		if (webHdfs != null) {
+			webHdfs.releaseConnection();
+			webHdfs = null;
+		}
 		if (webHdfs == null) {
 			webHdfs = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
 		}
