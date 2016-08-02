@@ -9,9 +9,9 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.CollectionUtil;
 
-public class HeaderBasedWebHDFSPathParser implements WebHDFSPathParser {
+public class WebHDFSPathParserHeaderBased implements WebHDFSPathParser {
 	private static final AdaptorLogger logger = new AdaptorLogger(
-			LoggerFactory.getLogger(HeaderBasedWebHDFSPathParser.class));
+			LoggerFactory.getLogger(WebHDFSPathParserHeaderBased.class));
 
 	public List<String> parse(String tokenizedPath, Map<? extends String, ? extends Object> properties,
 			List<ActionEvent> eventList, String headerName) {

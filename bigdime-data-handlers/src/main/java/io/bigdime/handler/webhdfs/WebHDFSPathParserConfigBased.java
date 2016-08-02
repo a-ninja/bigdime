@@ -17,9 +17,9 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.StringHelper;
 
-public class ConfigBasedWebHDFSPathParser implements WebHDFSPathParser {
+public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 	private static final AdaptorLogger logger = new AdaptorLogger(
-			LoggerFactory.getLogger(ConfigBasedWebHDFSPathParser.class));
+			LoggerFactory.getLogger(WebHDFSPathParserConfigBased.class));
 
 	/**
 	 * Detokenizes the tokenizedPath; e.g.

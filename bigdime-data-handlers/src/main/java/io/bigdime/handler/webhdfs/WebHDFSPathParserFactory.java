@@ -4,9 +4,9 @@ public class WebHDFSPathParserFactory {
 
 	public static WebHDFSPathParser getWebHDFSPathParser(String hdfsPathFrom) {
 		if (hdfsPathFrom.equals("headers")) {
-			return new HeaderBasedWebHDFSPathParser();
+			return new WebHDFSPathParserHeaderBased();
 		} else if (hdfsPathFrom.equals("config")) {
-			return new ConfigBasedWebHDFSPathParser();
+			return new WebHDFSPathParserConfigBased();
 		} else
 			return null;
 	}
