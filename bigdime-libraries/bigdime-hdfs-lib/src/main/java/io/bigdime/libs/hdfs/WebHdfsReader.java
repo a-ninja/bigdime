@@ -133,7 +133,7 @@ public class WebHdfsReader {
 			List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
 
 			for (FileStatus fs : fileStatuses) {
-				if (fs.getType().equals("FILE")) {
+				if (fs.getType().equals("FILE") && fs.getLength() > 0) {
 					filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
 
 				}
@@ -143,10 +143,15 @@ public class WebHdfsReader {
 			}
 
 		} else if (response.getStatusLine().getStatusCode() == 404) {
-			logger.debug("_message=\"file does not exist\" responseCode={} hdfsPath={} responseMessage={}",
+			logger.info("_message=\"file does not exist\" responseCode={} hdfsPath={} responseMessage={}",
 					response.getStatusLine().getStatusCode(), webhdfsFilePath,
 					response.getStatusLine().getReasonPhrase());
 			throw new FileNotFoundException("File not found: filePath=" + webhdfsFilePath);
+		} else if (response.getStatusLine().getStatusCode() == 403) {
+			logger.warn("_message=\"unable to access file\" responseCode={} hdfsPath={} responseMessage={}",
+					response.getStatusLine().getStatusCode(), webhdfsFilePath,
+					response.getStatusLine().getReasonPhrase());
+			throw new WebHdfsException("unable to access file: filePath=" + webhdfsFilePath);
 		} else {
 			logger.warn("_message=\"file existence not known\", responseCode={} hdfsPath={} responseMessage={}",
 					response.getStatusLine().getStatusCode(), webhdfsFilePath,
