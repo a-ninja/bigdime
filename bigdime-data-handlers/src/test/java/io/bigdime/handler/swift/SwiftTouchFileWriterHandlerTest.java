@@ -25,9 +25,8 @@ import org.testng.annotations.Test;
 
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
-import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.HandlerException;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.core.handler.HandlerJournal;
 
@@ -178,9 +177,17 @@ public class SwiftTouchFileWriterHandlerTest {
 		Collection<DirectoryOrObject> mockSwiftDirListing = new ArrayList<>();
 
 		DirectoryOrObject dirOrObject1 = Mockito.mock(DirectoryOrObject.class);
+		StoredObject storedObject1 = Mockito.mock(StoredObject.class);
 		Mockito.when(dirOrObject1.getName()).thenReturn("20160101__entityName/fileName01.ext");
+		Mockito.when(dirOrObject1.getAsObject()).thenReturn(storedObject1);
+		Mockito.when(storedObject1.getBareName()).thenReturn("fileName01.ext");
+
 		DirectoryOrObject dirOrObject2 = Mockito.mock(DirectoryOrObject.class);
+		StoredObject storedObject2 = Mockito.mock(StoredObject.class);
 		Mockito.when(dirOrObject2.getName()).thenReturn("20160101__entityName/fileName02.ext");
+		Mockito.when(dirOrObject2.getAsObject()).thenReturn(storedObject2);
+		Mockito.when(storedObject2.getBareName()).thenReturn("fileName02.ext");
+
 		mockSwiftDirListing.add(dirOrObject1);
 		mockSwiftDirListing.add(dirOrObject2);
 		Mockito.when(mockContainer.listDirectory(anyString(), anyChar(), anyString(), anyInt()))

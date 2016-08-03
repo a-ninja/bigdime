@@ -46,8 +46,8 @@ public class AvroRecordHandlerTest {
 	private AvroJsonMapperHandler buildAvroRecordHandler() throws AdaptorConfigurationException {
 		AvroJsonMapperHandler avroRecordHandler = new AvroJsonMapperHandler();
 		Map<String, Object> propertyMap = new HashMap<>();
-		avroRecordHandler.setPropertyMap(propertyMap);
 		propertyMap.put("schemaFileName", "avro-schema-file.avsc");
+		avroRecordHandler.setPropertyMap(propertyMap);
 		avroRecordHandler.build();
 		return avroRecordHandler;
 	}

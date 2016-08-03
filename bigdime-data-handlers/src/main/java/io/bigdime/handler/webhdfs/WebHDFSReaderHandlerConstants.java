@@ -34,4 +34,5 @@ public final class WebHDFSReaderHandlerConstants {
 	public static final String HDFS_PATH_LOWER_UPPER_CASE = "hdfs-path-lower-upper-case";
 	public static final String AUTH_CHOICE = "auth-choice";
 	public static final String ENTITY_NAME = "entity-name";
+	public static final String WAIT_FOR_FILE_NAME = "wait-for-file-name";
 }

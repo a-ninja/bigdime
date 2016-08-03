@@ -176,7 +176,7 @@ public class StringHelperTest {
 		outPattern = "$1/$3";
 		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
 		Assert.assertEquals(replacedString, "2016-07-01/file_123.txt");
-		outPattern = "$10__$2/$3";
+		outPattern = "$1__$2/$3";
 		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
 		Assert.assertEquals(replacedString, "2016-07-01__path6/file_123.txt");
 	}

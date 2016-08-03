@@ -41,7 +41,7 @@ public final class PropertyHelper {
 	 *             if the property with name specified by argument name does not
 	 *             exist in propertyMap.
 	 */
-	public static int getIntProperty(Map<String, Object> propertyMap, String name) {
+	public static int getIntProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		return getIntProperty(propertyMap.get(name));
 	}
 
@@ -61,7 +61,8 @@ public final class PropertyHelper {
 	 * @throws NumberFormatException
 	 *             if the property's value cannot be parsed as an integer.
 	 */
-	public static int getIntProperty(Map<String, Object> propertyMap, String name, int defaultValue) {
+	public static int getIntProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			int defaultValue) {
 		return getIntProperty(propertyMap.get(name), defaultValue);
 	}
 
@@ -149,7 +150,8 @@ public final class PropertyHelper {
 	 * @throws NumberFormatException
 	 *             if the property's value cannot be parsed as a long.
 	 */
-	public static long getLongProperty(Map<String, Object> propertyMap, String name, long defaultValue) {
+	public static long getLongProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			long defaultValue) {
 		final Object value = propertyMap.get(name);
 		return getLongProperty(value, defaultValue);
 	}
@@ -163,7 +165,7 @@ public final class PropertyHelper {
 	 *            name of the property to look for
 	 * @return value of the property if the property is found, null otherwise
 	 */
-	public static String getStringProperty(Map<String, Object> propertyMap, String name) {
+	public static String getStringProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		final Object value = propertyMap.get(name);
 		if (value == null)
 			return null;
@@ -180,7 +182,8 @@ public final class PropertyHelper {
 	 *            name of the property to look for
 	 * @return value of the property if the property is found, null otherwise
 	 */
-	public static String getStringProperty(Map<String, Object> propertyMap, String name, String defaultValue) {
+	public static String getStringProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			String defaultValue) {
 		String value = getStringProperty(propertyMap, name);
 		if (value == null)
 			return defaultValue;
@@ -188,7 +191,7 @@ public final class PropertyHelper {
 			return value;
 	}
 
-	public static boolean getBooleanProperty(Map<String, Object> propertyMap, String name) {
+	public static boolean getBooleanProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		final Object value = String.valueOf(propertyMap.get(name));
 		if (value == null || value.equals("null"))
 			return false;
@@ -196,7 +199,7 @@ public final class PropertyHelper {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public static Map getMapProperty(Map<String, Object> propertyMap, String name) {
+	public static Map getMapProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		final Object value = propertyMap.get(name);
 		if (value == null || value.equals("null"))
 			return null;
@@ -208,9 +211,9 @@ public final class PropertyHelper {
 		}
 	}
 
-	public static void redeemTokensFromAppProperties(final Map<String, Object> properties,
+	public static void redeemTokensFromAppProperties(final Map<? super String, ? super Object> properties,
 			final Properties applicationProperties) {
-		for (Entry<String, Object> property : properties.entrySet()) {
+		for (Entry<? super String, ? super Object> property : properties.entrySet()) {
 			logger.info("property_name=\"{}\" value=\"{}\" isString=\"{}\"", property.getKey(), property.getValue(),
 					(property.getValue() instanceof String));
 			if (property.getValue() instanceof String) {

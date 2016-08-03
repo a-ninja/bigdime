@@ -226,7 +226,7 @@ public final class StringHelper {
 		while (m.find()) {
 			String key = null;
 
-			for (int i = 1; i <= m.groupCount(); i++) {
+			for (int i = m.groupCount(); i >= 1; i--) {
 				key = "$" + i;
 				String temp = m.group(i);
 				outputString = outputString.replace(key, temp);

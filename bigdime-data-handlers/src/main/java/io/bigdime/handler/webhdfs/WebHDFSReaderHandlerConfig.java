@@ -36,12 +36,8 @@ public class WebHDFSReaderHandlerConfig {
 	private String entityName;
 	private HDFS_AUTH_OPTION authOption;
 	private int bufferSize;
-
-	/**
-	 * CONFIG or HEADERS
-	 */
 	private READ_HDFS_PATH_FROM readHdfsPathFrom; // CONFIG | HEADERS
-
+	private String waitForFileName;
 	private final String INPUT_DESCRIPTOR_PREFIX = "/webhdfs/v1/";
 	private final String PATH_INPUT_DESCRIPTOR_PREFIX = "/webhdfs/v1/";
 
@@ -119,6 +115,14 @@ public class WebHDFSReaderHandlerConfig {
 
 	public String getPATH_INPUT_DESCRIPTOR_PREFIX() {
 		return PATH_INPUT_DESCRIPTOR_PREFIX;
+	}
+
+	public String getWaitForFileName() {
+		return waitForFileName;
+	}
+
+	public void setWaitForFileName(String waitForFileName) {
+		this.waitForFileName = waitForFileName;
 	}
 
 }

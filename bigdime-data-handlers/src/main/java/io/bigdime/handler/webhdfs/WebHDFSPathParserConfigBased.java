@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -15,6 +13,7 @@ import org.joda.time.format.DateTimeFormatter;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.commons.StringHelper;
 
 public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
@@ -36,6 +35,8 @@ public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 	 * @param properties
 	 * @return
 	 */
+	private static final int DEFAULT_GO_BACK_DAYS = 5;
+
 	public List<String> parse(String tokenizedPath, Map<? extends String, ? extends Object> properties,
 			List<ActionEvent> eventList, String headerName) {
 		logger.debug("detokenizing string", "tokenizedPath={} properties={}", tokenizedPath, properties);
@@ -43,12 +44,12 @@ public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 		final DateTimeFormatter monthDtf = DateTimeFormat.forPattern("MM");
 		final DateTimeFormatter dateDtf = DateTimeFormat.forPattern("dd");
 		final List<String> hdfsPathList = new ArrayList<>();
+		int goBackDays = PropertyHelper.getIntProperty(properties, WebHDFSReaderHandlerConstants.BATCH_SIZE,
+				DEFAULT_GO_BACK_DAYS);
 
 		long currentTime = System.currentTimeMillis();
 
-		long oldTime = currentTime - TimeUnit.DAYS.toMillis(10);// 10days back
-																// TODO: remove
-		// hard coding
+		long oldTime = currentTime - TimeUnit.DAYS.toMillis(goBackDays);
 
 		Map<String, String> tokenToTokenName = StringHelper.getTokenToTokenNameMap(tokenizedPath,
 				"\\$\\{([\\w\\-]+)\\}+");
@@ -59,7 +60,7 @@ public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 
 		Set<String> tokenSet = tokenToTokenName.keySet();
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < goBackDays; i++) {
 			long time = oldTime + TimeUnit.DAYS.toMillis(i);
 			logger.debug("detokenizing string:", "currentTime={} time={} tokenizedPath={}", currentTime, time,
 					tokenizedPath);
