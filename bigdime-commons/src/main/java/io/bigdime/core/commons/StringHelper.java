@@ -201,6 +201,19 @@ public final class StringHelper {
 			return null;
 	}
 
+	/**
+	 * Convert string like
+	 * "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt" to
+	 * "2016-07-01__path6/file_123.txt" or "2016-07-01/file_123.txt".
+	 * 
+	 * Less than 10 tokens are supported. Tokens are in $1, $2... format.
+	 * 
+	 * @param inputString
+	 *            string without any tokens.
+	 * @param outPattern
+	 * @param inPattern
+	 * @return
+	 */
 	public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern) {
 
 		Preconditions.checkArgument(inputString != null, "inputString must be not null");

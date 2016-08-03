@@ -5,6 +5,7 @@ package io.bigdime.core.commons;
 
 import java.nio.charset.Charset;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -159,4 +160,24 @@ public class StringHelperTest {
 
 	}
 
+	/**
+	 * 
+	 */
+	@Test
+	public void testReplaceToken() {
+
+		String inputString = "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt";
+
+		Pattern inputPattern = Pattern.compile(".+\\/date=(\\w+-\\w+-\\w+)\\/(\\w+)\\/([\\w\\.\\-_]+)$");
+		String outPattern = "$3";
+		String replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "file_123.txt");
+
+		outPattern = "$1/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "2016-07-01/file_123.txt");
+		outPattern = "$10__$2/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "2016-07-01__path6/file_123.txt");
+	}
 }

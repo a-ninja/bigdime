@@ -3,6 +3,7 @@ package io.bigdime.handler.swift;
 import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -39,6 +40,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 				SwiftWriterHandlerConstants.FILE_PATH_PREFIX_PATTERN);
 		filePathPattern = PropertyHelper.getStringProperty(getPropertyMap(),
 				SwiftWriterHandlerConstants.FILE_PATH_PATTERN);
+
 		logger.debug(getHandlerPhase(), "	={} outputFilePathPattern={} filePathPrefixPattern={} filePathPattern={}",
 				outputFilePathPattern, inputFilePathPattern, filePathPrefixPattern, filePathPattern);
 	}
@@ -91,11 +93,13 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 
 			int matchedCount = 0;
 			final Set<String> fileNameListFromSwift = new HashSet<>();
+			final Set<String> fileBareNameListFromSwift = new LinkedHashSet<>();
 			if (swiftDirListing != null && swiftDirListing.size() == fileNames.length) {
 				logger.debug(getHandlerPhase(), "_message=\"file count match\" count={}", swiftDirListing.size());
 
 				for (DirectoryOrObject dirOrObject : swiftDirListing) {
 					fileNameListFromSwift.add(dirOrObject.getName());
+					fileBareNameListFromSwift.add(dirOrObject.getAsObject().getBareName());
 				}
 
 				for (String webhdfsFileName : fileNames) {
@@ -115,9 +119,11 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 
 			if (matchedCount == fileNames.length) {
 				logger.debug(getHandlerPhase(), "_message=\"setting writeReady to true\"");
+				// logger.debug(getHandlerPhase(), "_message=\"bare names={}",
+				// fileBareNameListFromSwift);
 				StringBuilder outputEventBody = new StringBuilder();
-				for (final String swiftFileName : fileNameListFromSwift) {
-					outputEventBody.append(swiftFileName).append("\n");
+				for (final String swiftFileFragmentName : fileBareNameListFromSwift) {
+					outputEventBody.append(swiftFileFragmentName).append("\n");
 				}
 				actionEvent.setBody(outputEventBody.toString().getBytes());
 				writeReady = true;
