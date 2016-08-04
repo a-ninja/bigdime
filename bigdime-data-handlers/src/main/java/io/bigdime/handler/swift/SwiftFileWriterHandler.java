@@ -66,7 +66,8 @@ public final class SwiftFileWriterHandler extends SwiftWriterHandler {
 	private void writeToSwift(final ActionEvent actionEvent) throws IOException, HandlerException {
 
 		String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-		String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern);
+		String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern,
+				actionEvent.getHeaders());
 		uploadFile(container, swiftObjectName, new String(fileName));
 	}
 

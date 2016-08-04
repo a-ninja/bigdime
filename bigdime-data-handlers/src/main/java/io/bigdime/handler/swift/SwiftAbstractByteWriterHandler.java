@@ -23,7 +23,9 @@ public abstract class SwiftAbstractByteWriterHandler extends SwiftWriterHandler 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-			String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern);
+			String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern,
+					actionEvent.getHeaders());
+
 			long sizeToWrite = 0;
 			// long count = 0;
 			for (final ActionEvent thisEvent : actionEvents) {

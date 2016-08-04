@@ -35,7 +35,7 @@ public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 	 * @param properties
 	 * @return
 	 */
-	private static final int DEFAULT_GO_BACK_DAYS = 5;
+	private static final int DEFAULT_GO_BACK_DAYS = 1;
 
 	public List<String> parse(String tokenizedPath, Map<? extends String, ? extends Object> properties,
 			List<ActionEvent> eventList, String headerName) {
@@ -44,7 +44,7 @@ public class WebHDFSPathParserConfigBased implements WebHDFSPathParser {
 		final DateTimeFormatter monthDtf = DateTimeFormat.forPattern("MM");
 		final DateTimeFormatter dateDtf = DateTimeFormat.forPattern("dd");
 		final List<String> hdfsPathList = new ArrayList<>();
-		int goBackDays = PropertyHelper.getIntProperty(properties, WebHDFSReaderHandlerConstants.BATCH_SIZE,
+		int goBackDays = PropertyHelper.getIntProperty(properties, WebHDFSReaderHandlerConstants.GO_BACK_DAYS,
 				DEFAULT_GO_BACK_DAYS);
 
 		long currentTime = System.currentTimeMillis();

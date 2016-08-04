@@ -235,6 +235,18 @@ public final class StringHelper {
 		return outputString;
 	}
 
+	public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern,
+			Map<? extends String, ? extends String> properties) {
+		String val = replaceTokens(inputString, outPattern, inPattern);
+		for (final String key : properties.keySet()) {
+			String pattern = "(.*)(\\$" + key + ")([\\W]*.*)";
+			if (val.matches(pattern)) {
+				val = val.replaceAll(pattern, "$1" + properties.get(key) + "$3");
+			}
+		}
+		return val;
+	}
+
 	/**
 	 * bigdime wrapper for StringUtils.isBlank.
 	 * 

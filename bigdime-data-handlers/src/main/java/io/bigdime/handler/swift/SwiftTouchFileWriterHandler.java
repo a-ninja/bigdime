@@ -81,7 +81,8 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 
 			// Get the source file name =
 			// /webhdfs/v1/user/johndow/bigdime/newdir3/20160101/part1_prt2_part3/0001_0.ext
-			String swiftPrefix = StringHelper.replaceTokens(sourceFileName, filePathPrefixPattern, inputPattern);
+			String swiftPrefix = StringHelper.replaceTokens(sourceFileName, filePathPrefixPattern, inputPattern,
+					actionEvent.getHeaders());
 
 			Collection<DirectoryOrObject> swiftDirListing = container.listDirectory(swiftPrefix, null, null, -1);
 			logger.debug(getHandlerPhase(), "_message=\"swiftDirListing\" swiftDirListing_null={} swiftPrefix={}",
@@ -103,7 +104,8 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 				}
 
 				for (String webhdfsFileName : fileNames) {
-					String swiftFileName = StringHelper.replaceTokens(webhdfsFileName, filePathPattern, inputPattern);
+					String swiftFileName = StringHelper.replaceTokens(webhdfsFileName, filePathPattern, inputPattern,
+							actionEvent.getHeaders());
 					if (fileNameListFromSwift.contains(swiftFileName)) {
 						logger.debug(getHandlerPhase(), "_message=\"file name found in swift\" swiftFileName={}",
 								swiftFileName);
