@@ -21,7 +21,6 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
-import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.ProcessHelper;
@@ -67,6 +66,7 @@ import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
 @Scope("prototype")
 public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJdbcReaderHandler.class));
+	private String outputDirectory = "";
 	final Map<String, String> hiveConfigurations = new HashMap<>();
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
@@ -216,8 +216,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		final String hiveQuery = runtimeProperty.get("hiveQuery");
 
 		inputDescriptor = new HiveReaderDescriptor(getEntityName(), hiveConfDate, outputDirectory, hiveQuery);
-		InputDescriptor<String> x = inputDescriptor;
-		x.hashCode();
+		logger.debug(getHandlerPhase(), "\"initialized descriptor\" getInputDescriptorString={}",
+				inputDescriptor.getInputDescriptorString());
 
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
 		hiveConfigurations.put("DATE", hiveConfDate);
@@ -245,11 +245,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					"_message=\"time to set hiveConfDateTime.\" now={} hiveConfDateTime={} intervalInMillis={} hiveConfDate={}",
 					now, hiveConfDateTime, intervalInMillis, getHiveConfDate());
 		} else {
-			logger.info("nothing to run", "now={} hiveConfDateTime={} intervalInMillis={}", now, hiveConfDateTime,
-					intervalInMillis);
+			logger.info("/", "now={} hiveConfDateTime={} intervalInMillis={}", now, hiveConfDateTime, intervalInMillis);
 			return false;
 		}
-		String outputDirectory = setHdfsOutputDirectory();
+		setHdfsOutputDirectory();
 		final HiveReaderDescriptor descriptor = new HiveReaderDescriptor(getEntityName(), getHiveConfDate(),
 				outputDirectory, getHiveQuery());
 		Map<String, String> properties = new HashMap<>();
@@ -263,7 +262,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	private String setHdfsOutputDirectory() {
-		String outputDirectory = null;
+		// String outputDirectory = null;
 		if (!getBaseOutputDirectory().endsWith(FORWARD_SLASH))
 			outputDirectory = getBaseOutputDirectory() + FORWARD_SLASH;
 		else
@@ -299,13 +298,16 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		try {
 			ActionEvent outputEvent = new ActionEvent();
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, getEntityName());
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, inputDescriptor.getHiveConfDirectory());
+			// outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH,
+			// inputDescriptor.getHiveConfDirectory());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, getHiveQuery());
 
 			if (inputDescriptor == null) {
 				logger.info(getHandlerPhase(),
 						"will return READY, so that next handler can process the pending records");
 			} else {
+				logger.info(getHandlerPhase(), "\"found inputDescriptor\" inputDescriptor={}", inputDescriptor);
 
 				final Statement stmt = connection.createStatement();
 				runHiveConfs(stmt);
@@ -455,14 +457,17 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return handlerConfig.getOutputDirectoryPattern();
 	}
 
+	@Override
 	protected String getInputDescriptorPrefix() {
 		return INPUT_DESCRIPTOR_PREFIX;
 	}
 
+	@Override
 	protected void setInputDescriptorToNull() {
 		inputDescriptor = null;
 	}
 
+	@Override
 	protected boolean isInputDescriptorNull() {
 		return inputDescriptor == null;
 	}

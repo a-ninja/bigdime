@@ -31,6 +31,7 @@ import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.FileHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.core.handler.HandlerJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
@@ -498,6 +499,7 @@ public class ZipFileInputStreamHandlerTest {
 				.entrySet().iterator().next());
 		propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH,
 				fileLocation);
+		propertyMap.put(ActionEventHeaderConstants.LAST_HANDLER_IN_CHAIN, "false");
 
 		zfirh.setPropertyMap(propertyMap);
 		zfirh.build();

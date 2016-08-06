@@ -41,10 +41,10 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
 		try {
 			init(); // initialize cleanup records etc
 			initDescriptor();
-			if (isInputDescriptorNull()) {
-				logger.debug(getHandlerPhase(), "returning BACKOFF");
-				return io.bigdime.core.ActionEvent.Status.BACKOFF;
-			}
+			// if (isInputDescriptorNull()) {
+			// logger.debug(getHandlerPhase(), "returning BACKOFF");
+			// return io.bigdime.core.ActionEvent.Status.BACKOFF;
+			// }
 			return doProcess();
 		} catch (IOException e) {
 			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,

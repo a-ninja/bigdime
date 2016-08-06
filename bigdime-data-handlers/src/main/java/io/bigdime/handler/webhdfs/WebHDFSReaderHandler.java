@@ -201,6 +201,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
+		if (isInputDescriptorNull()) {
+			logger.debug(getHandlerPhase(), "returning BACKOFF");
+			return io.bigdime.core.ActionEvent.Status.BACKOFF;
+		}
 		long nextIndexToRead = getTotalReadFromJournal();
 		logger.info(getHandlerPhase(),
 				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={}", getId(),
