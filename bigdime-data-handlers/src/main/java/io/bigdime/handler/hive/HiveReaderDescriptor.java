@@ -6,12 +6,13 @@ import org.apache.commons.lang3.StringUtils;
 
 import io.bigdime.core.InputDescriptor;
 
-public class HiveReaderDescriptor implements InputDescriptor<HiveReaderDescriptor> {
+public class HiveReaderDescriptor implements InputDescriptor<String> {
 
 	private String entityName;
 	private String hiveConfDate;
 	private String hiveConfDirectory;
 	private String hiveQuery;
+	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.hive.HiveJdbcReaderHandler";
 
 	public HiveReaderDescriptor(final String _entityName, final String _hiveConfDate, final String _hiveConfDirectory,
 			final String _hiveQuery) {
@@ -22,7 +23,7 @@ public class HiveReaderDescriptor implements InputDescriptor<HiveReaderDescripto
 	}
 
 	@Override
-	public HiveReaderDescriptor getNext(List<HiveReaderDescriptor> availableInputs, String lastInput) {
+	public String getNext(List<String> availableInputs, String lastInput) {
 		isValid(availableInputs, lastInput);
 
 		int indexOfLastInput = availableInputs.indexOf(lastInput);
@@ -32,7 +33,7 @@ public class HiveReaderDescriptor implements InputDescriptor<HiveReaderDescripto
 		return null;
 	}
 
-	private boolean isValid(List<HiveReaderDescriptor> availableInputs, String lastInput) {
+	private boolean isValid(List<String> availableInputs, String lastInput) {
 		if (availableInputs == null) {
 			throw new IllegalArgumentException();
 		}
@@ -47,7 +48,7 @@ public class HiveReaderDescriptor implements InputDescriptor<HiveReaderDescripto
 	}
 
 	public String getInputDescriptorString() {
-		return "hiveConfDate:" + hiveConfDate + ",hiveConfDirectory:" + hiveConfDirectory;
+		return INPUT_DESCRIPTOR_PREFIX+",hiveConfDate:" + hiveConfDate + ",hiveConfDirectory:" + hiveConfDirectory;
 	}
 
 	@Override
@@ -91,6 +92,14 @@ public class HiveReaderDescriptor implements InputDescriptor<HiveReaderDescripto
 		} else if (!hiveQuery.equals(other.hiveQuery))
 			return false;
 		return true;
+	}
+
+	public String getHiveConfDirectory() {
+		return hiveConfDirectory;
+	}
+
+	public void setHiveConfDirectory(String hiveConfDirectory) {
+		this.hiveConfDirectory = hiveConfDirectory;
 	}
 
 }

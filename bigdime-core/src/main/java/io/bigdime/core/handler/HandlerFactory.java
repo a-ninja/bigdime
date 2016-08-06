@@ -49,7 +49,8 @@ public final class HandlerFactory {
 			final Class<? extends Handler> handlerClass = Class.forName(handlerConfig.getHandlerClass())
 					.asSubclass(Handler.class);
 			Handler handler = context.getBean(handlerClass);
-
+handler.setHandlerClass(handlerClass);
+			
 			Map<String, Object> handlerProperties = handlerConfig.getHandlerProperties();
 			PropertyHelper.redeemTokensFromAppProperties(handlerProperties, appProperties);
 			handler.setPropertyMap(Collections.unmodifiableMap(handlerConfig.getHandlerProperties()));

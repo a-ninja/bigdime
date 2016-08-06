@@ -74,6 +74,8 @@ public abstract class AbstractHandler implements Handler {
 
 	private boolean lastHandler = false;
 
+	private Class<? extends Handler> clazz = null;
+
 	private String[] getInputChannelArray(String channelMapValue) {
 		return channelMapValue.split(","); // spilt "input1:channel1,
 											// input2:channel2"
@@ -198,6 +200,7 @@ public abstract class AbstractHandler implements Handler {
 	 * @return
 	 * @throws RuntimeInfoStoreException
 	 */
+
 	protected <T> T getNextDescriptorToProcess(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName, List<T> availableDescriptors, final InputDescriptor<T> inputDescriptor)
 			throws RuntimeInfoStoreException {
@@ -219,6 +222,14 @@ public abstract class AbstractHandler implements Handler {
 		return nextDescriptorToProcess;
 	}
 
+	/**
+	 * 
+	 * @param runtimeInfoStore
+	 * @param entityName
+	 * @param inputDescriptorPrefix
+	 * @return
+	 * @throws RuntimeInfoStoreException
+	 */
 	protected RuntimeInfo getOneQueuedRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName, final String inputDescriptorPrefix) throws RuntimeInfoStoreException {
 		final List<RuntimeInfo> runtimeInfos = runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
@@ -330,7 +341,10 @@ public abstract class AbstractHandler implements Handler {
 			boolean validationPassed, ActionEvent actionEvent) throws RuntimeInfoStoreException {
 
 		String entityName = actionEvent.getHeaders().get(ActionEventHeaderConstants.ENTITY_NAME);
-		String inputDescriptor = actionEvent.getHeaders().get(ActionEventHeaderConstants.INPUT_DESCRIPTOR);
+
+		String inputDescriptor = actionEvent.getHeaders().get(ActionEventHeaderConstants.FULL_DESCRIPTOR);
+		if (inputDescriptor == null)
+			inputDescriptor = actionEvent.getHeaders().get(ActionEventHeaderConstants.INPUT_DESCRIPTOR);
 		Map<String, String> properties = actionEvent.getHeaders();
 		if (validationPassed) {
 			return updateRuntimeInfo(runtimeInfoStore, entityName, inputDescriptor, Status.VALIDATED, properties);
@@ -520,84 +534,14 @@ public abstract class AbstractHandler implements Handler {
 		}
 	}
 
-	// protected List<RuntimeInfo> dirtyRecords;
-	// private boolean processingDirty = false;
-	//
-	// protected void setNextDescriptorToProcess()
-	// throws IOException, RuntimeInfoStoreException, HandlerException,
-	// WebHdfsException {
-	//
-	// if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-	// RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
-	// logger.info(getHandlerPhase(), "\"processing a dirty record\"
-	// dirtyRecord=\"{}\"", dirtyRecord);
-	// String nextDescriptorToProcess = dirtyRecord.getInputDescriptor();
-	// initRecordToProcess(nextDescriptorToProcess);
-	// processingDirty = true;
-	// return;
-	// } else {
-	// logger.info(getHandlerPhase(), "processing a clean record");
-	// processingDirty = false;
-	// RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore,
-	// entityName, INPUT_DESCRIPTOR_PREFIX);
-	// if (queuedRecord == null) {
-	// boolean foundRecordsToProcess = initializeRuntimeInfoRecords();
-	// if (foundRecordsToProcess)
-	// queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName,
-	// INPUT_DESCRIPTOR_PREFIX);
-	// }
-	// if (queuedRecord != null) {
-	// logger.info(getHandlerPhase(), "_message=\"found a queued record, will
-	// process this\" queued_record={}",
-	// queuedRecord);
-	// initRecordToProcess(queuedRecord.getInputDescriptor());
-	// Map<String, String> properties = new HashMap<>();
-	// properties.put("handlerName", this.getClass().getName());
-	// updateRuntimeInfo(runtimeInfoStore, entityName,
-	// queuedRecord.getInputDescriptor(),
-	// RuntimeInfoStore.Status.STARTED, properties);
-	// } else {
-	// inputDescriptor = null;
-	// }
-	// }
-	// }
-	//
-	// protected abstract void initRecordToProcess(String
-	// nextDescriptorToProcess) throws Exception;
-	// Map<String, Long> methodEntryTimeMap = new HashMap<>();
-	//
-	// Map<String, Long> methodElapsedTimeMap = new HashMap<>();
-	//
-	// protected void registerEntry(String methodName) {
-	// long entryTime = System.currentTimeMillis();
-	// methodEntryTimeMap.put(methodName, entryTime);
-	// }
-	//
-	// protected void registerExit(String methodName) {
-	// long exitTime = System.currentTimeMillis();
-	// long entryTime = getLongOrZero(methodEntryTimeMap, methodName);
-	// long elapsedTime = exitTime - entryTime;
-	//
-	// long totalElapsedTime = getLongOrZero(methodElapsedTimeMap, methodName);
-	//
-	// totalElapsedTime += elapsedTime;
-	// methodElapsedTimeMap.put(methodName, totalElapsedTime);
-	// methodEntryTimeMap.remove(methodName);
-	// }
-	//
-	// private long getLongOrZero(Map<String, Long> map, String key) {
-	// if (map.containsKey(key))
-	// return map.get(key);
-	// return 0l;
-	// }
-	//
-	// protected void printStats() {
-	// Set<Entry<String, Long>> entrySet = methodElapsedTimeMap.entrySet();
-	// for (Entry<String, Long> entry : entrySet) {
-	// logger.info(getName(), "methodName={} timeElapsed={} invocationCount={}",
-	// entry.getKey(), entry.getValue(),
-	// getInvocationCount());
-	// }
-	// }
+	/**
+	 * Class object of the class that implements Handler interface.
+	 */
+	public void setHandlerClass(final Class<? extends Handler> _clazz) {
+		this.clazz = _clazz;
+	}
 
+	public String getHandlerClass() {
+		return clazz.getName();
+	}
 }

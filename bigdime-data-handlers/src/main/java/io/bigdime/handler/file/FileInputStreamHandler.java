@@ -334,7 +334,7 @@ public class FileInputStreamHandler extends AbstractSourceHandler {
 		}
 	}
 
-	private boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
+	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
 		List<String> availableFiles = getAvailableFiles();
 		if (availableFiles == null || availableFiles.isEmpty()) {
 			return false;

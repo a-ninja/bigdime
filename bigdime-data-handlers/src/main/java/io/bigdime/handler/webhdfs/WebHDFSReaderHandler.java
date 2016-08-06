@@ -15,12 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import io.bigdime.alert.Logger.ALERT_CAUSE;
+import io.bigdime.alert.Logger.ALERT_SEVERITY;
+import io.bigdime.alert.Logger.ALERT_TYPE;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
-import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
@@ -67,7 +69,7 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
  */
 @Component
 @Scope("prototype")
-public class WebHDFSReaderHandler extends AbstractSourceHandler {
+public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSReaderHandler.class));
 	private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
@@ -78,46 +80,15 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	/**
 	 * CONFIG or HEADERS
 	 */
-	// private String readHdfsPathFrom; // CONFIG | HEADERS
-
-	private FileStatus currentFileStatus;
-	private String currentFilePath;
-	private long fileLength = -1;
-	ReadableByteChannel fileChannel;
-
-	private InputStream inputStream;
 	@Autowired
 	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 
-	private long dirtyRecordCount = 0;
-	protected List<RuntimeInfo> dirtyRecords;
 	private boolean processingDirty = false;
-	private InputDescriptor<String> inputDescriptor;
+	private WebHDFSInputDescriptor inputDescriptor;
 
-	private final String INPUT_DESCRIPTOR_PREFIX = "/webhdfs/v1/";
-	private final String PATH_INPUT_DESCRIPTOR_PREFIX = "::/webhdfs/v1/";
+	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebHDFSReaderHandler,webhdfsPath:";
 
 	WebHDFSReaderHandlerConfig handlerConfig = new WebHDFSReaderHandlerConfig();
-
-	// handlerName:list:directoryPath
-	// handlerName:file:filePath
-
-	// hive-jdbc-reader:hiveQuery:
-	// Capability to go back
-
-	// webhdfs-file-reader:list:directoryPath
-	// webhdfs-file-reader:file:filePath
-	// if there are files in start status, process them.
-	// If there are directories in start state, process them.
-	// Detect the last successful run date, say 100 days back.
-	// Check the frequency, say 1 day. Compute next run date, say 99 days back.
-	// Look for maxGoBack param. Say, 10 days
-	// If today - next run date is < goBack, set next date as goBack
-	// else
-	// Compute hdfsPath for Today - maxGoBackDays
-	// if the descriptor is present and not in QUEUED/START/PENDING for that old
-	// date, add frequency to the datetime and compute the next hdfs path.
-	// else process for that date.
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -142,7 +113,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 				@SuppressWarnings("unchecked")
 				Entry<Object, String> srcDescEntry = (Entry<Object, String>) getPropertyMap()
 						.get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
-				logger.debug(getHandlerPhase(), "src-desc-node-key=\"{}\" src-desc-node-value=\"{}\"",
+				logger.info(getHandlerPhase(), "src-desc-node-key=\"{}\" src-desc-node-value=\"{}\"",
 						srcDescEntry.getKey(), srcDescEntry.getValue());
 				@SuppressWarnings("unchecked")
 				Map<String, Object> srcDescValueMap = (Map<String, Object>) srcDescEntry.getKey();
@@ -199,7 +170,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	 * @return true if the method completed with success, false otherwise.
 	 * @throws RuntimeInfoStoreException
 	 */
-	protected boolean init() throws RuntimeInfoStoreException {
+	protected void initClass() throws RuntimeInfoStoreException {
 		if (isFirstRun()) {
 			if (getReadHdfsPathFrom() == READ_HDFS_PATH_FROM.HEADERS) {
 				entityName = getEntityNameFromHeader();
@@ -207,44 +178,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			} else {
 				logger.info(getHandlerPhase(), "From config, entityName={} ", entityName);
 			}
-			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-
-			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-				dirtyRecordCount = dirtyRecords.size();
-				logger.warn(getHandlerPhase(),
-						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
-						getId(), dirtyRecordCount, entityName);
-			} else {
-				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
-			}
 		}
-		return false;
-	}
-
-	/**
-	 * gets called before process method execution every time.
-	 * 
-	 * 
-	 */
-	protected void pre() {
-
-	}
-
-	/**
-	 * gets called after process method execution every time.
-	 * 
-	 * 
-	 */
-
-	protected void post() {
-
-	}
-
-	/**
-	 * Gets called after pre and before post method execution every time.
-	 */
-	protected void execute() {
-
 	}
 
 	/**
@@ -268,14 +202,15 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	@Override
 	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		long nextIndexToRead = getTotalReadFromJournal();
-		logger.debug(getHandlerPhase(),
+		logger.info(getHandlerPhase(),
 				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={}", getId(),
-				nextIndexToRead, handlerConfig.getBufferSize(), fileChannel.isOpen(), currentFilePath);
+				nextIndexToRead, handlerConfig.getBufferSize(), inputDescriptor.getFileChannel().isOpen(),
+				inputDescriptor.getCurrentFilePath());
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(getBufferSize());
 		Status statustoReturn = Status.READY;
 
-		int bytesRead = fileChannel.read(readInto);
+		int bytesRead = inputDescriptor.getFileChannel().read(readInto);
 		if (bytesRead > 0) {
 			getSimpleJournal().setTotalRead((nextIndexToRead + bytesRead));
 			long readCount = getSimpleJournal().getReadCount();
@@ -283,16 +218,21 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 			ActionEvent outputEvent = new ActionEvent();
 			byte[] readBody = new byte[bytesRead];
 			logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} readBody.length={} fileLength={} readCount={}",
-					getId(), bytesRead, readBody.length, fileLength, getSimpleJournal().getReadCount());
+					getId(), bytesRead, readBody.length, inputDescriptor.getCurrentFileStatus().getLength(),
+					getSimpleJournal().getReadCount());
 
 			readInto.flip();
 			readInto.get(readBody, 0, bytesRead);
 
 			outputEvent.setBody(readBody);
 			statustoReturn = Status.CALLBACK;
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME, currentFilePath);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME,
+					inputDescriptor.getCurrentFilePath());
 			outputEvent.getHeaders().put("read_count", "" + getSimpleJournal().getReadCount());
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, currentFilePath);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR,
+					inputDescriptor.getCurrentFilePath());
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.FULL_DESCRIPTOR,
+					inputDescriptor.getFullDescriptor());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 
 			if (processingDirty)
@@ -302,7 +242,7 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 			if (readAll()) {
 				logger.info(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
-						getId(), getSimpleJournal().getReadCount(), currentFilePath);
+						getId(), getSimpleJournal().getReadCount(), inputDescriptor.getCurrentFilePath());
 				getSimpleJournal().reset();
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
 			} else {
@@ -319,66 +259,43 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	}
 
 	@Override
-	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		init();
+	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
 
+		setHandlerPhase("processing " + getName());
+		incrementInvocationCount();
+		logger.debug(getHandlerPhase(), "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
+		try {
+			init(); // initialize cleanup records etc
+			// if (readAll()) {
+			initDescriptor();
+			// }
+			if (isInputDescriptorNull()) {
+				logger.debug(getHandlerPhase(), "returning BACKOFF");
+				return io.bigdime.core.ActionEvent.Status.BACKOFF;
+			}
+			return doProcess();
+		} catch (IOException e) {
+			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
+					"error during process", e);
+			throw new HandlerException("Unable to process", e);
+		} catch (RuntimeInfoStoreException e) {
+			throw new HandlerException("Unable to process", e);
+		}
+	}
+
+	protected void initDescriptor() throws HandlerException, RuntimeInfoStoreException {
 		if (readAll()) {
-			try {
-				setNextDescriptorToProcess();
-			} catch (WebHdfsException e) {
-				throw new HandlerException(e);
-			}
-			if (currentFilePath == null) {
-				logger.info(getHandlerPhase(), "_message=\"no file to process\" handler_id={} descriptor={}", getId());
-				return Status.BACKOFF;
-			}
-
-			fileLength = currentFileStatus.getLength();
-			logger.info(getHandlerPhase(), "_message=\"got a new file to process\" handler_id={} file_length={}",
-					getId(), fileLength);
-			if (fileLength == 0) {
-				logger.info(getHandlerPhase(), "_message=\"file is empty\" handler_id={} ", getId());
-				return Status.BACKOFF;
-			}
+			super.initDescriptor();
+			long fileLength = 0;
+			if (isInputDescriptorNull())
+				fileLength = 0;
+			else
+				fileLength = inputDescriptor.getCurrentFileStatus().getLength();
 			getSimpleJournal().setTotalSize(fileLength);
 		}
-		return Status.READY;
 	}
 
-	protected void setNextDescriptorToProcess()
-			throws IOException, RuntimeInfoStoreException, HandlerException, WebHdfsException {
-
-		if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-			RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
-			logger.info(getHandlerPhase(), "\"processing a dirty record\" dirtyRecord=\"{}\"", dirtyRecord);
-			String nextDescriptorToProcess = dirtyRecord.getInputDescriptor();
-			initRecordToProcess(nextDescriptorToProcess);
-			processingDirty = true;
-			return;
-		} else {
-			logger.info(getHandlerPhase(), "processing a clean record");
-			processingDirty = false;
-			RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-			if (queuedRecord == null) {
-				boolean foundRecordsToProcess = initializeRuntimeInfoRecords();
-				if (foundRecordsToProcess)
-					queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, entityName, INPUT_DESCRIPTOR_PREFIX);
-			}
-			if (queuedRecord != null) {
-				logger.info(getHandlerPhase(), "_message=\"found a queued record, will process this\" queued_record={}",
-						queuedRecord);
-				initRecordToProcess(queuedRecord.getInputDescriptor());
-				Map<String, String> properties = new HashMap<>();
-				properties.put("handlerName", this.getClass().getName());
-				updateRuntimeInfo(runtimeInfoStore, entityName, queuedRecord.getInputDescriptor(),
-						RuntimeInfoStore.Status.STARTED, properties);
-			} else {
-				inputDescriptor = null;
-			}
-		}
-	}
-
-	private boolean initializeRuntimeInfoRecords() throws RuntimeInfoStoreException, IOException, WebHdfsException {
+	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException, HandlerException {
 		boolean recordsFound = false;
 
 		try {
@@ -390,6 +307,11 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 					webHdfs1 = getWebHdfs();
 					recordsFound |= initializeRuntimeInfoRecords(webHdfs1, directoryPath);
 
+				} catch (IOException | WebHdfsException e) {
+					logger.warn(getHandlerPhase(),
+							"_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound,
+							e.getMessage());
+					throw new HandlerException(e);
 				} finally {
 					releaseWebHdfs(webHdfs1);
 				}
@@ -435,7 +357,11 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 					recordsFound = true;
 					properties.put(WebHDFSReaderHandlerConstants.HDFS_PATH, directoryPath);
 					properties.put(WebHDFSReaderHandlerConstants.HDFS_FILE_NAME, fileName);
-					queueRuntimeInfo(runtimeInfoStore, entityName, fileName, properties);
+					// queueRuntimeInfo(runtimeInfoStore, entityName,
+					// getInputDescriptorPrefix() + fileName, properties);
+					WebHDFSInputDescriptor tempInputDescriptor = new WebHDFSInputDescriptor();
+					queueRuntimeInfo(runtimeInfoStore, entityName, tempInputDescriptor.createFullDescriptor(fileName),
+							properties);
 				}
 			} else {
 				logger.info(getHandlerPhase(), "_message=\"ready file is not present\" waitForFileName={}",
@@ -448,26 +374,43 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 		return recordsFound;
 	}
 
-	protected void initRecordToProcess(String nextDescriptorToProcess) throws IOException, WebHdfsException {
-		releaseWebHdfs(webHdfs);
-		webHdfs = null;
-		if (webHdfs == null) {
-			webHdfs = getWebHdfs();
+	@Override
+	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
+		try {
+			releaseWebHdfs(webHdfs);
+			webHdfs = null;
+			if (webHdfs == null) {
+				webHdfs = getWebHdfs();
+			}
+
+			WebHdfsReader webHdfsReader = new WebHdfsReader();
+
+			String fullDescriptor = runtimeInfo.getInputDescriptor();
+			if (inputDescriptor == null)
+				inputDescriptor = new WebHDFSInputDescriptor();
+			else if (inputDescriptor.getFileChannel() != null) {
+				inputDescriptor.getFileChannel().close();
+			}
+
+			inputDescriptor.parseDescriptor(fullDescriptor);
+			// String webHdfsPathToProcess = inputDescriptor.getWebhdfsPath();
+			final InputStream inputStream = webHdfsReader.getInputStream(webHdfs, inputDescriptor.getWebhdfsPath());
+
+			// closing the channel explicitly
+			// if (inputDescriptor.getFileChannel() != null) {
+			// inputDescriptor.getFileChannel().close();
+			// }
+
+			FileStatus currentFileStatus = getFileStatusFromWebhdfs(inputDescriptor.getWebhdfsPath());
+			ReadableByteChannel fileChannel = Channels.newChannel(inputStream);
+			inputDescriptor.setCurrentFileStatus(currentFileStatus);
+			inputDescriptor.setFileChannel(fileChannel);
+
+			logger.debug(getHandlerPhase(), "current_file_path={} is_file_channel_open={}",
+					inputDescriptor.getCurrentFilePath(), fileChannel.isOpen());
+		} catch (IOException | WebHdfsException e) {
+			throw new HandlerException("unable to process", e);
 		}
-
-		WebHdfsReader webHdfsReader = new WebHdfsReader();
-
-		inputStream = webHdfsReader.getInputStream(webHdfs, nextDescriptorToProcess);
-
-		if (fileChannel != null) { // closing the channel explicitly
-			fileChannel.close();
-		}
-		currentFilePath = nextDescriptorToProcess;
-		currentFileStatus = getFileStatusFromWebhdfs(nextDescriptorToProcess);
-		fileChannel = Channels.newChannel(inputStream);
-
-		logger.debug(getHandlerPhase(), "current_file_path={} is_file_channel_open={}", currentFilePath,
-				fileChannel.isOpen());
 	}
 
 	private FileStatus getFileStatusFromWebhdfs(final String hdfsFilePath) throws IOException, WebHdfsException {
@@ -480,7 +423,6 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 		} finally {
 			releaseWebHdfs(webHdfs1);
 		}
-
 	}
 
 	private long getTotalReadFromJournal() throws HandlerException {
@@ -551,6 +493,15 @@ public class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private void releaseWebHdfs(WebHdfs _webHdfs) {
 		if (_webHdfs != null)
 			_webHdfs.releaseConnection();
-
 	}
+
+	protected boolean isInputDescriptorNull() {
+		return (inputDescriptor == null || inputDescriptor.getCurrentFilePath() == null)
+				|| (inputDescriptor.getCurrentFileStatus().getLength() == 0);
+	}
+
+	protected String getInputDescriptorPrefix() {
+		return INPUT_DESCRIPTOR_PREFIX;
+	}
+
 }

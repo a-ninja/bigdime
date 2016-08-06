@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -22,6 +21,7 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
+import io.bigdime.core.InputDescriptor;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.ProcessHelper;
@@ -30,7 +30,6 @@ import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
-import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
 import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
@@ -68,18 +67,12 @@ import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
 @Scope("prototype")
 public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJdbcReaderHandler.class));
-	private String outputDirectory = "";
 	final Map<String, String> hiveConfigurations = new HashMap<>();
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
-	@Autowired
-	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 	private Connection connection = null;
-	private boolean processingDirty = false;
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
-	long dirtyRecordCount = 0;
-	List<RuntimeInfo> dirtyRecords;
 
 	private static final int MILLS_IN_A_DAY = 24 * 60 * 60 * 1000;
 	private long intervalInMins = 24 * 60;// default to a day
@@ -87,13 +80,14 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	private static final String OUTPUT_DIRECTORY_DATE_FORMAT = "yyyy-MM-dd";
 
-	private final String INPUT_DESCRIPTOR_PREFIX = "hiveConfDate:";
+	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.hive.HiveJdbcReaderHandler";
 	final private int DEFAULT_GO_BACK_DAYS = 1;
 	private HiveJdbcReaderHandlerConfig handlerConfig = new HiveJdbcReaderHandlerConfig();
 
 	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMdd-HHmmss.SSS");
 	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 	private DateTimeFormatter hdfsOutputPathDtf;
+	public static final String FORWARD_SLASH = "/";
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -121,7 +115,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 		Map<String, Object> properties = getPropertyMap();
 		for (String key : properties.keySet()) {
-			logger.debug(getHandlerPhase(), "key=\"{}\" value=\"{}\"", key, getPropertyMap().get(key));
+			logger.info(getHandlerPhase(), "key=\"{}\" value=\"{}\"", key, getPropertyMap().get(key));
 		}
 
 		// sanity check for src-desc
@@ -132,7 +126,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			throw new InvalidValueConfigurationException("src-desc can't be null");
 		}
 
-		logger.debug(getHandlerPhase(), "src-desc-node-key=\"{}\" src-desc-node-value=\"{}\"", srcDescEntry.getKey(),
+		logger.info(getHandlerPhase(), "src-desc-node-key=\"{}\" src-desc-node-value=\"{}\"", srcDescEntry.getKey(),
 				srcDescEntry.getValue());
 
 		@SuppressWarnings("unchecked")
@@ -150,7 +144,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		Preconditions.checkArgument(goBackDays >= 0,
 				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS + " has to be a non-negative value.");
 
-		String frequencyExpression = PropertyHelper.getStringProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.FREQUENCY);
+		String frequencyExpression = PropertyHelper.getStringProperty(srcDescValueMap,
+				HiveJdbcReaderHandlerConstants.FREQUENCY);
 		for (String key : srcDescValueMap.keySet()) {
 			logger.debug(getHandlerPhase(), "srcDesc-key=\"{}\" srcDesc-value=\"{}\"", key, srcDescValueMap.get(key));
 		}
@@ -176,10 +171,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				HiveJdbcReaderHandlerConstants.OUTPUT_DIRECTORY_DATE_FORMAT, OUTPUT_DIRECTORY_DATE_FORMAT);
 		hdfsOutputPathDtf = DateTimeFormat.forPattern(outputDirectoryPattern);
 
-		logger.debug(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={}",
-				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory,
-				outputDirectoryPattern);
+		logger.info(getHandlerPhase(),
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} frequencyExpression={}",
+				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
+				frequencyExpression);
 		handlerConfig.setAuthOption(authOption);
 		handlerConfig.setBaseOutputDirectory(baseOutputDirectory);
 		handlerConfig.setDriverClassName(driverClassName);
@@ -189,7 +184,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		handlerConfig.setJdbcUrl(jdbcUrl);
 		handlerConfig.setPassword(password);
 		handlerConfig.setUserName(userName);
-		logger.debug(getHandlerPhase(),
+		logger.info(getHandlerPhase(),
 				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={}",
 				getJdbcUrl(), getDriverClassName(), authChoice, getAuthOption(), getUserName(),
 				getBaseOutputDirectory(), getOutputDirectoryPattern());
@@ -213,96 +208,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	}
 
-	/**
-	 * If it's the first run, find the dirty records and add to the list.
-	 * 
-	 * After that, just set the next descriptor to process.
-	 * 
-	 * @return
-	 * @throws IOException
-	 * @throws RuntimeInfoStoreException
-	 * @throws HandlerException
-	 */
 	@Override
-	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		setupFirstRun();
-		setNextDescriptorToProcess();
-		if (inputDescriptor == null) {
-			logger.info(getHandlerPhase(),
-					"_message=\"no descriptor to process, still returning READY\" handler_id={} ", getId());
-			// return Status.BACKOFF;
-		}
-		return Status.READY;
-	}
-
-	/**
-	 * @formatter:off
-	 * if first run
-	 *    check for dirty records
-	 *    if dirty records found
-	 *       process them
-	 * 
-	 * Get queued records
-	 * if queued record found
-	 *    process them
-	 * else
-	 *    generate queued record
-	 *    get queued records
-	 *    if queued record found
-	 *      process them
-	 *      return READY
-	 *    else
-	 *      return BACKOFF      
-	 * @formatter:on
-
-	 * @throws RuntimeInfoStoreException
-	 */
-	protected void setupFirstRun() throws RuntimeInfoStoreException {
-		if (isFirstRun()) {
-			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, getEntityName(), INPUT_DESCRIPTOR_PREFIX);
-			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-				dirtyRecordCount = dirtyRecords.size();
-				logger.warn(getHandlerPhase(),
-						"_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
-						getId(), dirtyRecordCount, getEntityName());
-			} else {
-				logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
-			}
-		}
-	}
-
-	protected void setNextDescriptorToProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
-		if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-			RuntimeInfo dirtyRecord = dirtyRecords.remove(0);
-			logger.info(getHandlerPhase(), "\"processing a dirty record\" dirtyRecord=\"{}\"", dirtyRecord);
-			initRecordToProcess(dirtyRecord);
-			processingDirty = true;
-			return;
-		} else {
-			logger.info(getHandlerPhase(), "processing a clean record");
-			processingDirty = false;
-			RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, getEntityName(),
-					INPUT_DESCRIPTOR_PREFIX);
-			logger.info(getHandlerPhase(), "queued_record={}", queuedRecord);
-			if (queuedRecord == null) {
-				boolean foundRecordsToProcess = findAndAddRuntimeInfoRecords();
-				if (foundRecordsToProcess)
-					queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, getEntityName(), INPUT_DESCRIPTOR_PREFIX);
-			}
-			if (queuedRecord != null) {
-				logger.info(getHandlerPhase(), "_message=\"found a queued record, will process this\" queued_record={}",
-						queuedRecord);
-				initRecordToProcess(queuedRecord);
-				Map<String, String> properties = new HashMap<>();
-				properties.put("handlerName", this.getClass().getName());
-				updateRuntimeInfo(runtimeInfoStore, getEntityName(), queuedRecord.getInputDescriptor(),
-						RuntimeInfoStore.Status.STARTED, properties);
-			} else {
-				inputDescriptor = null;
-			}
-		}
-	}
-
 	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
 		Map<String, String> runtimeProperty = runtimeInfo.getProperties();
 		final String hiveConfDate = runtimeProperty.get("hiveConfDate");
@@ -310,6 +216,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		final String hiveQuery = runtimeProperty.get("hiveQuery");
 
 		inputDescriptor = new HiveReaderDescriptor(getEntityName(), hiveConfDate, outputDirectory, hiveQuery);
+		InputDescriptor<String> x = inputDescriptor;
+		x.hashCode();
 
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
 		hiveConfigurations.put("DATE", hiveConfDate);
@@ -319,9 +227,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		} catch (ClassNotFoundException | SQLException | IOException e) {
 			throw new HandlerException("unable to process", e);
 		}
+		// return inputDescriptor;
 	}
 
-	private boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
+	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
 		long now = System.currentTimeMillis();
 		if (hiveConfDateTime == 0) {// this is the first time
 
@@ -340,7 +249,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					intervalInMillis);
 			return false;
 		}
-		setHdfsOutputDirectory();
+		String outputDirectory = setHdfsOutputDirectory();
 		final HiveReaderDescriptor descriptor = new HiveReaderDescriptor(getEntityName(), getHiveConfDate(),
 				outputDirectory, getHiveQuery());
 		Map<String, String> properties = new HashMap<>();
@@ -348,19 +257,20 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		properties.put("hiveConfDirectory", outputDirectory);
 		properties.put("hiveQuery", getHiveQuery());
 
-		queueRuntimeInfo(runtimeInfoStore, getEntityName(), descriptor.getInputDescriptorString(), properties);
+		queueRuntimeInfo(getRuntimeInfoStore(), getEntityName(), descriptor.getInputDescriptorString(), properties);
 
 		return true;
 	}
 
-	private void setHdfsOutputDirectory() {
+	private String setHdfsOutputDirectory() {
+		String outputDirectory = null;
 		if (!getBaseOutputDirectory().endsWith(FORWARD_SLASH))
 			outputDirectory = getBaseOutputDirectory() + FORWARD_SLASH;
 		else
 			outputDirectory = getBaseOutputDirectory();
 
 		final String hiveConfDate = getHiveConfDate();
-		final String hdfsOutputPathDate = getHdfsOutputPathDate();
+		final String hdfsOutputPathDate = hdfsOutputPathDtf.print(hiveConfDateTime);
 		outputDirectory = outputDirectory + hdfsOutputPathDate + FORWARD_SLASH + getEntityName();
 
 		logger.debug(getHandlerPhase(), "hiveConfDate={} hdfsOutputPathDate={} outputDirectory=\"{}\"", hiveConfDate,
@@ -368,6 +278,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
 		hiveConfigurations.put("DATE", hiveConfDate);
+		return outputDirectory;
 	}
 
 	/**
@@ -388,7 +299,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		try {
 			ActionEvent outputEvent = new ActionEvent();
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, getEntityName());
-			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, inputDescriptor.getHiveConfDirectory());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, getHiveQuery());
 
 			if (inputDescriptor == null) {
@@ -403,9 +314,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 						+ "." + getJobDtf().print(System.currentTimeMillis());
 				logger.info(getHandlerPhase(), "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", getHiveQuery(),
 						hiveConfigurations, jobName);
+				outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME, jobName);
+
 				stmt.execute("set mapred.job.name=" + jobName);
 				stmt.execute(getHiveQuery());// no resultset is returned
-				boolean updatedRuntime = updateRuntimeInfo(runtimeInfoStore, getEntityName(),
+				boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
 						inputDescriptor.getInputDescriptorString(),
 						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
 				logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
@@ -421,16 +334,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return Status.READY;
 	}
 
-	public static final String FORWARD_SLASH = "/";
-
 	private String getHiveConfDate() {
 		final String hiveConfDate = getHiveQueryDtf().print(hiveConfDateTime);
 		return hiveConfDate;
-	}
-
-	private String getHdfsOutputPathDate() {
-		final String hdfsOutputPathDate = getHdfsOutputPathDtf().print(hiveConfDateTime);
-		return hdfsOutputPathDate;
 	}
 
 	private void setupConnection() throws SQLException, IOException, ClassNotFoundException {
@@ -467,10 +373,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		} finally {
 			connection = null;
 		}
-	}
-
-	public String getOutputDirectory() {
-		return outputDirectory;
 	}
 
 	public String getJdbcUrl() {
@@ -529,22 +431,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return connection;
 	}
 
-	public RuntimeInfoStore<RuntimeInfo> getRuntimeInfoStore() {
-		return runtimeInfoStore;
-	}
-
-	public long getDirtyRecordCount() {
-		return dirtyRecordCount;
-	}
-
-	public List<RuntimeInfo> getDirtyRecords() {
-		return dirtyRecords;
-	}
-
-	public boolean isProcessingDirty() {
-		return processingDirty;
-	}
-
 	public HiveReaderDescriptor getInputDescriptor() {
 		return inputDescriptor;
 	}
@@ -569,4 +455,15 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return handlerConfig.getOutputDirectoryPattern();
 	}
 
+	protected String getInputDescriptorPrefix() {
+		return INPUT_DESCRIPTOR_PREFIX;
+	}
+
+	protected void setInputDescriptorToNull() {
+		inputDescriptor = null;
+	}
+
+	protected boolean isInputDescriptorNull() {
+		return inputDescriptor == null;
+	}
 }

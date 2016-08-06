@@ -69,6 +69,21 @@ public interface Handler extends NamedComponent {
 	 */
 	public void setIndex(int index);
 
+	/**
+	 * Concrete Class object that represents the handler. Can be used for
+	 * printing purposes.
+	 * 
+	 * @param clazz
+	 */
+	public void setHandlerClass(Class<? extends Handler> clazz);
+
+	/**
+	 * Get the complete class name.
+	 * 
+	 * @return
+	 */
+	public String getHandlerClass();
+
 	public enum State {
 		/**
 		 * CREATED(0) reserved for later use.

@@ -36,6 +36,7 @@ public final class ActionEventHeaderConstants {
 
 	public static final String ENTITY_NAME = "entityName";
 	public static final String INPUT_DESCRIPTOR = "inputDescriptor";
+	public static final String FULL_DESCRIPTOR = "fullDescriptor";
 
 	public static final String SOURCE_FILE_NAME = "sourceFileName";
 
@@ -82,11 +83,13 @@ public final class ActionEventHeaderConstants {
 	public static final String HIVE_METASTORE_URI = "hive.metastore.uris";
 
 	public static final String HDFS_OUTPUT_DIRECTORY = "hdfsOutputDirectory";
-	
+
 	public static final String LAST_HANDLER_IN_CHAIN = "last-handler-in-chain";
 
 	public static class HiveJDBCReaderHeaders {
 		public static final String HIVE_QUERY = "hiveQuery";
+		public static final String MAPRED_JOB_NAME = "mapReduceJobName";
+		public static final String MAPRED_JOB_ID = "mapReduceJobId";
 	}
 
 	public static class SwiftHeaders {
