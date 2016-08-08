@@ -5,6 +5,7 @@ package io.bigdime.core.commons;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 
 import org.testng.Assert;
@@ -200,5 +201,32 @@ public class PropertyHelperTest {
 				"unit-test-testGetBooleanPropertyWithInvalidValue");
 		Assert.assertFalse(
 				PropertyHelper.getBooleanProperty(propertyMap, "unit-test-testGetBooleanPropertyWithInvalidValue"));
+	}
+
+	@Test
+	public void testRedeemTokensFromAppProperties() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Properties applicationProperties = new Properties();
+
+		Map<String, String> yarnConfs = new HashMap<>();
+		yarnConfs.put("fs.defaultFS", "${fs.defaultFS}");
+		yarnConfs.put("ipc.client.connect.max.retries", "${ipc.client.connect.max.retries}");
+		yarnConfs.put("yarn.resourcemanager.principal", "${yarn.resourcemanager.principal}");
+
+		propertyMap.put("yarn-confs", yarnConfs);
+		propertyMap.put("hive-jdbc-user-name", "unit-user");
+
+		applicationProperties.put("yarn.resourcemanager.principal", "unit-yarn.resourcemanager.principal");
+		applicationProperties.put("ipc.client.connect.max.retries", "87");
+		applicationProperties.put("hive-jdbc-user-name", "unit-user");
+		PropertyHelper.redeemTokensFromAppProperties(propertyMap, applicationProperties);
+
+		Assert.assertEquals(PropertyHelper.getStringProperty(propertyMap, "hive-jdbc-user-name"), "unit-user");
+		Assert.assertEquals(
+				PropertyHelper.getMapProperty(propertyMap, "yarn-confs").get("yarn.resourcemanager.principal"),
+				"unit-yarn.resourcemanager.principal");
+		Assert.assertEquals(
+				PropertyHelper.getMapProperty(propertyMap, "yarn-confs").get("ipc.client.connect.max.retries"), "87");
+
 	}
 }

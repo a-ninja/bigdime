@@ -13,6 +13,7 @@ public class HiveReaderDescriptor implements InputDescriptor<String> {
 	private String hiveConfDirectory;
 	private String hiveQuery;
 	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.hive.HiveJdbcReaderHandler";
+	private String jobName;
 
 	public HiveReaderDescriptor(final String _entityName, final String _hiveConfDate, final String _hiveConfDirectory,
 			final String _hiveQuery) {
@@ -48,7 +49,7 @@ public class HiveReaderDescriptor implements InputDescriptor<String> {
 	}
 
 	public String getInputDescriptorString() {
-		return INPUT_DESCRIPTOR_PREFIX+",hiveConfDate:" + hiveConfDate + ",hiveConfDirectory:" + hiveConfDirectory;
+		return INPUT_DESCRIPTOR_PREFIX + ",hiveConfDate:" + hiveConfDate + ",hiveConfDirectory:" + hiveConfDirectory;
 	}
 
 	@Override
@@ -100,6 +101,14 @@ public class HiveReaderDescriptor implements InputDescriptor<String> {
 
 	public void setHiveConfDirectory(String hiveConfDirectory) {
 		this.hiveConfDirectory = hiveConfDirectory;
+	}
+
+	public String getJobName() {
+		return jobName;
+	}
+
+	public void setJobName(String jobName) {
+		this.jobName = jobName;
 	}
 
 }

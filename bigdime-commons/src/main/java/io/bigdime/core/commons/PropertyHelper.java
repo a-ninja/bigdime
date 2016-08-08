@@ -224,6 +224,9 @@ public final class PropertyHelper {
 					logger.info("property_name=\"{}\" old_value=\"{}\" new_value=\"{}\"", property.getKey(), propValue,
 							newValue);
 				}
+			} else if (property.getValue() instanceof Map) {
+				redeemTokensFromAppProperties((Map) property.getValue(), applicationProperties);
+
 			}
 		}
 	}

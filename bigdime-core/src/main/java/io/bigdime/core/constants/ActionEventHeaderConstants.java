@@ -90,6 +90,10 @@ public final class ActionEventHeaderConstants {
 		public static final String HIVE_QUERY = "hiveQuery";
 		public static final String MAPRED_JOB_NAME = "mapReduceJobName";
 		public static final String MAPRED_JOB_ID = "mapReduceJobId";
+		public static final String MAPRED_JOB_START_TIME = "mapReduceJobStartTime";
+		public static final String MAPRED_JOB_FINISH_TIME = "mapReduceJobFinishTime";
+		public static final String MAPRED_JOB_COMPLETION_STATUS = "mapReduceJobCompletionStatus";
+		public static final String MAPRED_JOB_FAILURE_INFO = "mapReduceJobFailureInfo";
 	}
 
 	public static class SwiftHeaders {

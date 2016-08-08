@@ -7,7 +7,13 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
+import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +38,7 @@ import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
 import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
+import io.bigdime.libs.hdfs.job.YarnJobHelper;
 
 /**
  * 
@@ -138,7 +145,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		goBackDays = PropertyHelper.getIntProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.GO_BACK_DAYS,
 				DEFAULT_GO_BACK_DAYS);
 
-		logger.debug(getHandlerPhase(), "entityName=\"{}\" hiveQuery=\"{}\" goBackDays={}", entityName, hiveQuery,
+		logger.info(getHandlerPhase(), "entityName=\"{}\" hiveQuery=\"{}\" goBackDays={}", entityName, hiveQuery,
 				goBackDays);
 
 		Preconditions.checkArgument(goBackDays >= 0,
@@ -147,7 +154,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		String frequencyExpression = PropertyHelper.getStringProperty(srcDescValueMap,
 				HiveJdbcReaderHandlerConstants.FREQUENCY);
 		for (String key : srcDescValueMap.keySet()) {
-			logger.debug(getHandlerPhase(), "srcDesc-key=\"{}\" srcDesc-value=\"{}\"", key, srcDescValueMap.get(key));
+			logger.info(getHandlerPhase(), "srcDesc-key=\"{}\" srcDesc-value=\"{}\"", key, srcDescValueMap.get(key));
 		}
 
 		setHiveConfigurations(srcDescValueMap);
@@ -193,31 +200,60 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	@SuppressWarnings("unchecked")
 	private void setHiveConfigurations(Map<String, Object> srcDescValueMap) {
 		if (getPropertyMap().get(HiveJdbcReaderHandlerConstants.HIVE_CONF) != null) {
-			logger.debug(getHandlerPhase(), "found hive-conf in handler properties");
+			logger.info(getHandlerPhase(), "found hive-conf in handler properties");
 			hiveConfigurations
 					.putAll(PropertyHelper.getMapProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.HIVE_CONF));
-			logger.debug(getHandlerPhase(), "hiveConfs from handler properties=\"{}\"", hiveConfigurations);
+			logger.info(getHandlerPhase(), "hiveConfs from handler properties=\"{}\"", hiveConfigurations);
 		}
 
 		if (PropertyHelper.getMapProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.HIVE_CONF) != null) {
-			logger.debug(getHandlerPhase(), "found hive-conf in src-desc properties");
+			logger.info(getHandlerPhase(), "found hive-conf in src-desc properties");
 			hiveConfigurations
 					.putAll(PropertyHelper.getMapProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.HIVE_CONF));
 		}
-		logger.debug(getHandlerPhase(), "hiveConfs=\"{}\"", hiveConfigurations);
+		logger.info(getHandlerPhase(), "hiveConfs=\"{}\"", hiveConfigurations);
 
+	}
+
+	private org.apache.hadoop.conf.Configuration conf;
+
+	protected void initClass() throws RuntimeInfoStoreException {
+		if (isFirstRun()) {
+			logger.info(getHandlerPhase(), "initializing yarn JobClient instance");
+			try {
+				if (getPropertyMap().get(HiveJdbcReaderHandlerConstants.YARN_CONF) != null) {
+					conf = new org.apache.hadoop.conf.Configuration();
+
+					@SuppressWarnings("unchecked")
+					Map<String, String> yarnConfs = PropertyHelper.getMapProperty(getPropertyMap(),
+							HiveJdbcReaderHandlerConstants.YARN_CONF);
+					logger.debug(getHandlerPhase(), "yarn_confs={}", yarnConfs);
+					for (Entry<String, String> entry : yarnConfs.entrySet()) {
+						conf.set(entry.getKey(), entry.getValue());
+					}
+					UserGroupInformation.setConfiguration(conf);
+					UserGroupInformation.loginUserFromKeytab(handlerConfig.getUserName(), handlerConfig.getPassword());
+					// yarnJobHelper = new YarnJobHelper();
+					logger.info(getHandlerPhase(), "initialized yarn JobClient instance");
+				}
+			} catch (Throwable e) {
+				logger.warn("jobclient", "error during yarn JobClient initialization", e);
+			}
+		}
 	}
 
 	@Override
 	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
 		Map<String, String> runtimeProperty = runtimeInfo.getProperties();
 		final String hiveConfDate = runtimeProperty.get("hiveConfDate");
-		String outputDirectory = runtimeProperty.get("hiveConfDirectory");
+		outputDirectory = runtimeProperty.get("hiveConfDirectory");
 		final String hiveQuery = runtimeProperty.get("hiveQuery");
+		final String jobName = runtimeProperty.get(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME);
 
 		inputDescriptor = new HiveReaderDescriptor(getEntityName(), hiveConfDate, outputDirectory, hiveQuery);
-		logger.debug(getHandlerPhase(), "\"initialized descriptor\" getInputDescriptorString={}",
-				inputDescriptor.getInputDescriptorString());
+		inputDescriptor.setJobName(jobName);
+		logger.debug(getHandlerPhase(), "\"initialized descriptor\" getInputDescriptorString={} jobName={}",
+				inputDescriptor.getInputDescriptorString(), jobName);
 
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
 		hiveConfigurations.put("DATE", hiveConfDate);
@@ -256,6 +292,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		properties.put("hiveConfDirectory", outputDirectory);
 		properties.put("hiveQuery", getHiveQuery());
 
+		String jobName = "bigdime" + "." + getEntityName() + "." + ProcessHelper.getInstance().getProcessId() + "."
+				+ getJobDtf().print(System.currentTimeMillis());
+		logger.info(getHandlerPhase(),
+				"findAndAddRuntimeInfoRecords: hiveQuery=\"{}\" hiveConfigurations=\"{}\" outputDirectory={} jobName={}",
+				getHiveQuery(), hiveConfigurations, outputDirectory, jobName);
+		properties.put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME, jobName);
+
 		queueRuntimeInfo(getRuntimeInfoStore(), getEntityName(), descriptor.getInputDescriptorString(), properties);
 
 		return true;
@@ -293,8 +336,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	public Status doProcess() throws HandlerException {
-
-		logger.debug(getHandlerPhase(), "_messagge=\"entering doProcess\" invocation_count={}", getInvocationCount());
+		logger.info(getHandlerPhase(), "_messagge=\"entering doProcess\" invocation_count={}", getInvocationCount());
+		Status returnStatus = Status.READY;
 		try {
 			ActionEvent outputEvent = new ActionEvent();
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, getEntityName());
@@ -312,28 +355,150 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				final Statement stmt = connection.createStatement();
 				runHiveConfs(stmt);
 
-				String jobName = "bigdime-dw" + "." + getEntityName() + "." + ProcessHelper.getInstance().getProcessId()
-						+ "." + getJobDtf().print(System.currentTimeMillis());
-				logger.info(getHandlerPhase(), "hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}", getHiveQuery(),
-						hiveConfigurations, jobName);
-				outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME, jobName);
+				String jobName = inputDescriptor.getJobName();
+//				JobStatus jobStatus = null;
+//				int runState = -1;
+//				try {
+//					YarnJobHelper yarnJobHelper = new YarnJobHelper();
+//					jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
+//				} catch (IOException e1) {
+//					logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}",
+//							getInvocationCount());
+//				}
 
-				stmt.execute("set mapred.job.name=" + jobName);
-				stmt.execute(getHiveQuery());// no resultset is returned
-				boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
-						inputDescriptor.getInputDescriptorString(),
-						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
-				logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
-			}
+//				if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
+//					logger.info(getHandlerPhase(),
+//							"_message=\"job is already running.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+//							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+//					returnStatus = Status.BACKOFF;
+//				} else if (runState == JobStatus.SUCCEEDED) {
+//					logger.info(getHandlerPhase(),
+//							"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+//							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+//					boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+//							inputDescriptor.getInputDescriptorString(),
+//							io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
+//					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+//					returnStatus = Status.READY;
+//
+//				} else {
+					String newJobName = "bigdime" + "." + getEntityName() + "."
+							+ ProcessHelper.getInstance().getProcessId() + "."
+							+ getJobDtf().print(System.currentTimeMillis());
+
+					logger.info(getHandlerPhase(),
+							"_message=\"job is going to be submitted\" hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={} newJobName={}",
+							getHiveQuery(), hiveConfigurations, jobName, newJobName);
+					outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME,
+							newJobName);
+					stmt.execute("set mapred.job.name=" + newJobName);
+					boolean jobRanSuccessfully = false;
+					int attempts = 0;
+					int maxAttempts = 5;
+					do {
+						try {
+							attempts++;
+							submitJob(stmt);
+
+							logger.info(getHandlerPhase(), "_mesage=\"submitted job\" attempts={}", attempts);
+
+							boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+									inputDescriptor.getInputDescriptorString(),
+									io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
+									outputEvent.getHeaders());
+
+							logger.info(getHandlerPhase(),
+									"_message=\"after job submission\" updatedRuntime={} jobName={}", updatedRuntime,
+									newJobName);
+							// JobID jobID = null;
+//							YarnJobHelper yarnJobHelper = new YarnJobHelper();
+							// JobStatus newJobStatus =
+							// yarnJobHelper.getStatusForNewJob(newJobName,
+							// conf);
+							//
+							// if (newJobStatus != null) {
+							// boolean updatedRuntime =
+							// updateRuntimeInfo(getRuntimeInfoStore(),
+							// getEntityName(),
+							// inputDescriptor.getInputDescriptorString(),
+							// io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
+							// outputEvent.getHeaders());
+							// logger.info(getHandlerPhase(),
+							// "_message=\"after submitting the job\"
+							// updatedRuntime={} jobID={} jobName={} runState={}
+							// runState={}",
+							// updatedRuntime,
+							// newJobStatus.getJobID().toString(),
+							// newJobName,
+							// newJobStatus.getRunState(),
+							// JobStatus.getJobRunState(newJobStatus.getRunState()));
+							// }
+							futureTask.get();
+							// pool.shutdown();
+							logger.info(getHandlerPhase(), "_mesage=\"job completed, future returned\" jobName={}",
+									newJobName);
+							// get the status of the job after completion
+//							JobStatus newJobStatus = yarnJobHelper.getStatusForCompletedJob(newJobName, conf);
+//							if (newJobStatus != null && newJobStatus.getRunState() == JobStatus.SUCCEEDED)
+//								jobRanSuccessfully = true;
+//							outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_ID,
+//									newJobStatus.getJobID().toString());
+//							outputEvent.getHeaders().put(
+//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_START_TIME,
+//									"" + newJobStatus.getStartTime());
+//							outputEvent.getHeaders().put(
+//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FINISH_TIME,
+//									"" + newJobStatus.getFinishTime());
+//							outputEvent.getHeaders().put(
+//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FAILURE_INFO,
+//									newJobStatus.getFailureInfo());
+
+							updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+									inputDescriptor.getInputDescriptorString(),
+									io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
+									outputEvent.getHeaders());
+//							logger.info(getHandlerPhase(),
+//									"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+//									updatedRuntime, newJobStatus.getJobID().toString(), newJobName,
+//									newJobStatus.getRunState(), JobStatus.getJobRunState(newJobStatus.getRunState()));
+							logger.info(getHandlerPhase(),
+									"_message=\"after job completion\" updatedRuntime={} jobName={}",
+									updatedRuntime, newJobName);
+							break;
+						} catch (Exception ex) {
+							logger.warn(getHandlerPhase(), "_message=\"error in running the job\" jobName={} error={}",
+									newJobName, ex, ex);
+						} finally {
+							if (!pool.isShutdown())
+								pool.shutdown();
+						}
+						try {
+							Thread.sleep(30000);
+						} catch (Exception ex) {
+							logger.info(getHandlerPhase(), "Thread interrupted", ex);
+						}
+
+					} while (!jobRanSuccessfully && attempts < maxAttempts);
+
+					// stmt.execute(getHiveQuery());// no resultset is returned
+					boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+							inputDescriptor.getInputDescriptorString(),
+							io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
+					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+
+					returnStatus = Status.READY;
+				}
+//			}
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\"", outputEvent.getHeaders());
+			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\" returnStatus={}",
+					outputEvent.getHeaders(), returnStatus);
 		} catch (final Exception e) {
 			throw new HandlerException("unable to process", e);
 		} finally {
 			closeConnection();
 		}
 
-		return Status.READY;
+		return returnStatus;
 	}
 
 	private String getHiveConfDate() {
@@ -346,11 +511,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			if (getAuthOption() == HDFS_AUTH_OPTION.KERBEROS) {
 				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(getDriverClassName(),
 						getJdbcUrl(), getUserName(), getPassword(), hiveConfigurations);
-				logger.debug(getHandlerPhase(), "_message=\"connected to db\"");
+				logger.info(getHandlerPhase(), "_message=\"connected to db using kerberos\"");
 			} else if (getAuthOption() == HDFS_AUTH_OPTION.PASSWORD) {
 				connection = hiveJdbcConnectionFactory.getConnection(getDriverClassName(), getJdbcUrl(), getUserName(),
 						getPassword(), hiveConfigurations);
-				logger.debug(getHandlerPhase(), "_message=\"connected to db\"");
+				logger.info(getHandlerPhase(), "_message=\"connected to db using password\"");
 			}
 		}
 	}
@@ -470,5 +635,26 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	@Override
 	protected boolean isInputDescriptorNull() {
 		return inputDescriptor == null;
+	}
+
+	private ExecutorService pool;
+	FutureTask<Void> futureTask;
+
+	private void submitJob(final Statement stmt) {
+		pool = Executors.newSingleThreadExecutor();
+
+		futureTask = new FutureTask<>(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+
+				stmt.execute(getHiveQuery());// no resultset is
+				logger.info(getHandlerPhase(), "sql statement ran");
+				return null;
+			}
+		});
+		logger.info(getHandlerPhase(), "initializing executor");
+		// ExecutorService pool = Executors.newSingleThreadExecutor();
+		pool.execute(futureTask);
+
 	}
 }
