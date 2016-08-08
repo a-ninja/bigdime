@@ -77,8 +77,10 @@ public class YarnJobHelper {
 		return null;
 	}
 
+	private static long sleepTimeBetweenStatusCall = TimeUnit.SECONDS.toMillis(60);
+	private static long maxWait = TimeUnit.MINUTES.toMillis(60);
+
 	public JobStatus getStatusForNewJob(String jobName, Configuration conf) throws IOException {
-		long maxWait = TimeUnit.MINUTES.toMillis(60);
 		long startTime = System.currentTimeMillis();
 		long endTime = startTime;
 		do {
@@ -94,7 +96,7 @@ public class YarnJobHelper {
 				}
 			} else {
 				try {
-					Thread.sleep(30000);
+					Thread.sleep(sleepTimeBetweenStatusCall);
 				} catch (Exception ex) {
 					logger.info("Thread interrupted", ex);
 				}
@@ -104,7 +106,6 @@ public class YarnJobHelper {
 	}
 
 	public JobStatus getStatusForCompletedJob(String jobName, Configuration conf) throws IOException {
-		long maxWait = TimeUnit.MINUTES.toMillis(60);
 		long startTime = System.currentTimeMillis();
 		long endTime = startTime;
 		do {
@@ -122,7 +123,7 @@ public class YarnJobHelper {
 				}
 			} else {
 				try {
-					Thread.sleep(30000);
+					Thread.sleep(sleepTimeBetweenStatusCall);
 				} catch (Exception ex) {
 					logger.info("Thread interrupted", ex);
 				}

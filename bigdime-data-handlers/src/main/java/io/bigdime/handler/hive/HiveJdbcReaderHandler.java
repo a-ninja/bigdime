@@ -31,6 +31,8 @@ import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.ProcessHelper;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.commons.StringHelper;
+import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractSourceHandler;
@@ -324,6 +326,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	/**
+	 * 
+	 * If all is good started record in RTI start the job
+	 * 
+	 * 
 	 * Descriptor: entityName, date, outputDirectory, hiveQuery
 	 * 
 	 * tab, 20160724, dir, INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}'
@@ -356,46 +362,51 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				runHiveConfs(stmt);
 
 				String jobName = inputDescriptor.getJobName();
-//				JobStatus jobStatus = null;
-//				int runState = -1;
-//				try {
-//					YarnJobHelper yarnJobHelper = new YarnJobHelper();
-//					jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
-//				} catch (IOException e1) {
-//					logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}",
-//							getInvocationCount());
-//				}
+				JobStatus jobStatus = null;
+				int runState = -1;
 
-//				if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
-//					logger.info(getHandlerPhase(),
-//							"_message=\"job is already running.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
-//							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
-//					returnStatus = Status.BACKOFF;
-//				} else if (runState == JobStatus.SUCCEEDED) {
-//					logger.info(getHandlerPhase(),
-//							"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
-//							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
-//					boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
-//							inputDescriptor.getInputDescriptorString(),
-//							io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
-//					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
-//					returnStatus = Status.READY;
-//
-//				} else {
-					String newJobName = "bigdime" + "." + getEntityName() + "."
-							+ ProcessHelper.getInstance().getProcessId() + "."
-							+ getJobDtf().print(System.currentTimeMillis());
+				try {
+					YarnJobHelper yarnJobHelper = new YarnJobHelper();
+					jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
+					runState = jobStatus.getRunState();
+				} catch (IOException e1) {
+					logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}",
+							getInvocationCount());
+				}
 
+				if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
 					logger.info(getHandlerPhase(),
-							"_message=\"job is going to be submitted\" hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={} newJobName={}",
-							getHiveQuery(), hiveConfigurations, jobName, newJobName);
-					outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME,
-							newJobName);
-					stmt.execute("set mapred.job.name=" + newJobName);
+							"_message=\"job is already running. will return backoff\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+					boolean updatedRuntime = updateRunningStatus(outputEvent, jobStatus);
+					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+					returnStatus = Status.BACKOFF;
+				} else if (runState == JobStatus.SUCCEEDED) {
+					logger.info(getHandlerPhase(),
+							"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+					boolean updatedRuntime = updateSuccessfulStatus(outputEvent, jobStatus);
+					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+					returnStatus = Status.READY;
+
+				} else {
+
 					boolean jobRanSuccessfully = false;
 					int attempts = 0;
 					int maxAttempts = 5;
 					do {
+
+						String newJobName = "bigdime" + "." + getEntityName() + "."
+								+ ProcessHelper.getInstance().getProcessId() + "."
+								+ getJobDtf().print(System.currentTimeMillis());
+
+						logger.info(getHandlerPhase(),
+								"_message=\"job is going to be submitted\" hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={} newJobName={}",
+								getHiveQuery(), hiveConfigurations, jobName, newJobName);
+						outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME,
+								newJobName);
+						stmt.execute("set mapred.job.name=" + newJobName);
+
 						try {
 							attempts++;
 							submitJob(stmt);
@@ -411,63 +422,45 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 									"_message=\"after job submission\" updatedRuntime={} jobName={}", updatedRuntime,
 									newJobName);
 							// JobID jobID = null;
-//							YarnJobHelper yarnJobHelper = new YarnJobHelper();
-							// JobStatus newJobStatus =
-							// yarnJobHelper.getStatusForNewJob(newJobName,
-							// conf);
-							//
-							// if (newJobStatus != null) {
-							// boolean updatedRuntime =
-							// updateRuntimeInfo(getRuntimeInfoStore(),
-							// getEntityName(),
-							// inputDescriptor.getInputDescriptorString(),
-							// io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
-							// outputEvent.getHeaders());
-							// logger.info(getHandlerPhase(),
-							// "_message=\"after submitting the job\"
-							// updatedRuntime={} jobID={} jobName={} runState={}
-							// runState={}",
-							// updatedRuntime,
-							// newJobStatus.getJobID().toString(),
-							// newJobName,
-							// newJobStatus.getRunState(),
-							// JobStatus.getJobRunState(newJobStatus.getRunState()));
-							// }
+							YarnJobHelper yarnJobHelper = new YarnJobHelper();
+							JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
+
+							if (newJobStatus != null) {
+								updatedRuntime = updateRunningStatus(outputEvent, newJobStatus);
+								logger.info(getHandlerPhase(),
+										"_message=\"after submitting the job\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+										updatedRuntime, newJobStatus.getJobID().toString(), newJobName,
+										newJobStatus.getRunState(),
+										JobStatus.getJobRunState(newJobStatus.getRunState()));
+
+							}
 							futureTask.get();
-							// pool.shutdown();
+							pool.shutdown();
 							logger.info(getHandlerPhase(), "_mesage=\"job completed, future returned\" jobName={}",
 									newJobName);
 							// get the status of the job after completion
-//							JobStatus newJobStatus = yarnJobHelper.getStatusForCompletedJob(newJobName, conf);
-//							if (newJobStatus != null && newJobStatus.getRunState() == JobStatus.SUCCEEDED)
-//								jobRanSuccessfully = true;
-//							outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_ID,
-//									newJobStatus.getJobID().toString());
-//							outputEvent.getHeaders().put(
-//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_START_TIME,
-//									"" + newJobStatus.getStartTime());
-//							outputEvent.getHeaders().put(
-//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FINISH_TIME,
-//									"" + newJobStatus.getFinishTime());
-//							outputEvent.getHeaders().put(
-//									ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FAILURE_INFO,
-//									newJobStatus.getFailureInfo());
+							JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(newJobName, conf);
+							if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
+								jobRanSuccessfully = true;
+								updatedRuntime = updateSuccessfulStatus(outputEvent, jobStatus);
+							} else {
+								updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
+							}
 
-							updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
-									inputDescriptor.getInputDescriptorString(),
-									io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
-									outputEvent.getHeaders());
-//							logger.info(getHandlerPhase(),
-//									"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-//									updatedRuntime, newJobStatus.getJobID().toString(), newJobName,
-//									newJobStatus.getRunState(), JobStatus.getJobRunState(newJobStatus.getRunState()));
 							logger.info(getHandlerPhase(),
-									"_message=\"after job completion\" updatedRuntime={} jobName={}",
-									updatedRuntime, newJobName);
+									"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+									updatedRuntime, completedJobStatus.getJobID().toString(), newJobName,
+									completedJobStatus.getRunState(),
+									JobStatus.getJobRunState(completedJobStatus.getRunState()));
 							break;
 						} catch (Exception ex) {
-							logger.warn(getHandlerPhase(), "_message=\"error in running the job\" jobName={} error={}",
-									newJobName, ex, ex);
+							YarnJobHelper yarnJobHelper = new YarnJobHelper();
+							JobStatus failedJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
+
+							boolean updatedRuntime = updateFailedStatus(outputEvent, failedJobStatus);
+							logger.warn(getHandlerPhase(),
+									"_message=\"error in running the job\" updatedRuntime={} jobName={} error={}",
+									updatedRuntime, newJobName, ex, ex);
 						} finally {
 							if (!pool.isShutdown())
 								pool.shutdown();
@@ -488,7 +481,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 					returnStatus = Status.READY;
 				}
-//			}
+			}
 			getHandlerContext().createSingleItemEventList(outputEvent);
 			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\" returnStatus={}",
 					outputEvent.getHeaders(), returnStatus);
@@ -656,5 +649,75 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		// ExecutorService pool = Executors.newSingleThreadExecutor();
 		pool.execute(futureTask);
 
+	}
+
+	private boolean updateRunningStatus(ActionEvent event, JobStatus jobStatus) throws RuntimeInfoStoreException {
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_ID,
+				jobStatus.getJobID().toString());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_START_TIME,
+				"" + jobStatus.getStartTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FINISH_TIME,
+				"" + jobStatus.getFinishTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FAILURE_INFO,
+				jobStatus.getFailureInfo());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_INTERIM_STATUS,
+				JobStatus.getJobRunState(jobStatus.getRunState()));
+
+		boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+				inputDescriptor.getInputDescriptorString(), io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
+				event.getHeaders());
+
+		return updatedRuntime;
+	}
+
+	private boolean updateSuccessfulStatus(ActionEvent event, JobStatus jobStatus) throws RuntimeInfoStoreException {
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_ID,
+				jobStatus.getJobID().toString());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_START_TIME,
+				"" + jobStatus.getStartTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FINISH_TIME,
+				"" + jobStatus.getFinishTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FAILURE_INFO,
+				jobStatus.getFailureInfo());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_COMPLETION_STATUS,
+				JobStatus.getJobRunState(jobStatus.getRunState()));
+
+		boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+				inputDescriptor.getInputDescriptorString(), io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING,
+				event.getHeaders());
+
+		return updatedRuntime;
+	}
+
+	private boolean updateFailedStatus(ActionEvent event, JobStatus jobStatus)
+			throws RuntimeInfoStoreException, IOException {
+
+		RuntimeInfo rtiRecord = getRuntimeInfoStore().get(AdaptorConfig.getInstance().getName(), getEntityName(),
+				inputDescriptor.getInputDescriptorString());
+
+		String origJobId = rtiRecord.getProperties()
+				.get(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_ORIG_JOB_ID);
+
+		if (StringHelper.isBlank(origJobId)) {
+			origJobId = origJobId + "," + jobStatus.getJobID().toString();
+		}
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_ORIG_JOB_ID, origJobId);
+
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_ID,
+				jobStatus.getJobID().toString());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_START_TIME,
+				"" + jobStatus.getStartTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FINISH_TIME,
+				"" + jobStatus.getFinishTime());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_FAILURE_INFO,
+				jobStatus.getFailureInfo());
+		event.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_COMPLETION_STATUS,
+				JobStatus.getJobRunState(jobStatus.getRunState()));
+
+		boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+				inputDescriptor.getInputDescriptorString(), io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.FAILED,
+				event.getHeaders());
+
+		return updatedRuntime;
 	}
 }
