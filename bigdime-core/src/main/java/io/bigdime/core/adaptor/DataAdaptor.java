@@ -244,6 +244,7 @@ public final class DataAdaptor implements Adaptor {
 			@Override
 			public void run() {
 				try {
+					Thread.currentThread().setName("healthcheck for DataAdaptor");
 					logger.info("heartbeat thread for DataAdaptor", "heathcheck thread for DataAdaptor");
 					while (!adaptorStopped) {
 						isSourceRunning();
