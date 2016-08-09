@@ -26,4 +26,6 @@ public enum HiveJdbcReaderHandlerConstants {
 	public static final String OUTPUT_DIRECTORY_DATE_FORMAT = "output-directory-date-format";
 	public static final String FREQUENCY = "frequency";
 	public static final String YARN_CONF = "yarn-conf";
+	public static final String SLEEP_BETWEEN_RETRY_SECONDS = "sleep-between-retry-seconds";
+	public static final String MAX_RETRIES = "max-retries";
 }

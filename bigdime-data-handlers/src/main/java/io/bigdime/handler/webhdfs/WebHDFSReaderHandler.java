@@ -371,7 +371,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	@Override
 	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
 		try {
-			webHdfsReader.closeInputStream();
+			webHdfsReader.releaseWebHdfsForInputStream();
 			String fullDescriptor = runtimeInfo.getInputDescriptor();
 			if (inputDescriptor == null)
 				inputDescriptor = new WebHDFSInputDescriptor();
@@ -475,6 +475,17 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	protected String getInputDescriptorPrefix() {
 		return INPUT_DESCRIPTOR_PREFIX;
+	}
+
+	@Override
+	public void handleException() {
+		try {
+			getSimpleJournal().reset();
+		} catch (HandlerException ex) {
+			logger.alert(ALERT_TYPE.OTHER_ERROR, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
+					"_message=\"handler({}) is unable to handleException\" exception=\"{}\"", getName(),
+					ex.getMessage(), ex);
+		}
 	}
 
 }

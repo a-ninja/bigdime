@@ -5,6 +5,7 @@ package io.bigdime.libs.hdfs;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,14 +29,13 @@ public class WebHdfsReader {
 
 	public static final String FORWARD_SLASH = "/";
 	private static final String WEBHDFS_PREFIX = "/webhdfs/v1";
-	private long sleepTime = 3000;
 
-	String hostNames;
-	int port;
-	String hdfsUser;
+	private String hostNames;
+	private int port;
+	private String hdfsUser;
 	final HDFS_AUTH_OPTION authOption;
-	private WebHdfs webHdfs = null;
 	private WebHdfs webHdfsForInputStream = null;
+	private static short maxAttempts = 5;
 
 	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption) {
 		hostNames = _hostNames;
@@ -44,76 +44,22 @@ public class WebHdfsReader {
 		authOption = _authOption;
 	}
 
-	public String prependWebhdfsPrefix(final String hdfsPathWithoutPrefix) {
-		if (!StringHelper.isBlank(hdfsPathWithoutPrefix) && !hdfsPathWithoutPrefix.startsWith(WEBHDFS_PREFIX)) {
-			return "/webhdfs/v1" + hdfsPathWithoutPrefix;
-		}
-		return hdfsPathWithoutPrefix;
-	}
-
-	/**
-	 * Uses "OPEN" operation and returns the InputStream to read the file
-	 * contents.
-	 * 
-	 * @param webHdfs
-	 * @param filePath
-	 * @return
-	 * @throws IOException
-	 * @throws WebHdfsException
-	 */
-	public void closeInputStream() throws IOException, WebHdfsException {
-		if (webHdfsForInputStream != null)
-			webHdfsForInputStream.releaseConnection();
-	}
-
 	public InputStream getInputStream(String hdfsFilePath) throws IOException, WebHdfsException {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid filePath: empty or null");
 
-		String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
-		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-			webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
+		String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath);
 
-		String exceptionReason = null;
-		int attempts = 0;
-		boolean isSuccess = false;
-		do {
-			try {
-				webHdfsForInputStream = getWebHdfs();
-				attempts++;
-				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
-						hdfsFilePath, webhdfsFilePath, attempts);
-				HttpResponse response = webHdfsForInputStream.openFile(webhdfsFilePath);
-				int statusCode = response.getStatusLine().getStatusCode();
-
-				if (statusCode == 200 || statusCode == 201) {
-					logger.debug("_message=\"file opened\" responseCode={} hdfsPath={} responseMessage={}", statusCode,
-							webhdfsFilePath, response.getStatusLine().getReasonPhrase());
-					isSuccess = true;
-					return response.getEntity().getContent();
-				} else {
-					exceptionReason = logResponse(response, "getInputStream Failed", attempts, hdfsFilePath,
-							webhdfsFilePath);
-				}
-			} catch (final Exception e) {
-				closeInputStream();
-				exceptionReason = e.getMessage();
-				logger.warn("_message=\"WebHdfs getInputStream Failed:\" attempts={} host ={} error={}", attempts,
-						webHdfs.getHost(), e);
-			}
-		} while (!isSuccess && attempts < 3);
-		if (!isSuccess) {
-			logger.error("_message=\"getInputStream failed After 3 retries :\"");
-			throw new WebHDFSSinkException(exceptionReason);
+		try {
+			webHdfsForInputStream = getWebHdfs();
+			Method method = WebHdfs.class.getMethod("openFile", String.class);
+			HttpResponse response = webHdfsForInputStream.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+			return response.getEntity().getContent();
+		} catch (NoSuchMethodException | SecurityException e) {
+			logger.error("method not found", e);
+			releaseWebHdfsForInputStream();
+			throw new WebHdfsException("method not found", e);
 		}
-
-		return null;
-	}
-
-	private WebHdfsListStatusResponse parseJson(final InputStream stream) throws JsonProcessingException, IOException {
-		final ObjectMapper mapper = new ObjectMapper();
-		WebHdfsListStatusResponse fs = mapper.readValue(stream, WebHdfsListStatusResponse.class);
-		return fs;
 	}
 
 	/**
@@ -143,70 +89,36 @@ public class WebHdfsReader {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid hdfspath: empty or null");
 
-		String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
-		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-			webhdfsFilePath = webhdfsFilePath + FORWARD_SLASH;
+		String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath);
 
 		String fileType = getFileType(webhdfsFilePath);
 		if (!fileType.equalsIgnoreCase("DIRECTORY")) {
 			logger.debug("_message=\"processing WebHdfsReader\" webhdfsFilePath={} represents a file", webhdfsFilePath);
 			return null;
 		}
+		WebHdfs webHdfs = null;
+		try {
+			webHdfs = getWebHdfs();
+			Method method = WebHdfs.class.getMethod("listStatus", String.class);
+			HttpResponse response = webHdfs.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+			WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
+			List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
 
-		boolean isSuccess = false;
-		int attempts = 0;
-		String exceptionReason = null;
-		do {
-			try {
-				webHdfs = getWebHdfs();
-				attempts++;
-				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} ", hdfsFilePath,
-						webhdfsFilePath);
-				// HttpResponse response = invoke("listStatus",
-				// webhdfsFilePath);
-				HttpResponse response = webHdfs.listStatus(webhdfsFilePath);
-
-				int statusCode = response.getStatusLine().getStatusCode();
-				if (statusCode == 200 || statusCode == 201) {
-					logger.debug(
-							"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
-					isSuccess = true;
-
-					WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
-					List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
-
-					for (FileStatus fs : fileStatuses) {
-						if (fs.getType().equals("FILE") && fs.getLength() > 0) {
-							filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
-						}
-						if (recursive && fs.getType().equals("DIRECTORY")) {
-							filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));
-						}
-					}
-					return filesInDir;
-				} else if (statusCode == 404) {
-					logger.warn(
-							"_message=\"file does not exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
-				} else {
-					exceptionReason = logResponse(response, "list Failed", attempts, hdfsFilePath, webhdfsFilePath);
+			for (FileStatus fs : fileStatuses) {
+				if (fs.getType().equals("FILE") && fs.getLength() > 0) {
+					filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
 				}
-			} catch (Exception e) {
-				exceptionReason = e.getMessage();
-				logger.warn("_message=\"WebHdfs list Failed:\" attempts={} host ={} error={}", attempts,
-						webHdfs.getHost(), e);
-			} finally {
-				releaseWebHdfs();
+				if (recursive && fs.getType().equals("DIRECTORY")) {
+					filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));
+				}
 			}
-
-		} while (!isSuccess && attempts < 3);
-
-		if (!isSuccess) {
-			logger.error("_message=\"getInputStream failed After 3 retries :\"");
-			throw new WebHDFSSinkException(exceptionReason);
+			return filesInDir;
+		} catch (NoSuchMethodException | SecurityException e) {
+			logger.error("method not found", e);
+			throw new WebHdfsException("method not found", e);
+		} finally {
+			releaseWebHdfs(webHdfs);
 		}
-		return filesInDir;
 	}
 
 	/**
@@ -227,95 +139,43 @@ public class WebHdfsReader {
 
 	public FileStatus getFileStatus(final String directoryPath, final String fileName)
 			throws IOException, WebHdfsException {
-		String webhdfsFilePath = prependWebhdfsPrefix(directoryPath);
-		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-			webhdfsFilePath = directoryPath + FORWARD_SLASH;
+		String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(directoryPath);
 		webhdfsFilePath = webhdfsFilePath + fileName;
-
-		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-			webhdfsFilePath = webhdfsFilePath + FORWARD_SLASH;
-
+		webhdfsFilePath = appendSlash(webhdfsFilePath);
 		return getFileStatus(webhdfsFilePath);
-
 	}
 
 	public FileStatus getFileStatus(final String hdfsFilePath) throws IOException, WebHdfsException {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid filePath: empty or null");
 
-		String webhdfsFilePath = prependWebhdfsPrefix(hdfsFilePath);
-		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
-			webhdfsFilePath = hdfsFilePath + FORWARD_SLASH;
+		String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath);
 
-		boolean isSuccess = false;
-		int attempts = 0;
-		String exceptionReason = null;
-		do {
-			try {
-				webHdfs = getWebHdfs();
-				attempts++;
-				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
-						hdfsFilePath, webhdfsFilePath, attempts);
-				HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
-				int statusCode = response.getStatusLine().getStatusCode();
-				if (statusCode == 200 || statusCode == 201) {
-					logger.debug(
-							"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
-					isSuccess = true;
-					final ObjectMapper mapper = new ObjectMapper();
-					WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
-							WebHdfsGetFileStatusResponse.class);
-					isSuccess = true;
-					return fs.getFileStatus();
-				} else if (statusCode == 404) {
-					logger.warn(
-							"_message=\"file does not exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
-				} else {
-					exceptionReason = logResponse(response, "WebHdfs getFileStatus Failed", attempts, hdfsFilePath,
-							webhdfsFilePath);
-				}
-			} catch (Exception e) {
-				exceptionReason = e.getMessage();
-				logger.warn("_message=\"WebHdfs getFileStatus Failed:\" attempts={} host ={} error={}", attempts,
-						webHdfs.getHost(), e);
-			} finally {
-				releaseWebHdfs();
-			}
-		} while (!isSuccess && attempts < 3);
-		if (!isSuccess) {
-			logger.error("_message=\"getFileStatus failed After 3 retries :\"");
-			throw new WebHDFSSinkException(exceptionReason);
+		WebHdfs webHdfs = null;
+		try {
+			webHdfs = getWebHdfs();
+			Method method = WebHdfs.class.getMethod("fileStatus", String.class);
+			HttpResponse response = webHdfs.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+			final ObjectMapper mapper = new ObjectMapper();
+			WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
+					WebHdfsGetFileStatusResponse.class);
+			return fs.getFileStatus();
+		} catch (NoSuchMethodException | SecurityException e) {
+			logger.error("method not found", e);
+			throw new WebHdfsException("method not found", e);
+		} finally {
+			releaseWebHdfs(webHdfs);
 		}
-		return null;
 	}
 
-	private String logResponse(HttpResponse response, String message, int attempts, String hdfsFilePath,
-			String webhdfsFilePath) {
-		int statusCode = response.getStatusLine().getStatusCode();
-		String exceptionReason = statusCode + ":" + response.getStatusLine().getReasonPhrase();
-		logger.warn(
-				"_message=\"" + message
-						+ "\" responseCode={}  responseMessage={} attempts={} hdfsFilePath={} webhdfsFilePath={}",
-				statusCode, response.getStatusLine().getReasonPhrase(), attempts, hdfsFilePath, webhdfsFilePath);
-		try {
-			Thread.sleep(sleepTime * (attempts + 1));
-		} catch (InterruptedException e) {
-			logger.warn("sleep interrupted", e);
-		}
-		return exceptionReason;
-
+	private WebHdfsListStatusResponse parseJson(final InputStream stream) throws JsonProcessingException, IOException {
+		final ObjectMapper mapper = new ObjectMapper();
+		WebHdfsListStatusResponse fs = mapper.readValue(stream, WebHdfsListStatusResponse.class);
+		return fs;
 	}
 
 	private WebHdfs getWebHdfs() {
-		releaseWebHdfs();
 		return WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
-	}
-
-	public void releaseWebHdfs() {
-		if (webHdfs != null)
-			webHdfs.releaseConnection();
 	}
 
 	public void releaseWebHdfs(WebHdfs webHdfs) {
@@ -323,45 +183,33 @@ public class WebHdfsReader {
 			webHdfs.releaseConnection();
 	}
 
-	// private HttpResponse invoke(String methodName, String... args) throws
-	// WebHdfsException {
-	//
-	// Method m;
-	// boolean isSuccess = false;
-	// String exceptionReason = null;
-	// int attempts = 0;
-	// try {
-	// m = WebHdfs.class.getMethod("listStatus", String.class);
-	// do {
-	// WebHdfs webHdfs = null;
-	// logger.debug("_message=\"invoking {}\" attempt={} hdfsFilePath={}
-	// args={}", methodName, attempts, args);
-	// try {
-	// webHdfs = getWebHdfs();
-	// HttpResponse response = (HttpResponse) m.invoke(webHdfs, m, args);
-	// attempts++;
-	// int statusCode = response.getStatusLine().getStatusCode();
-	// if (statusCode == 200 || statusCode == 201) {
-	// isSuccess = true;
-	// return response;
-	// } else if (statusCode == 404) {
-	// logger.info("_message=\"executed method: {}\" file not not found:\"",
-	// methodName, args);
-	// } else {
-	// }
-	// } catch (Exception e) {
-	// exceptionReason = e.getMessage();
-	// } finally {
-	// releaseWebHdfs(webHdfs);
-	// }
-	// } while (!isSuccess && attempts < 3);
-	// } catch (NoSuchMethodException | SecurityException e1) {
-	// logger.error("_message=\"{} failed:\"", methodName, e1);
-	// }
-	// if (!isSuccess) {
-	// logger.error("_message=\"{} failed After 3 retries :\"", methodName);
-	// throw new WebHdfsException(exceptionReason);
-	// }
-	// return null;
-	// }
+	public String appendSlash(final String hdfsPath) {
+		if (!StringHelper.isBlank(hdfsPath) && !hdfsPath.endsWith(FORWARD_SLASH))
+			return hdfsPath + FORWARD_SLASH;
+		return hdfsPath;
+	}
+
+	public String prependWebhdfsPrefixAndAppendSlash(final String hdfsPathWithoutPrefix) {
+		String hdfsPath = hdfsPathWithoutPrefix;
+		if (!StringHelper.isBlank(hdfsPath) && !hdfsPath.startsWith(WEBHDFS_PREFIX)) {
+			hdfsPath = WEBHDFS_PREFIX + hdfsPath;
+		}
+		return appendSlash(hdfsPath);
+	}
+
+	/**
+	 * Uses "OPEN" operation and returns the InputStream to read the file
+	 * contents.
+	 * 
+	 * @param webHdfs
+	 * @param filePath
+	 * @return
+	 * @throws IOException
+	 * @throws WebHdfsException
+	 */
+	public void releaseWebHdfsForInputStream() throws IOException, WebHdfsException {
+		if (webHdfsForInputStream != null)
+			webHdfsForInputStream.releaseConnection();
+	}
+
 }

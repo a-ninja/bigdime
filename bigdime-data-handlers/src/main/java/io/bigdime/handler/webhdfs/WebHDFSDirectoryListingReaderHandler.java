@@ -1,7 +1,6 @@
 package io.bigdime.handler.webhdfs;
 
 import java.io.IOException;
-import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 
 import org.springframework.context.annotation.Scope;
@@ -40,10 +39,6 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 	private String hdfsUser;
 	private HDFS_AUTH_OPTION authOption;
 
-	// private String readHdfsPathFrom; // CONFIG | HEADERS
-
-	ReadableByteChannel fileChannel;
-
 	protected List<RuntimeInfo> dirtyRecords;
 	public static final String FORWARD_SLASH = "/";
 
@@ -57,14 +52,6 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 			port = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.PORT);
 
 			hdfsUser = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HDFS_USER);
-			// readHdfsPathFrom =
-			// PropertyHelper.getStringProperty(getPropertyMap(),
-			// WebHDFSReaderHandlerConstants.READ_HDFS_PATH_FROM);
-			// if (StringUtils.equalsIgnoreCase(readHdfsPathFrom, "config")) {
-			// hdfsPath = PropertyHelper.getStringProperty(getPropertyMap(),
-			// WebHDFSReaderHandlerConstants.HDFS_PATH);
-			// }
-
 			final String authChoice = PropertyHelper.getStringProperty(getPropertyMap(),
 					WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString());
 

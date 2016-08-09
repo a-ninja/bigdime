@@ -62,6 +62,7 @@ public class HandlerManager {
 			}
 		}
 	}
+
 	/**
 	 * List of handlers that this handler will manage.
 	 */
@@ -167,7 +168,7 @@ public class HandlerManager {
 							handlerChainName, handler.getId(), handler.getName(), iteration);
 					currentHandlerName = handler.getName();
 					status = handler.process();
-					//TODO: handle the null status
+					// TODO: handle the null status
 					switch (status) {
 					case BACKOFF:
 					case BACKOFF_NOW:
@@ -176,7 +177,7 @@ public class HandlerManager {
 								handlerChainName, handler.getId(), handler.getName(), iteration, status);
 						backoff = true;
 						break;
-//						return status;
+					// return status;
 					case CALLBACK:
 						logger.debug("handler chain executing",
 								"_message=\"pushing handler node stack\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\"",
@@ -199,24 +200,26 @@ public class HandlerManager {
 				errorCount++;
 				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
 						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an exception, this loop of handlers will be stopped\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
+						"_message=\"one of the handlers({}) in the chain threw an exception, this loop of handlers will be stopped after 10 errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
 						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
 				logger.info("handler chain handling exception", "invoking handleException");
 				executeHandleException();
 				stopOnError();
 				logger.info("handler chain handling exception", "invoked handleException");
-				throw ex;
+				if (errorCount > 10)
+					throw ex;
 			} catch (Exception ex) {
 				errorCount++;
 				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
 						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
+						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped after 10 errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
 						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
 				logger.info("handler chain handling exception", "invoking handleException");
 				executeHandleException();
 				stopOnError();
 				logger.info("handler chain handling exception", "invoked handleException");
-				throw new HandlerException(ex.getMessage(), ex);
+				if (errorCount > 10)
+					throw new HandlerException(ex.getMessage(), ex);
 			}
 		}
 		// while (true);

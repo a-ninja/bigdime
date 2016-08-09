@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -79,7 +80,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	final Map<String, String> hiveConfigurations = new HashMap<>();
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
-	private Connection connection = null;
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
 
@@ -97,6 +97,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
 	private DateTimeFormatter hdfsOutputPathDtf;
 	public static final String FORWARD_SLASH = "/";
+	private static final long DEFAULT_SLEEP_BETWEEN_RETRIES_SECONDS = TimeUnit.MINUTES.toSeconds(5);
+	private static final int DEFAULT_MAX_RETRIES = 5;
+
+	private static long sleepBetweenRetriesMillis;
+	private static int maxRetries;
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -147,8 +152,20 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		goBackDays = PropertyHelper.getIntProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.GO_BACK_DAYS,
 				DEFAULT_GO_BACK_DAYS);
 
-		logger.info(getHandlerPhase(), "entityName=\"{}\" hiveQuery=\"{}\" goBackDays={}", entityName, hiveQuery,
-				goBackDays);
+		long sleep = PropertyHelper.getLongProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.SLEEP_BETWEEN_RETRY_SECONDS, DEFAULT_SLEEP_BETWEEN_RETRIES_SECONDS);
+		if (sleep == 0)
+			sleep = DEFAULT_SLEEP_BETWEEN_RETRIES_SECONDS;
+		sleepBetweenRetriesMillis = TimeUnit.SECONDS.toMillis(sleep);
+
+		maxRetries = PropertyHelper.getIntProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.MAX_RETRIES,
+				DEFAULT_MAX_RETRIES);
+
+		if (maxRetries < 0)
+			maxRetries = 0;
+		logger.info(getHandlerPhase(),
+				"entityName=\"{}\" hiveQuery=\"{}\" goBackDays={} sleepBetweenRetriesMillis={} maxRetries={}",
+				entityName, hiveQuery, goBackDays, sleepBetweenRetriesMillis, maxRetries);
 
 		Preconditions.checkArgument(goBackDays >= 0,
 				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS + " has to be a non-negative value.");
@@ -260,11 +277,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
 		hiveConfigurations.put("DATE", hiveConfDate);
 		// setHdfsOutputDirectory();
-		try {
-			setupConnection();
-		} catch (ClassNotFoundException | SQLException | IOException e) {
-			throw new HandlerException("unable to process", e);
-		}
 		// return inputDescriptor;
 	}
 
@@ -340,6 +352,17 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	 * 
 	 */
 
+	protected Status processNullDescriptor() {
+		if (isFirstRun()) {
+			logger.info(getHandlerPhase(),
+					"will return CALLBACK, so that next handler can process the pending records");
+			return Status.CALLBACK;
+		} else {
+			logger.info(getHandlerPhase(), "will return READY, so that next handler can process the pending records");
+			return Status.READY;
+		}
+	}
+
 	@Override
 	public Status doProcess() throws HandlerException {
 		logger.info(getHandlerPhase(), "_messagge=\"entering doProcess\" invocation_count={}", getInvocationCount());
@@ -347,133 +370,18 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		try {
 			ActionEvent outputEvent = new ActionEvent();
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, getEntityName());
-			// outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH,
-			// inputDescriptor.getHiveConfDirectory());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, getHiveQuery());
 
 			if (inputDescriptor == null) {
-				logger.info(getHandlerPhase(),
-						"will return READY, so that next handler can process the pending records");
+				return processNullDescriptor();
 			} else {
 				logger.info(getHandlerPhase(), "\"found inputDescriptor\" inputDescriptor={}", inputDescriptor);
 
-				final Statement stmt = connection.createStatement();
-				runHiveConfs(stmt);
-
 				String jobName = inputDescriptor.getJobName();
-				JobStatus jobStatus = null;
-				int runState = -1;
-
-				try {
-					YarnJobHelper yarnJobHelper = new YarnJobHelper();
-					jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
-					if (jobStatus != null)
-						runState = jobStatus.getRunState();
-				} catch (IOException e1) {
-					logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}",
-							getInvocationCount());
-				}
-
-				if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
-					logger.info(getHandlerPhase(),
-							"_message=\"job is already running. will return backoff\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
-							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
-					boolean updatedRuntime = updateRunningStatus(outputEvent, jobStatus);
-					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
-					returnStatus = Status.BACKOFF;
-				} else if (runState == JobStatus.SUCCEEDED) {
-					logger.info(getHandlerPhase(),
-							"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
-							jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
-					boolean updatedRuntime = updateSuccessfulStatus(outputEvent, jobStatus);
-					logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
-					returnStatus = Status.READY;
-
-				} else {
-
-					boolean jobRanSuccessfully = false;
-					int attempts = 0;
-					int maxAttempts = 5;
-					do {
-
-						String newJobName = "bigdime" + "." + getEntityName() + "."
-								+ ProcessHelper.getInstance().getProcessId() + "."
-								+ getJobDtf().print(System.currentTimeMillis());
-
-						logger.info(getHandlerPhase(),
-								"_message=\"job is going to be submitted\" hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={} newJobName={}",
-								getHiveQuery(), hiveConfigurations, jobName, newJobName);
-						outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME,
-								newJobName);
-						stmt.execute("set mapred.job.name=" + newJobName);
-
-						try {
-							attempts++;
-							submitJob(stmt);
-
-							logger.info(getHandlerPhase(), "_mesage=\"submitted job\" attempts={}", attempts);
-
-							boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
-									inputDescriptor.getInputDescriptorString(),
-									io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED,
-									outputEvent.getHeaders());
-
-							logger.info(getHandlerPhase(),
-									"_message=\"after job submission\" updatedRuntime={} jobName={}", updatedRuntime,
-									newJobName);
-							YarnJobHelper yarnJobHelper = new YarnJobHelper();
-							JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
-
-							if (newJobStatus != null) {
-								updatedRuntime = updateRunningStatus(outputEvent, newJobStatus);
-								logger.info(getHandlerPhase(),
-										"_message=\"after submitting the job\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-										updatedRuntime, newJobStatus.getJobID().toString(), newJobName,
-										newJobStatus.getRunState(),
-										JobStatus.getJobRunState(newJobStatus.getRunState()));
-
-							}
-							futureTask.get();
-							pool.shutdown();
-							logger.info(getHandlerPhase(), "_mesage=\"job completed, future returned\" jobName={}",
-									newJobName);
-							// get the status of the job after completion
-							JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(newJobName, conf);
-							if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
-								jobRanSuccessfully = true;
-								updatedRuntime = updateSuccessfulStatus(outputEvent, completedJobStatus);
-							} else {
-								updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
-							}
-
-							logger.info(getHandlerPhase(),
-									"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-									updatedRuntime, completedJobStatus.getJobID().toString(), newJobName,
-									completedJobStatus.getRunState(),
-									JobStatus.getJobRunState(completedJobStatus.getRunState()));
-							break;
-						} catch (Exception ex) {
-							YarnJobHelper yarnJobHelper = new YarnJobHelper();
-							JobStatus failedJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
-
-							boolean updatedRuntime = updateFailedStatus(outputEvent, failedJobStatus);
-							logger.warn(getHandlerPhase(),
-									"_message=\"error in running the job\" updatedRuntime={} jobName={} error={}",
-									updatedRuntime, newJobName, ex, ex);
-						} finally {
-							if (!pool.isShutdown())
-								pool.shutdown();
-						}
-						try {
-							Thread.sleep(30000);
-						} catch (Exception ex) {
-							logger.info(getHandlerPhase(), "Thread interrupted", ex);
-						}
-
-					} while (!jobRanSuccessfully && attempts < maxAttempts);
-
-					// stmt.execute(getHiveQuery());// no resultset is returned
+				returnStatus = processPreviouslySubmittedJobInfo(jobName, outputEvent);
+				if (returnStatus == null) {
+					runWithRetries(outputEvent, jobName);
 					boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
 							inputDescriptor.getInputDescriptorString(),
 							io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.PENDING, outputEvent.getHeaders());
@@ -487,8 +395,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					outputEvent.getHeaders(), returnStatus);
 		} catch (final Exception e) {
 			throw new HandlerException("unable to process", e);
-		} finally {
-			closeConnection();
 		}
 
 		return returnStatus;
@@ -499,7 +405,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return hiveConfDate;
 	}
 
-	private void setupConnection() throws SQLException, IOException, ClassNotFoundException {
+	private Connection setupConnection() throws SQLException, IOException, ClassNotFoundException {
+		Connection connection = null;
 		if (connection == null) {
 			if (getAuthOption() == HDFS_AUTH_OPTION.KERBEROS) {
 				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(getDriverClassName(),
@@ -511,6 +418,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				logger.info(getHandlerPhase(), "connected to db using password");
 			}
 		}
+		return connection;
 	}
 
 	private void runHiveConfs(final Statement stmt) throws SQLException {
@@ -523,15 +431,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		}
 	}
 
-	private void closeConnection() {
+	private void closeConnection(final Connection connection) {
 		try {
 			if (connection != null && !connection.isClosed()) {
 				connection.close();
 			}
 		} catch (Exception e) {
 			logger.warn(getHandlerPhase(), "_message=\"error while trying to close the connection\"", e);
-		} finally {
-			connection = null;
 		}
 	}
 
@@ -587,10 +493,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return hiveJdbcConnectionFactory;
 	}
 
-	public Connection getConnection() {
-		return connection;
-	}
-
 	public HiveReaderDescriptor getInputDescriptor() {
 		return inputDescriptor;
 	}
@@ -633,22 +535,28 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private ExecutorService pool;
 	FutureTask<Void> futureTask;
 
-	private void submitJob(final Statement stmt) {
+	private void submitJob(final String jobName) {
 		pool = Executors.newSingleThreadExecutor();
 
 		futureTask = new FutureTask<>(new Callable<Void>() {
 			@Override
 			public Void call() throws Exception {
+				Connection connection = setupConnection();
+				try {
+					final Statement stmt = connection.createStatement();
+					stmt.execute("set mapred.job.name=" + jobName);
+					runHiveConfs(stmt);
+					stmt.execute(getHiveQuery());// no resultset is
+					logger.info(getHandlerPhase(), "sql statement ran");
+					return null;
+				} finally {
+					closeConnection(connection);
+				}
 
-				stmt.execute(getHiveQuery());// no resultset is
-				logger.info(getHandlerPhase(), "sql statement ran");
-				return null;
 			}
 		});
 		logger.info(getHandlerPhase(), "initializing executor");
-		// ExecutorService pool = Executors.newSingleThreadExecutor();
 		pool.execute(futureTask);
-
 	}
 
 	private boolean updateRunningStatus(ActionEvent event, JobStatus jobStatus) throws RuntimeInfoStoreException {
@@ -719,5 +627,128 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				event.getHeaders());
 
 		return updatedRuntime;
+	}
+
+	private boolean jobSucceeded(String jobName, ActionEvent outputEvent)
+			throws RuntimeInfoStoreException, IOException {
+		YarnJobHelper yarnJobHelper = new YarnJobHelper();
+		JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(jobName, conf);
+		boolean updatedRuntime = false;
+		if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
+			updatedRuntime = updateSuccessfulStatus(outputEvent, completedJobStatus);
+		} else {
+			updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
+		}
+
+		logger.info(getHandlerPhase(),
+				"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+				updatedRuntime, completedJobStatus.getJobID().toString(), jobName, completedJobStatus.getRunState(),
+				JobStatus.getJobRunState(completedJobStatus.getRunState()));
+		return completedJobStatus.getRunState() == JobStatus.SUCCEEDED;
+	}
+
+	private Status processPreviouslySubmittedJobInfo(String jobName, ActionEvent outputEvent)
+			throws RuntimeInfoStoreException {
+		JobStatus jobStatus = null;
+		int runState = -1;
+		Status returnStatus = null;
+		try {
+			YarnJobHelper yarnJobHelper = new YarnJobHelper();
+			jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
+			if (jobStatus != null)
+				runState = jobStatus.getRunState();
+		} catch (IOException e1) {
+			logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}", getInvocationCount());
+		}
+
+		if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
+			logger.info(getHandlerPhase(),
+					"_message=\"job is already running. will return backoff\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+					jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+			boolean updatedRuntime = updateRunningStatus(outputEvent, jobStatus);
+			logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+			returnStatus = Status.BACKOFF;
+		} else if (runState == JobStatus.SUCCEEDED) {
+			logger.info(getHandlerPhase(),
+					"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+					jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
+			boolean updatedRuntime = updateSuccessfulStatus(outputEvent, jobStatus);
+			logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
+			returnStatus = Status.READY;
+		}
+		return returnStatus;
+
+	}
+
+	private String computeJobName() {
+		return "bigdime" + "." + getEntityName() + "." + ProcessHelper.getInstance().getProcessId() + "."
+				+ getJobDtf().print(System.currentTimeMillis());
+	}
+
+	private void runWithRetries(ActionEvent outputEvent, String jobName)
+			throws SQLException, IOException, RuntimeInfoStoreException {
+
+		String newJobName = computeJobName();
+		boolean jobRanSuccessfully = false;
+		int attempts = 0;
+		logger.info(getHandlerPhase(),
+				"_message=\"job is going to be submitted\" hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={} newJobName={}",
+				getHiveQuery(), hiveConfigurations, jobName, newJobName);
+		outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.MAPRED_JOB_NAME, newJobName);
+		do {
+			try {
+				attempts++;
+				submitJob(newJobName);
+
+				logger.info(getHandlerPhase(), "_mesage=\"submitted job\" attempts={}", attempts);
+
+				boolean updatedRuntime = updateRuntimeInfo(getRuntimeInfoStore(), getEntityName(),
+						inputDescriptor.getInputDescriptorString(),
+						io.bigdime.core.runtimeinfo.RuntimeInfoStore.Status.STARTED, outputEvent.getHeaders());
+
+				logger.info(getHandlerPhase(), "_message=\"after job submission\" updatedRuntime={} jobName={}",
+						updatedRuntime, newJobName);
+				processStatusForNewJob(outputEvent, newJobName);
+				futureTask.get();
+				pool.shutdown();
+				logger.info(getHandlerPhase(), "_mesage=\"job completed, future returned\" jobName={}", newJobName);
+				jobRanSuccessfully = jobSucceeded(newJobName, outputEvent);
+				if (jobRanSuccessfully)
+					break;
+
+			} catch (Exception ex) {
+				YarnJobHelper yarnJobHelper = new YarnJobHelper();
+				JobStatus failedJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
+
+				boolean updatedRuntime = updateFailedStatus(outputEvent, failedJobStatus);
+				logger.warn(getHandlerPhase(),
+						"_message=\"error in running the job\" updatedRuntime={} jobName={} error={}", updatedRuntime,
+						newJobName, ex, ex);
+			}
+			if (attempts <= maxRetries) {
+				logger.info(getHandlerPhase(), "will sleep for 3 mins and retry");
+				try {
+					Thread.sleep(sleepBetweenRetriesMillis);
+				} catch (Exception ex) {
+					logger.info(getHandlerPhase(), "Thread interrupted", ex);
+				}
+			}
+
+		} while (!jobRanSuccessfully && attempts <= maxRetries);
+
+	}
+
+	private void processStatusForNewJob(ActionEvent outputEvent, String jobName)
+			throws IOException, RuntimeInfoStoreException {
+		YarnJobHelper yarnJobHelper = new YarnJobHelper();
+		JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(jobName, conf);
+		if (newJobStatus != null) {
+			boolean updatedRuntime = updateRunningStatus(outputEvent, newJobStatus);
+			logger.info(getHandlerPhase(),
+					"_message=\"after submitting the job\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+					updatedRuntime, newJobStatus.getJobID().toString(), jobName, newJobStatus.getRunState(),
+					JobStatus.getJobRunState(newJobStatus.getRunState()));
+		}
+
 	}
 }
