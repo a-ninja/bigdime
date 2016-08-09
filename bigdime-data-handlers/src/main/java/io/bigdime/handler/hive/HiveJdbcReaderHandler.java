@@ -374,7 +374,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, getHiveQuery());
 
 			if (inputDescriptor == null) {
-				return processNullDescriptor();
+				returnStatus = processNullDescriptor();
 			} else {
 				logger.info(getHandlerPhase(), "\"found inputDescriptor\" inputDescriptor={}", inputDescriptor);
 
@@ -663,11 +663,17 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 		if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
 			logger.info(getHandlerPhase(),
-					"_message=\"job is already running. will return backoff\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
+					"_message=\"job is already running. will return callback\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
 					jobStatus.getJobID().toString(), getHiveQuery(), hiveConfigurations, jobName);
 			boolean updatedRuntime = updateRunningStatus(outputEvent, jobStatus);
 			logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
-			returnStatus = Status.BACKOFF;
+			try {
+				logger.info(getHandlerPhase(), "sleeping before callback");
+				Thread.sleep(sleepBetweenRetriesMillis);
+			} catch (Exception ex) {
+				logger.info(getHandlerPhase(), "_message=\"sleep interrupted before call back\" exception={}", ex);
+			}
+			returnStatus = Status.CALLBACK;
 		} else if (runState == JobStatus.SUCCEEDED) {
 			logger.info(getHandlerPhase(),
 					"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
