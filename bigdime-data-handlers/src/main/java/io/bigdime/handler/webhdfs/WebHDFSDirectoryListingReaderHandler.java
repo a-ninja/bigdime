@@ -25,9 +25,7 @@ import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
-import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.libs.hdfs.WebHdfsException;
-import io.bigdime.libs.hdfs.WebHdfsFactory;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 
 @Component
@@ -169,36 +167,29 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 	}
 
 	protected byte[] prepareBodyContents(final String directoryPath) throws IOException {
-		WebHdfs webHdfs = null;
+
+		final WebHdfsReader webHdfsReader = new WebHdfsReader(hostNames, port, hdfsUser, authOption);
+		StringBuilder fileNamesStringBuilder = new StringBuilder();
+
 		try {
-			if (webHdfs == null) {
-				webHdfs = WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
-			}
-			final WebHdfsReader webHdfsReader = new WebHdfsReader();
-			StringBuilder fileNamesStringBuilder = new StringBuilder();
+			List<String> fileNames = webHdfsReader.list(directoryPath, false);
 
-			try {
-				List<String> fileNames = webHdfsReader.list(webHdfs, directoryPath, false);
-
-				if (CollectionUtil.isEmpty(fileNames)) {
-					logger.warn(getHandlerPhase(), "_message=\"no files found\" directoryPath={}", directoryPath);
-				}
-				logger.info(getHandlerPhase(), "_message=\"found files\" directoryPath={} files_count={}",
-						directoryPath, fileNames.size());
-				for (final String fileName : fileNames) {
-					fileNamesStringBuilder.append(fileName).append("\n");
-				}
-				// logger.debug(getHandlerPhase(),
-				// fileNamesStringBuilder.toString());
-			} catch (WebHdfsException e) {
-				logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
-						directoryPath, e.getMessage());
+			if (CollectionUtil.isEmpty(fileNames)) {
+				logger.warn(getHandlerPhase(), "_message=\"no files found\" directoryPath={}", directoryPath);
 			}
-			return fileNamesStringBuilder.toString().getBytes();
-		} finally {
-			logger.debug(getHandlerPhase(), "releasing webhdfs connection");
-			webHdfs.releaseConnection();
+			logger.info(getHandlerPhase(), "_message=\"found files\" directoryPath={} files_count={}", directoryPath,
+					fileNames.size());
+			for (final String fileName : fileNames) {
+				fileNamesStringBuilder.append(fileName).append("\n");
+			}
+			// logger.debug(getHandlerPhase(),
+			// fileNamesStringBuilder.toString());
+		} catch (WebHdfsException e) {
+			logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
+					directoryPath, e.getMessage());
 		}
+		return fileNamesStringBuilder.toString().getBytes();
+
 	}
 
 	private SimpleJournal getSimpleJournal() throws HandlerException {

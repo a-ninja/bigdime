@@ -30,6 +30,20 @@ public class WebHdfsReader {
 	private static final String WEBHDFS_PREFIX = "/webhdfs/v1";
 	private long sleepTime = 3000;
 
+	String hostNames;
+	int port;
+	String hdfsUser;
+	final HDFS_AUTH_OPTION authOption;
+	private WebHdfs webHdfs = null;
+	private WebHdfs webHdfsForInputStream = null;
+
+	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption) {
+		hostNames = _hostNames;
+		port = _port;
+		hdfsUser = _hdfsUser;
+		authOption = _authOption;
+	}
+
 	public String prependWebhdfsPrefix(final String hdfsPathWithoutPrefix) {
 		if (!StringHelper.isBlank(hdfsPathWithoutPrefix) && !hdfsPathWithoutPrefix.startsWith(WEBHDFS_PREFIX)) {
 			return "/webhdfs/v1" + hdfsPathWithoutPrefix;
@@ -47,7 +61,12 @@ public class WebHdfsReader {
 	 * @throws IOException
 	 * @throws WebHdfsException
 	 */
-	public InputStream getInputStream(WebHdfs webHdfs, String hdfsFilePath) throws IOException, WebHdfsException {
+	public void closeInputStream() throws IOException, WebHdfsException {
+		if (webHdfsForInputStream != null)
+			webHdfsForInputStream.releaseConnection();
+	}
+
+	public InputStream getInputStream(String hdfsFilePath) throws IOException, WebHdfsException {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid filePath: empty or null");
 
@@ -59,21 +78,29 @@ public class WebHdfsReader {
 		int attempts = 0;
 		boolean isSuccess = false;
 		do {
-			attempts++;
-			logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
-					hdfsFilePath, webhdfsFilePath, attempts);
-			HttpResponse response = webHdfs.openFile(webhdfsFilePath);
+			try {
+				webHdfsForInputStream = getWebHdfs();
+				attempts++;
+				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
+						hdfsFilePath, webhdfsFilePath, attempts);
+				HttpResponse response = webHdfsForInputStream.openFile(webhdfsFilePath);
 
-			if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 201) {
-				logger.debug("_message=\"file opened\" responseCode={} hdfsPath={} responseMessage={}",
-						response.getStatusLine().getStatusCode(), webhdfsFilePath,
-						response.getStatusLine().getReasonPhrase());
-				isSuccess = true;
-				return response.getEntity().getContent();
-
-			} else {
-				exceptionReason = logResponse(response, "getInputStream Failed", attempts, hdfsFilePath,
-						webhdfsFilePath);
+				if (response.getStatusLine().getStatusCode() == 200
+						|| response.getStatusLine().getStatusCode() == 201) {
+					logger.debug("_message=\"file opened\" responseCode={} hdfsPath={} responseMessage={}",
+							response.getStatusLine().getStatusCode(), webhdfsFilePath,
+							response.getStatusLine().getReasonPhrase());
+					isSuccess = true;
+					return response.getEntity().getContent();
+				} else {
+					exceptionReason = logResponse(response, "getInputStream Failed", attempts, hdfsFilePath,
+							webhdfsFilePath);
+				}
+			} catch (final Exception e) {
+				closeInputStream();
+				exceptionReason = e.getMessage();
+				logger.warn("_message=\"WebHdfs getInputStream Failed:\" attempts={} host ={} error={}", attempts,
+						webHdfs.getHost(), e);
 			}
 		} while (!isSuccess && attempts < 3);
 		if (!isSuccess) {
@@ -113,8 +140,7 @@ public class WebHdfsReader {
 	 * @throws IOException
 	 * @throws Exception
 	 */
-	public List<String> list(final WebHdfs webHdfs, final String hdfsFilePath, boolean recursive)
-			throws IOException, WebHdfsException {
+	public List<String> list(final String hdfsFilePath, boolean recursive) throws IOException, WebHdfsException {
 		List<String> filesInDir = new ArrayList<>();
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid hdfspath: empty or null");
@@ -123,7 +149,7 @@ public class WebHdfsReader {
 		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
 			webhdfsFilePath = webhdfsFilePath + FORWARD_SLASH;
 
-		String fileType = getFileType(webHdfs, webhdfsFilePath);
+		String fileType = getFileType(webhdfsFilePath);
 		if (!fileType.equalsIgnoreCase("DIRECTORY")) {
 			logger.debug("_message=\"processing WebHdfsReader\" webhdfsFilePath={} represents a file", webhdfsFilePath);
 			return null;
@@ -132,34 +158,44 @@ public class WebHdfsReader {
 		boolean isSuccess = false;
 		int attempts = 0;
 		String exceptionReason = null;
-
 		do {
-			attempts++;
-			logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
-					hdfsFilePath, webhdfsFilePath, attempts);
-			HttpResponse response = webHdfs.listStatus(webhdfsFilePath);
-			if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 201) {
-				logger.debug(
-						"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-						response.getStatusLine().getStatusCode(), hdfsFilePath, webhdfsFilePath,
-						response.getStatusLine().getReasonPhrase());
-				isSuccess = true;
+			try {
+				webHdfs = getWebHdfs();
+				attempts++;
+				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
+						hdfsFilePath, webhdfsFilePath, attempts);
+				HttpResponse response = webHdfs.listStatus(webhdfsFilePath);
+				if (response.getStatusLine().getStatusCode() == 200
+						|| response.getStatusLine().getStatusCode() == 201) {
+					logger.debug(
+							"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
+							response.getStatusLine().getStatusCode(), hdfsFilePath, webhdfsFilePath,
+							response.getStatusLine().getReasonPhrase());
+					isSuccess = true;
 
-				WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
-				List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
+					WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
+					List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
 
-				for (FileStatus fs : fileStatuses) {
-					if (fs.getType().equals("FILE") && fs.getLength() > 0) {
-						filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
+					for (FileStatus fs : fileStatuses) {
+						if (fs.getType().equals("FILE") && fs.getLength() > 0) {
+							filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
+						}
+						if (recursive && fs.getType().equals("DIRECTORY")) {
+							filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));
+						}
 					}
-					if (recursive && fs.getType().equals("DIRECTORY")) {
-						filesInDir.addAll(list(webHdfs, webhdfsFilePath + fs.getPathSuffix(), recursive));
-					}
+					return filesInDir;
+				} else {
+					exceptionReason = logResponse(response, "list Failed", attempts, hdfsFilePath, webhdfsFilePath);
 				}
-				return filesInDir;
-			} else {
-				exceptionReason = logResponse(response, "list Failed", attempts, hdfsFilePath, webhdfsFilePath);
+			} catch (Exception e) {
+				exceptionReason = e.getMessage();
+				logger.warn("_message=\"WebHdfs list Failed:\" attempts={} host ={} error={}", attempts,
+						webHdfs.getHost(), e);
+			} finally {
+				releaseWebHdfs();
 			}
+
 		} while (!isSuccess && attempts < 3);
 
 		if (!isSuccess) {
@@ -177,15 +213,15 @@ public class WebHdfsReader {
 	 * @return "FILE" if the file is
 	 * @throws WebHDFSSinkException
 	 */
-	public String getFileType(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
-		return getFileStatus(webHdfs, hdfsFilePath).getType();
+	public String getFileType(final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(hdfsFilePath).getType();
 	}
 
-	public long getFileLength(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
-		return getFileStatus(webHdfs, hdfsFilePath).getLength();
+	public long getFileLength(final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(hdfsFilePath).getLength();
 	}
 
-	public FileStatus getFileStatus(WebHdfs webHdfs, final String directoryPath, final String fileName)
+	public FileStatus getFileStatus(final String directoryPath, final String fileName)
 			throws IOException, WebHdfsException {
 		String webhdfsFilePath = prependWebhdfsPrefix(directoryPath);
 		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
@@ -195,11 +231,11 @@ public class WebHdfsReader {
 		if (!webhdfsFilePath.endsWith(FORWARD_SLASH))
 			webhdfsFilePath = webhdfsFilePath + FORWARD_SLASH;
 
-		return getFileStatus(webHdfs, webhdfsFilePath);
+		return getFileStatus(webhdfsFilePath);
 
 	}
 
-	public FileStatus getFileStatus(WebHdfs webHdfs, final String hdfsFilePath) throws IOException, WebHdfsException {
+	public FileStatus getFileStatus(final String hdfsFilePath) throws IOException, WebHdfsException {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid filePath: empty or null");
 
@@ -212,6 +248,7 @@ public class WebHdfsReader {
 		String exceptionReason = null;
 		do {
 			try {
+				webHdfs = getWebHdfs();
 				attempts++;
 				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
 						hdfsFilePath, webhdfsFilePath, attempts);
@@ -236,6 +273,8 @@ public class WebHdfsReader {
 				exceptionReason = e.getMessage();
 				logger.warn("_message=\"WebHdfs getFileStatus Failed:\" attempts={} host ={} error={}", attempts,
 						webHdfs.getHost(), e);
+			} finally {
+				releaseWebHdfs();
 			}
 		} while (!isSuccess && attempts < 3);
 		if (!isSuccess) {
@@ -261,5 +300,15 @@ public class WebHdfsReader {
 		}
 		return exceptionReason;
 
+	}
+
+	private WebHdfs getWebHdfs() {
+		releaseWebHdfs();
+		return WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
+	}
+
+	public void releaseWebHdfs() {
+		if (webHdfs != null)
+			webHdfs.releaseConnection();
 	}
 }

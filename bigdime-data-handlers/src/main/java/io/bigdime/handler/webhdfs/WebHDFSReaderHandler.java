@@ -38,9 +38,7 @@ import io.bigdime.handler.file.FileInputStreamReaderHandlerConstants;
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM;
 import io.bigdime.libs.hdfs.FileStatus;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
-import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.libs.hdfs.WebHdfsException;
-import io.bigdime.libs.hdfs.WebHdfsFactory;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 
 /**
@@ -74,7 +72,6 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSReaderHandler.class));
 	private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 	private String hdfsFileName;
-	private WebHdfs webHdfs;
 	private String entityName;
 	private WebHDFSPathParser webHDFSPathParser;
 	/**
@@ -88,7 +85,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebHDFSReaderHandler,webhdfsPath:";
 
-	WebHDFSReaderHandlerConfig handlerConfig = new WebHDFSReaderHandlerConfig();
+	private WebHDFSReaderHandlerConfig handlerConfig = new WebHDFSReaderHandlerConfig();
+	private WebHdfsReader webHdfsReader;
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -158,6 +156,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 				throw new InvalidValueConfigurationException("Invalid value for readHdfsPathFrom: \"" + readHdfsPathFrom
 						+ "\" not supported. Supported values are:" + READ_HDFS_PATH_FROM.values());
 			}
+			webHdfsReader = new WebHdfsReader(hostNames, port, hdfsUser, authOption);
 		} catch (final Exception ex) {
 			throw new AdaptorConfigurationException(ex);
 		}
@@ -306,18 +305,16 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			List<String> availableHdfsDirectories = webHDFSPathParser.parse(getHdfsPath(), getPropertyMap(),
 					getHandlerContext().getEventList(), ActionEventHeaderConstants.HDFS_PATH);
 			for (final String directoryPath : availableHdfsDirectories) {
-				WebHdfs webHdfs1 = null;
+
 				try {
-					webHdfs1 = getWebHdfs();
-					recordsFound |= initializeRuntimeInfoRecords(webHdfs1, directoryPath);
+
+					recordsFound |= initializeRuntimeInfoRecords(directoryPath);
 
 				} catch (IOException | WebHdfsException e) {
 					logger.warn(getHandlerPhase(),
 							"_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound,
 							e.getMessage());
 					throw new HandlerException(e);
-				} finally {
-					releaseWebHdfs(webHdfs1);
 				}
 			}
 			logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
@@ -335,27 +332,20 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			logger.debug(getHandlerPhase(), "getWaitForFileName() returned {}", getWaitForFileName());
 			return true;
 		}
-		final WebHdfsReader webHdfsReader = new WebHdfsReader();
-		WebHdfs webHdfs1 = null;
-		try {
-			webHdfs1 = getWebHdfs();
-			FileStatus fileStatus = webHdfsReader.getFileStatus(webHdfs1, directoryPath, getWaitForFileName());
-			if (fileStatus != null)
-				return true;
-		} finally {
-			releaseWebHdfs(webHdfs1);
-		}
+
+		FileStatus fileStatus = webHdfsReader.getFileStatus(directoryPath, getWaitForFileName());
+		if (fileStatus != null)
+			return true;
+
 		return false;
 	}
 
-	private boolean initializeRuntimeInfoRecords(WebHdfs webHdfs1, String directoryPath)
+	private boolean initializeRuntimeInfoRecords(String directoryPath)
 			throws RuntimeInfoStoreException, IOException, WebHdfsException {
 		boolean recordsFound = false;
-		final WebHdfsReader webHdfsReader = new WebHdfsReader();
-
 		try {
 			if (isReadyFilePresent(directoryPath)) {
-				List<String> fileNames = webHdfsReader.list(webHdfs1, directoryPath, false);
+				List<String> fileNames = webHdfsReader.list(directoryPath, false);
 				for (final String fileName : fileNames) {
 					Map<String, String> properties = new HashMap<>();
 					recordsFound = true;
@@ -381,14 +371,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	@Override
 	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
 		try {
-			releaseWebHdfs(webHdfs);
-			webHdfs = null;
-			if (webHdfs == null) {
-				webHdfs = getWebHdfs();
-			}
-
-			WebHdfsReader webHdfsReader = new WebHdfsReader();
-
+			webHdfsReader.closeInputStream();
 			String fullDescriptor = runtimeInfo.getInputDescriptor();
 			if (inputDescriptor == null)
 				inputDescriptor = new WebHDFSInputDescriptor();
@@ -398,7 +381,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 			inputDescriptor.parseDescriptor(fullDescriptor);
 			// String webHdfsPathToProcess = inputDescriptor.getWebhdfsPath();
-			final InputStream inputStream = webHdfsReader.getInputStream(webHdfs, inputDescriptor.getWebhdfsPath());
+			final InputStream inputStream = webHdfsReader.getInputStream(inputDescriptor.getWebhdfsPath());
 
 			// closing the channel explicitly
 			// if (inputDescriptor.getFileChannel() != null) {
@@ -418,15 +401,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	}
 
 	private FileStatus getFileStatusFromWebhdfs(final String hdfsFilePath) throws IOException, WebHdfsException {
-		WebHdfs webHdfs1 = null;
-		try {
-			webHdfs1 = getWebHdfs();
-			WebHdfsReader webHdfsReader = new WebHdfsReader();
-			FileStatus fileStatus = webHdfsReader.getFileStatus(webHdfs1, hdfsFilePath);
-			return fileStatus;
-		} finally {
-			releaseWebHdfs(webHdfs1);
-		}
+
+		FileStatus fileStatus = webHdfsReader.getFileStatus(hdfsFilePath);
+		return fileStatus;
+
 	}
 
 	private long getTotalReadFromJournal() throws HandlerException {
@@ -486,17 +464,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		return handlerConfig.getBufferSize();
 	}
 
-	private WebHdfs getWebHdfs() {
-		return WebHdfsFactory.getWebHdfs(getHostNames(), getPort(), getHdfsUser(), getAuthOption());
-	}
-
 	private String getWaitForFileName() {
 		return handlerConfig.getWaitForFileName();
-	}
-
-	private void releaseWebHdfs(WebHdfs _webHdfs) {
-		if (_webHdfs != null)
-			_webHdfs.releaseConnection();
 	}
 
 	protected boolean isInputDescriptorNull() {
