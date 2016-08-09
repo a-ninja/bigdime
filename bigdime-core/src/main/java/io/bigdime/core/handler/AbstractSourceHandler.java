@@ -136,9 +136,7 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
 					RuntimeInfoStore.Status.STARTED, properties);
 		} else {
 			setInputDescriptorToNull();
-			// inputDescriptor = null;
 		}
-		// return inputDescriptor;
 	}
 
 	public long getDirtyRecordCount() {

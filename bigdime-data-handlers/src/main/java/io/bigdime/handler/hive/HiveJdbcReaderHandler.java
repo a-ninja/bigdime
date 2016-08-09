@@ -368,7 +368,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				try {
 					YarnJobHelper yarnJobHelper = new YarnJobHelper();
 					jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
-					runState = jobStatus.getRunState();
+					if (jobStatus != null)
+						runState = jobStatus.getRunState();
 				} catch (IOException e1) {
 					logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}",
 							getInvocationCount());
@@ -421,7 +422,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 							logger.info(getHandlerPhase(),
 									"_message=\"after job submission\" updatedRuntime={} jobName={}", updatedRuntime,
 									newJobName);
-							// JobID jobID = null;
 							YarnJobHelper yarnJobHelper = new YarnJobHelper();
 							JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
 
@@ -442,7 +442,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 							JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(newJobName, conf);
 							if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
 								jobRanSuccessfully = true;
-								updatedRuntime = updateSuccessfulStatus(outputEvent, jobStatus);
+								updatedRuntime = updateSuccessfulStatus(outputEvent, completedJobStatus);
 							} else {
 								updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
 							}
@@ -504,11 +504,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			if (getAuthOption() == HDFS_AUTH_OPTION.KERBEROS) {
 				connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(getDriverClassName(),
 						getJdbcUrl(), getUserName(), getPassword(), hiveConfigurations);
-				logger.info(getHandlerPhase(), "_message=\"connected to db using kerberos\"");
+				logger.info(getHandlerPhase(), "connected to db using kerberos");
 			} else if (getAuthOption() == HDFS_AUTH_OPTION.PASSWORD) {
 				connection = hiveJdbcConnectionFactory.getConnection(getDriverClassName(), getJdbcUrl(), getUserName(),
 						getPassword(), hiveConfigurations);
-				logger.info(getHandlerPhase(), "_message=\"connected to db using password\"");
+				logger.info(getHandlerPhase(), "connected to db using password");
 			}
 		}
 	}
@@ -516,7 +516,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private void runHiveConfs(final Statement stmt) throws SQLException {
 		if (hiveConfigurations != null) {
 			for (final String prop : hiveConfigurations.keySet()) {
-				String sql = "set " + prop + " = " + hiveConfigurations.get(prop);
+				String sql = "set " + prop + "=" + hiveConfigurations.get(prop);
 				logger.debug(getHandlerPhase(), "running sql to set hiveconf: \"{}\"", sql);
 				stmt.execute(sql);
 			}

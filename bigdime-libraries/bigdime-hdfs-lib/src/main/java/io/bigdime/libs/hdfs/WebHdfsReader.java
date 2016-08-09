@@ -84,12 +84,11 @@ public class WebHdfsReader {
 				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
 						hdfsFilePath, webhdfsFilePath, attempts);
 				HttpResponse response = webHdfsForInputStream.openFile(webhdfsFilePath);
+				int statusCode = response.getStatusLine().getStatusCode();
 
-				if (response.getStatusLine().getStatusCode() == 200
-						|| response.getStatusLine().getStatusCode() == 201) {
-					logger.debug("_message=\"file opened\" responseCode={} hdfsPath={} responseMessage={}",
-							response.getStatusLine().getStatusCode(), webhdfsFilePath,
-							response.getStatusLine().getReasonPhrase());
+				if (statusCode == 200 || statusCode == 201) {
+					logger.debug("_message=\"file opened\" responseCode={} hdfsPath={} responseMessage={}", statusCode,
+							webhdfsFilePath, response.getStatusLine().getReasonPhrase());
 					isSuccess = true;
 					return response.getEntity().getContent();
 				} else {
@@ -130,8 +129,7 @@ public class WebHdfsReader {
 	 * 
 	 * There is no guarantee that the name strings in the resulting array will
 	 * appear in any specific order; they are not, in particular, guaranteed to
-	 * appear in alphabetical order. The webhdfs connection is left open. Caller
-	 * must release the connection.
+	 * appear in alphabetical order.
 	 * 
 	 * @param webHdfs
 	 * @param hdfsFilePath
@@ -162,15 +160,17 @@ public class WebHdfsReader {
 			try {
 				webHdfs = getWebHdfs();
 				attempts++;
-				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
-						hdfsFilePath, webhdfsFilePath, attempts);
+				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} ", hdfsFilePath,
+						webhdfsFilePath);
+				// HttpResponse response = invoke("listStatus",
+				// webhdfsFilePath);
 				HttpResponse response = webHdfs.listStatus(webhdfsFilePath);
-				if (response.getStatusLine().getStatusCode() == 200
-						|| response.getStatusLine().getStatusCode() == 201) {
+
+				int statusCode = response.getStatusLine().getStatusCode();
+				if (statusCode == 200 || statusCode == 201) {
 					logger.debug(
 							"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							response.getStatusLine().getStatusCode(), hdfsFilePath, webhdfsFilePath,
-							response.getStatusLine().getReasonPhrase());
+							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
 					isSuccess = true;
 
 					WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
@@ -185,6 +185,10 @@ public class WebHdfsReader {
 						}
 					}
 					return filesInDir;
+				} else if (statusCode == 404) {
+					logger.warn(
+							"_message=\"file does not exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
+							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
 				} else {
 					exceptionReason = logResponse(response, "list Failed", attempts, hdfsFilePath, webhdfsFilePath);
 				}
@@ -253,18 +257,21 @@ public class WebHdfsReader {
 				logger.debug("_message=\"getting status of file\" hdfsFilePath={} webhdfsFilePath={} attempts={}",
 						hdfsFilePath, webhdfsFilePath, attempts);
 				HttpResponse response = webHdfs.fileStatus(webhdfsFilePath);
-				if (response.getStatusLine().getStatusCode() == 200
-						|| response.getStatusLine().getStatusCode() == 201) {
+				int statusCode = response.getStatusLine().getStatusCode();
+				if (statusCode == 200 || statusCode == 201) {
 					logger.debug(
 							"_message=\"file exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
-							response.getStatusLine().getStatusCode(), hdfsFilePath, webhdfsFilePath,
-							response.getStatusLine().getReasonPhrase());
+							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
 					isSuccess = true;
 					final ObjectMapper mapper = new ObjectMapper();
 					WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
 							WebHdfsGetFileStatusResponse.class);
 					isSuccess = true;
 					return fs.getFileStatus();
+				} else if (statusCode == 404) {
+					logger.warn(
+							"_message=\"file does not exists\" responseCode={} hdfsFilePath={} webhdfsFilePath={} responseMessage={}",
+							statusCode, hdfsFilePath, webhdfsFilePath, response.getStatusLine().getReasonPhrase());
 				} else {
 					exceptionReason = logResponse(response, "WebHdfs getFileStatus Failed", attempts, hdfsFilePath,
 							webhdfsFilePath);
@@ -286,13 +293,12 @@ public class WebHdfsReader {
 
 	private String logResponse(HttpResponse response, String message, int attempts, String hdfsFilePath,
 			String webhdfsFilePath) {
-		String exceptionReason = response.getStatusLine().getStatusCode() + ":"
-				+ response.getStatusLine().getReasonPhrase();
+		int statusCode = response.getStatusLine().getStatusCode();
+		String exceptionReason = statusCode + ":" + response.getStatusLine().getReasonPhrase();
 		logger.warn(
 				"_message=\"" + message
-						+ "\" responseCode={}  responseMessage={} attempts={} attempts={} webhdfsFilePath={}",
-				response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase(), attempts,
-				hdfsFilePath, webhdfsFilePath);
+						+ "\" responseCode={}  responseMessage={} attempts={} hdfsFilePath={} webhdfsFilePath={}",
+				statusCode, response.getStatusLine().getReasonPhrase(), attempts, hdfsFilePath, webhdfsFilePath);
 		try {
 			Thread.sleep(sleepTime * (attempts + 1));
 		} catch (InterruptedException e) {
@@ -311,4 +317,51 @@ public class WebHdfsReader {
 		if (webHdfs != null)
 			webHdfs.releaseConnection();
 	}
+
+	public void releaseWebHdfs(WebHdfs webHdfs) {
+		if (webHdfs != null)
+			webHdfs.releaseConnection();
+	}
+
+	// private HttpResponse invoke(String methodName, String... args) throws
+	// WebHdfsException {
+	//
+	// Method m;
+	// boolean isSuccess = false;
+	// String exceptionReason = null;
+	// int attempts = 0;
+	// try {
+	// m = WebHdfs.class.getMethod("listStatus", String.class);
+	// do {
+	// WebHdfs webHdfs = null;
+	// logger.debug("_message=\"invoking {}\" attempt={} hdfsFilePath={}
+	// args={}", methodName, attempts, args);
+	// try {
+	// webHdfs = getWebHdfs();
+	// HttpResponse response = (HttpResponse) m.invoke(webHdfs, m, args);
+	// attempts++;
+	// int statusCode = response.getStatusLine().getStatusCode();
+	// if (statusCode == 200 || statusCode == 201) {
+	// isSuccess = true;
+	// return response;
+	// } else if (statusCode == 404) {
+	// logger.info("_message=\"executed method: {}\" file not not found:\"",
+	// methodName, args);
+	// } else {
+	// }
+	// } catch (Exception e) {
+	// exceptionReason = e.getMessage();
+	// } finally {
+	// releaseWebHdfs(webHdfs);
+	// }
+	// } while (!isSuccess && attempts < 3);
+	// } catch (NoSuchMethodException | SecurityException e1) {
+	// logger.error("_message=\"{} failed:\"", methodName, e1);
+	// }
+	// if (!isSuccess) {
+	// logger.error("_message=\"{} failed After 3 retries :\"", methodName);
+	// throw new WebHdfsException(exceptionReason);
+	// }
+	// return null;
+	// }
 }
