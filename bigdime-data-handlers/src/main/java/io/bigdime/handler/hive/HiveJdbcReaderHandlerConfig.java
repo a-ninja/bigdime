@@ -22,6 +22,15 @@ public class HiveJdbcReaderHandlerConfig {
 	 * todays records, 1 means process yesterdays records
 	 */
 	private int goBackDays;
+
+	/**
+	 * Go back atleast these many millis.
+	 * 
+	 * <br>
+	 * 1 day means, process records from yesterday and before.
+	 * 
+	 */
+	private long minGoBack;
 	/**
 	 * intervalInMins, cron expression and goBackDays properties are highly
 	 * dependent on each other. As a thumb rule, intervalInMins must be same as
@@ -129,4 +138,22 @@ public class HiveJdbcReaderHandlerConfig {
 	public void setFrequency(String frequency) {
 		this.frequency = frequency;
 	}
+
+	public long getMinGoBack() {
+		return minGoBack;
+	}
+
+	public void setMinGoBack(long minGoBack) {
+		this.minGoBack = minGoBack;
+	}
+
+	@Override
+	public String toString() {
+		return "HiveJdbcReaderHandlerConfig [jdbcUrl=" + jdbcUrl + ", driverClassName=" + driverClassName
+				+ ", authOption=" + authOption + ", userName=" + userName + ", password=" + "******"
+				+ ", baseOutputDirectory=" + baseOutputDirectory + ", entityName=" + entityName + ", hiveQuery="
+				+ hiveQuery + ", goBackDays=" + goBackDays + ", minGoBack=" + minGoBack + ", frequency=" + frequency
+				+ ", outputDirectoryPattern=" + outputDirectoryPattern + "]";
+	}
+
 }

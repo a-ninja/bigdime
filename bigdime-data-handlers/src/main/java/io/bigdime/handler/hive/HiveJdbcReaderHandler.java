@@ -30,6 +30,7 @@ import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.DateNaturalLanguageExpressionParser;
 import io.bigdime.core.commons.ProcessHelper;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.commons.StringHelper;
@@ -103,6 +104,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private static long sleepBetweenRetriesMillis;
 	private static int maxRetries;
 
+	final private String DEFAULT_MIN_GO_BACK = "1 day";
+
 	@Override
 	public void build() throws AdaptorConfigurationException {
 		setHandlerPhase("building HiveJdbcReaderHandler");
@@ -170,8 +173,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		Preconditions.checkArgument(goBackDays >= 0,
 				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS + " has to be a non-negative value.");
 
-		String frequencyExpression = PropertyHelper.getStringProperty(srcDescValueMap,
-				HiveJdbcReaderHandlerConstants.FREQUENCY);
+		String minGoBackExpression = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.MIN_GO_BACK, DEFAULT_MIN_GO_BACK);
+		long minGoBackMillis = DateNaturalLanguageExpressionParser.toMillis(minGoBackExpression);
+
+		Preconditions.checkArgument(goBackDays * MILLS_IN_A_DAY >= minGoBackMillis,
+				"\"go-back-days\" must be more than \"min-go-back\"");
+
 		for (String key : srcDescValueMap.keySet()) {
 			logger.info(getHandlerPhase(), "srcDesc-key=\"{}\" srcDesc-value=\"{}\"", key, srcDescValueMap.get(key));
 		}
@@ -198,9 +206,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		hdfsOutputPathDtf = DateTimeFormat.forPattern(outputDirectoryPattern);
 
 		logger.info(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} frequencyExpression={}",
-				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
-				frequencyExpression);
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={}",
+				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory,
+				outputDirectoryPattern);
 		handlerConfig.setAuthOption(authOption);
 		handlerConfig.setBaseOutputDirectory(baseOutputDirectory);
 		handlerConfig.setDriverClassName(driverClassName);
@@ -210,10 +218,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		handlerConfig.setJdbcUrl(jdbcUrl);
 		handlerConfig.setPassword(password);
 		handlerConfig.setUserName(userName);
-		logger.info(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={}",
-				getJdbcUrl(), getDriverClassName(), authChoice, getAuthOption(), getUserName(),
-				getBaseOutputDirectory(), getOutputDirectoryPattern());
+		handlerConfig.setMinGoBack(minGoBackMillis);
+		logger.info(getHandlerPhase(), "handlerConfig={}", handlerConfig);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -289,7 +295,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					"_message=\"first run, set hiveConfDateTime done\" hiveConfDateTime={} hiveConfDate={}",
 					hiveConfDateTime, getHiveConfDate());
 			// now - goBackDays * MILLS_IN_A_DAY;
-		} else if (now - hiveConfDateTime > intervalInMillis) {
+			// } else if (now - hiveConfDateTime > intervalInMillis) {
+		} else if (now - hiveConfDateTime > handlerConfig.getMinGoBack()) {
 			hiveConfDateTime = hiveConfDateTime + intervalInMillis;
 			logger.info(getHandlerPhase(),
 					"_message=\"time to set hiveConfDateTime.\" now={} hiveConfDateTime={} intervalInMillis={} hiveConfDate={}",

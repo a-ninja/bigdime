@@ -80,6 +80,18 @@ public class DateNaturalLanguageExpressionParser {
 
 	}
 
+	public static Object[] getDurationAndTimeUnitFromExpression(final String expression) {
+		Object[] returnVal = new Object[2];
+		String pattern = "(\\d+)\\s*(\\w+)";
+		Pattern p = Pattern.compile(pattern);
+		Matcher m = p.matcher(expression);
+		while (m.find()) {
+			returnVal[0] = Integer.valueOf(m.group(1));
+			returnVal[1] = TIME_UNIT_NAME.getByValue(m.group(2));
+		}
+		return returnVal;
+	}
+
 	/**
 	 * expression: 1 min | mins | minute | minutes | hour | hours | day | days
 	 * Convert to milliseconds and return.
@@ -87,24 +99,20 @@ public class DateNaturalLanguageExpressionParser {
 	 * @param expression
 	 */
 	public static long toMillis(final String expression) {
-		String pattern = "(\\d+)\\s*(\\w+)";
-		Pattern p = Pattern.compile(pattern);
+		Object[] durationAndTimeUnit = getDurationAndTimeUnitFromExpression(expression);
+		int duration = Integer.valueOf((Integer) durationAndTimeUnit[0]);
+		TimeUnit timeUnit = (TimeUnit) durationAndTimeUnit[1];
+		return timeUnit.toMillis(duration);
+	}
 
-		Matcher m = p.matcher(expression);
-		long millis = 0;
-		while (m.find()) {
-			int groups = m.groupCount();
-			int num = Integer.valueOf(m.group(1));
-			String unit = m.group(2);
-
-			TimeUnit timeUnit = TIME_UNIT_NAME.getByValue(unit);
-			millis = timeUnit.toMillis(num);
-			System.out.println("timeUnit=" + timeUnit + ", millis = " + millis);
-
-			for (int i = 0; i < groups; i++) {
-				System.out.println(m.group(i + 1));
-			}
-		}
-		return millis;
+	/**
+	 * 
+	 * @param currentMillis
+	 * @param expression
+	 */
+	public static long getPastDate(long currentMillis, final String goPastExpression) {
+		long goBackMillis = toMillis(goPastExpression);
+		long pastMillis = currentMillis - goBackMillis;
+		return pastMillis;
 	}
 }
