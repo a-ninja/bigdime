@@ -28,25 +28,34 @@ public class YarnJobHelper {
 	}
 
 	public JobStatus[] getStatusForAllJobs(Configuration conf) throws IOException {
-		JobClient jc = getJobClient(conf);
-		JobStatus[] jobStatus = jc.getAllJobs();
-		logger.debug("jobStatus, status={} length={}", jobStatus.toString(), jobStatus.length);
-		jc.close();
-		return jobStatus;
-
+		JobClient jc = null;
+		try {
+			jc = getJobClient(conf);
+			JobStatus[] jobStatus = jc.getAllJobs();
+			logger.debug("jobStatus, status={} length={}", jobStatus.toString(), jobStatus.length);
+			jc.close();
+			return jobStatus;
+		} finally {
+			if (jc != null)
+				jc.close();
+		}
 	}
 
 	public JobStatus[] getStatusForQueue(final String queueName, Configuration conf) throws IOException {
-		JobClient jc = getJobClient(conf);
-		logger.debug("_message=\"status for queue\" queue_name={}", queueName);
-		JobStatus[] jobStatus = jc.getJobsFromQueue(queueName);
-		logger.debug("jobStatus, status={} length={}", jobStatus.toString(), jobStatus.length);
-		jc.close();
-		return jobStatus;
+		JobClient jc = null;
+		try {
+			jc = getJobClient(conf);
+			logger.debug("_message=\"status for queue\" queue_name={}", queueName);
+			JobStatus[] jobStatus = jc.getJobsFromQueue(queueName);
+			logger.debug("jobStatus, status={} length={}", jobStatus.toString(), jobStatus.length);
+			return jobStatus;
+		} finally {
+			if (jc != null)
+				jc.close();
+		}
 	}
 
 	public JobStatus[] getStatusForJob(final String jobName, Configuration conf) throws IOException {
-		JobClient jc = getJobClient(conf);
 		JobStatus[] jobStatus = getStatusForAllJobs(conf);
 		logger.debug("getStatusForJob, status={} length={} jobName={}", jobStatus.toString(), jobStatus.length,
 				jobName);
@@ -56,7 +65,6 @@ public class YarnJobHelper {
 				statuses.add(js);
 			}
 		}
-		jc.close();
 		return statuses.toArray(new JobStatus[statuses.size()]);
 	}
 

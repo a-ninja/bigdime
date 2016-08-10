@@ -604,8 +604,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return updatedRuntime;
 	}
 
-	private boolean updateFailedStatus(ActionEvent event, JobStatus jobStatus)
-			throws RuntimeInfoStoreException, IOException {
+	private boolean updateFailedStatus(ActionEvent event, JobStatus jobStatus) throws RuntimeInfoStoreException {
 
 		RuntimeInfo rtiRecord = getRuntimeInfoStore().get(AdaptorConfig.getInstance().getName(), getEntityName(),
 				inputDescriptor.getInputDescriptorString());
@@ -636,22 +635,27 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return updatedRuntime;
 	}
 
-	private boolean jobSucceeded(String jobName, ActionEvent outputEvent)
-			throws RuntimeInfoStoreException, IOException {
-		YarnJobHelper yarnJobHelper = new YarnJobHelper();
-		JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(jobName, conf);
-		boolean updatedRuntime = false;
-		if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
-			updatedRuntime = updateSuccessfulStatus(outputEvent, completedJobStatus);
-		} else {
-			updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
-		}
+	private boolean jobSucceeded(String jobName, ActionEvent outputEvent) throws RuntimeInfoStoreException {
+		try {
+			YarnJobHelper yarnJobHelper = new YarnJobHelper();
+			JobStatus completedJobStatus = yarnJobHelper.getStatusForCompletedJob(jobName, conf);
+			boolean updatedRuntime = false;
+			if (completedJobStatus != null && completedJobStatus.getRunState() == JobStatus.SUCCEEDED) {
+				updatedRuntime = updateSuccessfulStatus(outputEvent, completedJobStatus);
+			} else {
+				updatedRuntime = updateFailedStatus(outputEvent, completedJobStatus);
+			}
+			logger.info(getHandlerPhase(),
+					"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+					updatedRuntime, completedJobStatus.getJobID().toString(), jobName, completedJobStatus.getRunState(),
+					JobStatus.getJobRunState(completedJobStatus.getRunState()));
+			return completedJobStatus.getRunState() == JobStatus.SUCCEEDED;
 
-		logger.info(getHandlerPhase(),
-				"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-				updatedRuntime, completedJobStatus.getJobID().toString(), jobName, completedJobStatus.getRunState(),
-				JobStatus.getJobRunState(completedJobStatus.getRunState()));
-		return completedJobStatus.getRunState() == JobStatus.SUCCEEDED;
+		} catch (final IOException ex) {
+			logger.warn(getHandlerPhase(), "_message=\"jobSucceeded:unable to get the job status\" jobName={}", jobName,
+					ex);
+			return false;
+		}
 	}
 
 	private Status processPreviouslySubmittedJobInfo(String jobName, ActionEvent outputEvent)
@@ -664,8 +668,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
 			if (jobStatus != null)
 				runState = jobStatus.getRunState();
-		} catch (IOException e1) {
-			logger.debug(getHandlerPhase(), "_messagge=\"getStatusForJob\" invocation_count={}", getInvocationCount());
+		} catch (IOException ex) {
+			logger.warn(getHandlerPhase(),
+					"_message=\"processPreviouslySubmittedJobInfo: unable to get the job status\" jobName={}", jobName,
+					ex);
 		}
 
 		if (runState == JobStatus.RUNNING || runState == JobStatus.PREP) {
@@ -751,16 +757,20 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	}
 
-	private void processStatusForNewJob(ActionEvent outputEvent, String jobName)
-			throws IOException, RuntimeInfoStoreException {
-		YarnJobHelper yarnJobHelper = new YarnJobHelper();
-		JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(jobName, conf);
-		if (newJobStatus != null) {
-			boolean updatedRuntime = updateRunningStatus(outputEvent, newJobStatus);
-			logger.info(getHandlerPhase(),
-					"_message=\"after submitting the job\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-					updatedRuntime, newJobStatus.getJobID().toString(), jobName, newJobStatus.getRunState(),
-					JobStatus.getJobRunState(newJobStatus.getRunState()));
+	private void processStatusForNewJob(ActionEvent outputEvent, String jobName) throws RuntimeInfoStoreException {
+		try {
+			YarnJobHelper yarnJobHelper = new YarnJobHelper();
+			JobStatus newJobStatus = yarnJobHelper.getStatusForNewJob(jobName, conf);
+			if (newJobStatus != null) {
+				boolean updatedRuntime = updateRunningStatus(outputEvent, newJobStatus);
+				logger.info(getHandlerPhase(),
+						"_message=\"after submitting the job\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+						updatedRuntime, newJobStatus.getJobID().toString(), jobName, newJobStatus.getRunState(),
+						JobStatus.getJobRunState(newJobStatus.getRunState()));
+			}
+		} catch (IOException ex) {
+			logger.warn(getHandlerPhase(),
+					"_message=\"processStatusForNewJob:unable to get the job status\" jobName={}", jobName, ex);
 		}
 
 	}
