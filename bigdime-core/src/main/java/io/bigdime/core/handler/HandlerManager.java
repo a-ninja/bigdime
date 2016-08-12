@@ -196,30 +196,21 @@ public class HandlerManager {
 				} while (tempHandlerNode != null && !backoff);
 			}
 
-			catch (final HandlerException ex) {
-				errorCount++;
-				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
-						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an exception, this loop of handlers will be stopped after 10 errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
-						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
-				logger.info("handler chain handling exception", "invoking handleException");
-				executeHandleException();
-				stopOnError();
-				logger.info("handler chain handling exception", "invoked handleException");
-				if (errorCount > 10)
-					throw ex;
-			} catch (Exception ex) {
+			catch (Exception ex) {
 				errorCount++;
 				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
 						ALERT_SEVERITY.BLOCKER,
 						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped after 10 errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
-						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
+						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount, ex);
 				logger.info("handler chain handling exception", "invoking handleException");
 				executeHandleException();
-				stopOnError();
-				logger.info("handler chain handling exception", "invoked handleException");
-				if (errorCount > 10)
-					throw new HandlerException(ex.getMessage(), ex);
+				if (errorCount > 10) {
+					stopOnError();
+					if (ex instanceof HandlerException)
+						throw ex;
+					else
+						throw new HandlerException(ex.getMessage(), ex);
+				}
 			}
 		}
 		// while (true);

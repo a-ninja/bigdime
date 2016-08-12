@@ -10,7 +10,9 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+@Component
 public class YarnJobHelper {
 	private static final Logger logger = LoggerFactory.getLogger(YarnJobHelper.class);
 
@@ -23,7 +25,6 @@ public class YarnJobHelper {
 		} catch (Throwable e) {
 			logger.warn("jobclient", "error in job client", e);
 		}
-
 		return null;
 	}
 
@@ -76,12 +77,13 @@ public class YarnJobHelper {
 					js.getRunState());
 			runState = js.getRunState();
 			if (runState == JobStatus.RUNNING || runState == JobStatus.PREP || runState == JobStatus.SUCCEEDED) {
-				logger.debug(
+				logger.info(
 						"_message=\"found a running or prep or succeeded jobStatus\" jobId={} jobName={} runState={}",
 						js.getJobID(), js.getJobName(), js.getRunState());
 				return js;
 			}
 		}
+		logger.debug("_message=\"getPositiveStatusForJob: no status found\"  jobName={}", jobName);
 		return null;
 	}
 
@@ -97,7 +99,7 @@ public class YarnJobHelper {
 			JobStatus[] jobStatuses = getStatusForJob(jobName, conf);
 			if (jobStatuses != null && jobStatuses.length > 0) {
 				for (JobStatus js : jobStatuses) {
-					logger.debug("_message=\"after submitting job, got job status\" jobId={} jobName={} runState={}",
+					logger.info("_message=\"after submitting job, got job status\" jobId={} jobName={} runState={}",
 							js.getJobID(), js.getJobName(), js.getRunState());
 
 					return js;
@@ -110,6 +112,7 @@ public class YarnJobHelper {
 				}
 			}
 		} while ((endTime - startTime) < maxWait);
+		logger.info("_message=\"getStatusForNewJob: no status found\"  jobName={}", jobName);
 		return null;
 	}
 
@@ -122,7 +125,7 @@ public class YarnJobHelper {
 			JobStatus[] jobStatuses = getStatusForJob(jobName, conf);
 			if (jobStatuses != null && jobStatuses.length > 0) {
 				for (JobStatus js : jobStatuses) {
-					logger.debug("_message=\"after completing job, got job status\" jobId={} jobName={} runState={}",
+					logger.info("_message=\"after completing job, got job status\" jobId={} jobName={} runState={}",
 							js.getJobID(), js.getJobName(), js.getRunState());
 
 					if (js.getRunState() == JobStatus.FAILED || js.getRunState() == JobStatus.KILLED
@@ -137,6 +140,7 @@ public class YarnJobHelper {
 				}
 			}
 		} while ((endTime - startTime) < maxWait);
+		logger.info("_message=\"getStatusForNewJob: no status found\"  jobName={}", jobName);
 		return null;
 	}
 }

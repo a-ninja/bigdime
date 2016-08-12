@@ -76,7 +76,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 
 			String[] fileNames = new String(body, Charset.defaultCharset()).split("\n");
 			body = null;
-			logger.debug(getHandlerPhase(), "fileNames.count={}", fileNames.length);
+			logger.info(getHandlerPhase(), "fileNames.count={}", fileNames.length);
 			String sourceFileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
 
 			// Get the source file name =
@@ -95,8 +95,8 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 			int matchedCount = 0;
 			final Set<String> fileNameListFromSwift = new HashSet<>();
 			final Set<String> fileBareNameListFromSwift = new LinkedHashSet<>();
-			if (swiftDirListing != null && swiftDirListing.size() == fileNames.length) {
-				logger.debug(getHandlerPhase(), "_message=\"file count match\" count={}", swiftDirListing.size());
+			if (swiftDirListing != null && (swiftDirListing.size() >= fileNames.length)) {
+				logger.info(getHandlerPhase(), "_message=\"file count match\" count={}", swiftDirListing.size());
 
 				for (DirectoryOrObject dirOrObject : swiftDirListing) {
 					fileNameListFromSwift.add(dirOrObject.getName());
@@ -120,7 +120,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 			}
 
 			if (matchedCount == fileNames.length) {
-				logger.debug(getHandlerPhase(), "_message=\"setting writeReady to true\"");
+				logger.info(getHandlerPhase(), "_message=\"setting writeReady to true\"");
 				// logger.debug(getHandlerPhase(), "_message=\"bare names={}",
 				// fileBareNameListFromSwift);
 				StringBuilder outputEventBody = new StringBuilder();

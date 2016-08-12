@@ -5,6 +5,7 @@
 package io.bigdime.libs.hdfs;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -432,6 +433,7 @@ public class WebHdfs {
 						return response;
 					} else if (statusCode == 404) {
 						logger.info("_message=\"executed method: {}\" file not found:\"", method.getName(), args);
+						exceptionReason = response.getStatusLine().getReasonPhrase();
 						releaseConnection();
 					} else {
 						exceptionReason = logResponse(response, method.getName(), attempts, args);
@@ -446,7 +448,7 @@ public class WebHdfs {
 			logger.error("_message=\"{} failed:\"", method.getName(), e1);
 		}
 		if (!isSuccess) {
-			logger.error("_message=\"{} failed After 3 retries :\"", method.getName());
+			logger.error("_message=\"{} failed After 3 retries :\", args={}", method.getName(), args);
 			throw new WebHdfsException(exceptionReason);
 		}
 		return null;

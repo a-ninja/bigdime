@@ -134,14 +134,8 @@ public final class DataAdaptor implements Adaptor {
 	public synchronized boolean start() throws DataAdaptorException {
 		logger.info("starting adaptor", "command received to start adaptor");
 		if (adaptorCurrentPhase == AdaptorPhase.STARTING || adaptorCurrentPhase == AdaptorPhase.STARTED) {
-			if (!isSourceRunning()) {
-				startSources();
-			} else {
-				logger.warn("starting adaptor",
-						"adaptor already running, at least one source is still running. can't start the sources");
-				// throw new DataAdaptorException("adaptor already started");
-				return false;
-			}
+			boolean started = startSources();
+			return started;
 		} else {
 			setAdaptorCurrentPhase(AdaptorPhase.STARTING);
 			startChannels();
@@ -221,14 +215,24 @@ public final class DataAdaptor implements Adaptor {
 		}
 	}
 
-	private void startSources() throws AdaptorConfigurationException {
+	private boolean startSources() throws AdaptorConfigurationException {
+		int numSourcesStarted = 0;
 		sourceRunning = true;
 		Collection<Source> sources = getSources();
 		logger.debug("adaptor calling start on each source", "sources.size=\"{}\"", sources.size());
 		for (final Source source : sources) {
-			logger.debug("adaptor calling start on source", "source_name=\"{}\"", source.getName());
-			source.start();
+			if (!(source.getLifecycleState() == LifecycleState.START)) {
+				numSourcesStarted++;
+				logger.debug("adaptor calling start on source", "source_name=\"{}\" count={}", source.getName(),
+						numSourcesStarted);
+				source.start();
+			} else {
+				logger.info("starting adaptor",
+						"_message=\"source is still running. can't start the source\" source_name=\"{}\"",
+						source.getName());
+			}
 		}
+		return (numSourcesStarted > 0);
 	}
 
 	private void startSink() throws AdaptorConfigurationException {

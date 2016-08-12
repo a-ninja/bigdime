@@ -26,6 +26,27 @@ public class RuntimeInfoRepositoryService {
 	@Autowired
 	private RuntimeInfoRepository runtimeInfoRepository;
 
+	public synchronized boolean delete(RuntimeInfoDTO adaptorRuntimeInfo) {
+		boolean isCreatedOrUpdated = false;
+		Assert.notNull(adaptorRuntimeInfo);
+		RuntimeInfoDTO adaptorRuntimeInformation = runtimeInfoRepository
+				.findByAdaptorNameAndEntityNameAndInputDescriptor(adaptorRuntimeInfo.getAdaptorName(),
+						adaptorRuntimeInfo.getEntityName(), adaptorRuntimeInfo.getInputDescriptor());
+		if (adaptorRuntimeInformation == null) {
+			logger.info(SOURCENAME, "nothing to delete, not record found",
+					"adaptorName: {} entityName: {} inputDescriptor: {}", adaptorRuntimeInfo.getAdaptorName(),
+					adaptorRuntimeInfo.getEntityName(), adaptorRuntimeInfo.getInputDescriptor());
+			adaptorRuntimeInfo.setCreatedAt();
+			adaptorRuntimeInfo.setUpdatedAt();
+			runtimeInfoRepository.save(adaptorRuntimeInfo);
+			isCreatedOrUpdated = false;
+		} else {
+			runtimeInfoRepository.delete(adaptorRuntimeInformation);
+			isCreatedOrUpdated = true;
+		}
+		return isCreatedOrUpdated;
+	}
+
 	public synchronized boolean create(RuntimeInfoDTO adaptorRuntimeInfo) {
 		boolean isCreatedOrUpdated = false;
 		Assert.notNull(adaptorRuntimeInfo);

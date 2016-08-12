@@ -362,10 +362,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	protected Status processNullDescriptor() {
 		if (isFirstRun()) {
 			logger.info(getHandlerPhase(),
-					"will return CALLBACK, so that next handler can process the pending records");
+					"_message=\"will return CALLBACK, so that next handler can process the pending records\" entityName={}",
+					getEntityName());
 			return Status.CALLBACK;
 		} else {
-			logger.info(getHandlerPhase(), "will return READY, so that next handler can process the pending records");
+			logger.info(getHandlerPhase(),
+					"_message=\"will return READY, so that next handler can process the pending records\" entityName={}",
+					getEntityName());
 			return Status.READY;
 		}
 	}
@@ -380,12 +383,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH, outputDirectory);
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.HiveJDBCReaderHeaders.HIVE_QUERY, getHiveQuery());
 
+			String jobName = null;
 			if (inputDescriptor == null) {
 				returnStatus = processNullDescriptor();
 			} else {
 				logger.info(getHandlerPhase(), "\"found inputDescriptor\" inputDescriptor={}", inputDescriptor);
 
-				String jobName = inputDescriptor.getJobName();
+				jobName = inputDescriptor.getJobName();
 				returnStatus = processPreviouslySubmittedJobInfo(jobName, outputEvent);
 				if (returnStatus == null) {
 					runWithRetries(outputEvent, jobName);
@@ -398,12 +402,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				}
 			}
 			getHandlerContext().createSingleItemEventList(outputEvent);
-			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\" returnStatus={}",
-					outputEvent.getHeaders(), returnStatus);
+			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\" returnStatus={} jobName={}",
+					outputEvent.getHeaders(), returnStatus, jobName);
 		} catch (final Exception e) {
-			throw new HandlerException("unable to process", e);
+			throw new HandlerException("unable to process" + e.getMessage(), e);
 		}
-
 		return returnStatus;
 	}
 
@@ -735,14 +738,14 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				if (jobRanSuccessfully)
 					break;
 
-			} catch (Exception ex) {
+			} catch (final Exception ex) {
 				YarnJobHelper yarnJobHelper = new YarnJobHelper();
 				JobStatus failedJobStatus = yarnJobHelper.getStatusForNewJob(newJobName, conf);
 
 				boolean updatedRuntime = updateFailedStatus(outputEvent, failedJobStatus);
 				logger.warn(getHandlerPhase(),
 						"_message=\"error in running the job\" updatedRuntime={} jobName={} error={}", updatedRuntime,
-						newJobName, ex, ex);
+						newJobName, ex.getMessage(), ex);
 			}
 			if (attempts <= maxRetries) {
 				logger.info(getHandlerPhase(), "will sleep for 3 mins and retry");

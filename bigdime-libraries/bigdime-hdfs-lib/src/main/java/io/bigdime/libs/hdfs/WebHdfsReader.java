@@ -107,6 +107,18 @@ public class WebHdfsReader {
 			for (FileStatus fs : fileStatuses) {
 				if (fs.getType().equals("FILE") && fs.getLength() > 0) {
 					filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
+//				if (fs.getType().equals("FILE")) {
+//					if (fs.getLength() > 0) {
+//						filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
+//					} else {
+//						try {
+//							Method method1 = WebHdfs.class.getMethod("deleteFile", String.class);
+//							webHdfs.invokeWithRetry(method1, (short) 1, webhdfsFilePath + fs.getPathSuffix());
+//						} catch (Exception ex) {
+//							logger.debug("_message=\"delete failed\" webhdfsFilePath={}",
+//									webhdfsFilePath + fs.getPathSuffix());
+//						}
+//					}
 				}
 				if (recursive && fs.getType().equals("DIRECTORY")) {
 					filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));

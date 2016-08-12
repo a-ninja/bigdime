@@ -48,7 +48,12 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		 * Ingestion was failed and the data from the target(hdfs/hbase etc) has
 		 * been cleared.
 		 */
-		ROLLED_BACK
+		ROLLED_BACK,
+
+		/**
+		 * Record not valid anymore
+		 */
+		INVALID
 	};
 
 	/**
@@ -126,4 +131,6 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 	 *             if there was any problem in storing RuntimeInfo
 	 */
 	public boolean put(T adaptorRuntimeInfo) throws RuntimeInfoStoreException;
+
+	public boolean delete(T adaptorRuntimeInfo) throws RuntimeInfoStoreException;
 }

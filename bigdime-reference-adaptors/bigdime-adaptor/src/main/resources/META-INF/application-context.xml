@@ -10,7 +10,7 @@
 
 	<context:annotation-config />
 	<context:component-scan
-		base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo" />
+		base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo, io.bigdime.ext" />
 	<context:property-placeholder location="classpath:${env.properties}"
 		 ignore-resource-not-found="false" ignore-unresolvable="true" />
 		

@@ -68,7 +68,6 @@ import io.bigdime.libs.hdfs.WebHdfsReader;
 @Component
 @Scope("prototype")
 public final class WebHDFSReaderHandler extends AbstractSourceHandler {
-
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(WebHDFSReaderHandler.class));
 	private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 	private String hdfsFileName;
@@ -87,6 +86,68 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	private WebHDFSReaderHandlerConfig handlerConfig = new WebHDFSReaderHandlerConfig();
 	private WebHdfsReader webHdfsReader;
+	// handlerName:list:directoryPath
+	// handlerName:file:filePath
+
+	// hive-jdbc-reader:hiveQuery:
+	// Capability to go back
+
+	// webhdfs-file-reader:list:directoryPath
+	// webhdfs-file-reader:file:filePath
+	// if there are files in start status, process them.
+	// If there are directories in start state, process them.
+	// Detect the last successful run date, say 100 days back.
+	// Check the frequency, say 1 day. Compute next run date, say 99 days back.
+	// Look for maxGoBack param. Say, 10 days
+	// If today - next run date is < goBack, set next date as goBack
+	// else
+	// Compute hdfsPath for Today - maxGoBackDays
+	// if the descriptor is present and not in QUEUED/START/PENDING for that old
+	// date, add frequency to the datetime and compute the next hdfs path.
+	// else process for that date.
+	/*
+	 * @formatter:off
+	 * frequency : 1 min | mins | minute | minutes | hour | hours | day | days
+	 * frequency will determine when to stop running.
+	 * 
+	 * goBack :  1 min | mins | minute | minutes | hour | hours | day | days
+	 *
+	 * Use case: 1
+	 * If the frequency is 1 hour, and right now it's 4pm:
+	 * If the latency = 1 hour.
+	 * timeNow = 4.10 pm
+	 * 
+	 * processTime = timeNow - frequency - latency
+	 * processTime = 2.10pm.
+	 * get hour = 2 pm
+	 * Set the processing time as 3pm.
+	 * 
+	 * Use case: 2
+	 * If the frequency is 1 day, and right now it's 10th of the month and 4pm:
+	 * timeNow = 10th of the month, 4.10 pm
+	 * 
+	 * processTime = timeNow - frequency
+	 * processTime = 9th of the month, 4.10 pm.
+	 * get day = 9th of the month
+	 * Set the processing time as 9th of the month
+	 * 
+	 * Use case: 3
+	 * If the frequency is 7 days, and right now it's 10th of the month and 4pm:
+	 * timeNow = 10th of the month, 4.10 pm
+	 * 
+	 * processTime = timeNow - 7 days
+	 * processTime = 3rd of the month, 4.10 pm.
+	 * get day = 3rd of the month
+	 * Set the processing time as 3rd of the month
+	 * 
+	 * 
+	 * 
+	 * @formatter:on
+	 * 
+	 * 
+	 * (non-Javadoc)
+	 * @see io.bigdime.core.handler.AbstractHandler#build()
+	 */
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -173,9 +234,9 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		if (isFirstRun()) {
 			if (getReadHdfsPathFrom() == READ_HDFS_PATH_FROM.HEADERS) {
 				entityName = getEntityNameFromHeader();
-				logger.info(getHandlerPhase(), "From header, entityName={} ", entityName);
+				logger.info(getHandlerPhase(), "from header, entityName={} ", entityName);
 			} else {
-				logger.info(getHandlerPhase(), "From config, entityName={} ", entityName);
+				logger.info(getHandlerPhase(), "from config, entityName={} ", entityName);
 			}
 		}
 	}
@@ -277,6 +338,16 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 				return io.bigdime.core.ActionEvent.Status.BACKOFF;
 			}
 			return doProcess();
+		} catch (HandlerException ex) {
+			logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"",
+					ex.getMessage(), ex.getCause().getMessage());
+			if (ex.getCause().getMessage().equals("Not Found")) {
+				logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs, returning backoff\" error={}",
+						ex.getMessage());
+				return Status.BACKOFF_NOW;
+			} else {
+				throw ex;
+			}
 		} catch (IOException e) {
 			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
 					"error during process", e);
@@ -370,6 +441,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
 	@Override
 	protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
+		String webHdfsPathToProcess = null;
 		try {
 			webHdfsReader.releaseWebHdfsForInputStream();
 			String fullDescriptor = runtimeInfo.getInputDescriptor();
@@ -380,13 +452,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			}
 
 			inputDescriptor.parseDescriptor(fullDescriptor);
-			// String webHdfsPathToProcess = inputDescriptor.getWebhdfsPath();
-			final InputStream inputStream = webHdfsReader.getInputStream(inputDescriptor.getWebhdfsPath());
-
-			// closing the channel explicitly
-			// if (inputDescriptor.getFileChannel() != null) {
-			// inputDescriptor.getFileChannel().close();
-			// }
+			webHdfsPathToProcess = inputDescriptor.getWebhdfsPath();
+			final InputStream inputStream = webHdfsReader.getInputStream(webHdfsPathToProcess);
 
 			FileStatus currentFileStatus = getFileStatusFromWebhdfs(inputDescriptor.getWebhdfsPath());
 			ReadableByteChannel fileChannel = Channels.newChannel(inputStream);
@@ -396,7 +463,16 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			logger.debug(getHandlerPhase(), "current_file_path={} is_file_channel_open={}",
 					inputDescriptor.getCurrentFilePath(), fileChannel.isOpen());
 		} catch (IOException | WebHdfsException e) {
-			throw new HandlerException("unable to process", e);
+			runtimeInfo.getProperties().put("error", e.getMessage());
+			try {
+				logger.debug(getHandlerPhase(), "_message=\"deleting record from runtime info\" runtimeInfo={}",
+						runtimeInfo);
+				runtimeInfoStore.delete(runtimeInfo);
+			} catch (RuntimeInfoStoreException e1) {
+				logger.debug(getHandlerPhase(), "_message=\"unable to update runtime info\" file_path={}",
+						webHdfsPathToProcess);
+			}
+			throw new HandlerException("unable to process:" + webHdfsPathToProcess + ", error=" + e.getMessage(), e);
 		}
 	}
 
