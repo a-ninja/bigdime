@@ -98,6 +98,7 @@
 		<org.apache.hadoop.version>2.4.1</org.apache.hadoop.version>
 		<org.apache.hadoop.hdp2.4.version>2.4.1</org.apache.hadoop.hdp2.4.version>
 		<org.apache.hive.hive-jdbc.version>1.1.1</org.apache.hive.hive-jdbc.version>
+		<joda-time.joda-time.version>2.9.4</joda-time.joda-time.version>
 	</properties>
 
 	<build>
@@ -440,6 +441,12 @@
 				<groupId>org.apache.hadoop</groupId>
 				<artifactId>hadoop-yarn-client</artifactId>
 				<version>${org.apache.hadoop.version}</version>
+			</dependency>
+			<dependency>
+				<!-- https://mvnrepository.com/artifact/joda-time/joda-time -->
+				<groupId>joda-time</groupId>
+				<artifactId>joda-time</artifactId>
+				<version>${joda-time.joda-time.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
