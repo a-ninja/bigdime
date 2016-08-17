@@ -229,4 +229,51 @@ public class PropertyHelperTest {
 				PropertyHelper.getMapProperty(propertyMap, "yarn-confs").get("ipc.client.connect.max.retries"), "87");
 
 	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Map<String, Object> srcDescMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+		srcDescMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromSrcDesc");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, srcDescMap,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromSrcDesc";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDescWithNoValueInSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Map<String, Object> srcDescMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, srcDescMap,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDescWithNullSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, null,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
 }

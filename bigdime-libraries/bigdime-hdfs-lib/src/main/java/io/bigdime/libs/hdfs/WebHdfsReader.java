@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipInputStream;
 
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.JsonProcessingException;
@@ -105,20 +106,8 @@ public class WebHdfsReader {
 			List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
 
 			for (FileStatus fs : fileStatuses) {
-				if (fs.getType().equals("FILE") && fs.getLength() > 0) {
+				if (!isEmptyFile(fs, webhdfsFilePath)) {
 					filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
-//				if (fs.getType().equals("FILE")) {
-//					if (fs.getLength() > 0) {
-//						filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
-//					} else {
-//						try {
-//							Method method1 = WebHdfs.class.getMethod("deleteFile", String.class);
-//							webHdfs.invokeWithRetry(method1, (short) 1, webhdfsFilePath + fs.getPathSuffix());
-//						} catch (Exception ex) {
-//							logger.debug("_message=\"delete failed\" webhdfsFilePath={}",
-//									webhdfsFilePath + fs.getPathSuffix());
-//						}
-//					}
 				}
 				if (recursive && fs.getType().equals("DIRECTORY")) {
 					filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));
@@ -131,6 +120,38 @@ public class WebHdfsReader {
 		} finally {
 			releaseWebHdfs(webHdfs);
 		}
+	}
+
+	protected boolean isEmptyFile(final FileStatus fs, final String webhdfsFilePath) {
+		String webhdfsFilePathWithName = webhdfsFilePath + fs.getPathSuffix();
+		if (fs.getType().equals("FILE") && fs.getLength() > 0) {
+			return false;// isEmptyGzFile(webhdfsFilePathWithName);
+		} else {
+			logger.info("_message=\"empty file found\" webhdfsFilePathWithName={}", webhdfsFilePathWithName);
+			return true;
+		}
+	}
+
+	protected boolean isEmptyGzFile(final String webhdfsFilePathWithName) {
+		try (ZipInputStream zis = new ZipInputStream(getInputStream(webhdfsFilePathWithName))) {
+			if (webhdfsFilePathWithName.endsWith(".gz")) {
+				if (zis.getNextEntry() == null) {
+					logger.info("_message=\"empty zip file found\" webhdfsFilePathWithName={}",
+							webhdfsFilePathWithName);
+					return true;
+				}
+			}
+		} catch (IOException | WebHdfsException e) {
+			logger.error("unable to determine file size", e);
+			return false;
+		} finally {
+			try {
+				releaseWebHdfsForInputStream();
+			} catch (IOException | WebHdfsException e) {
+				logger.error("unable to close stream", e);
+			}
+		}
+		return false;
 	}
 
 	/**

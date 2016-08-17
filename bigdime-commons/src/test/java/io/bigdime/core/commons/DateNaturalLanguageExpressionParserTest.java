@@ -94,6 +94,10 @@ public class DateNaturalLanguageExpressionParserTest {
 		long actualMillis = DateNaturalLanguageExpressionParser.toMillis("1 day");
 		long expected = 1 * 24 * 60 * 60 * 1000;
 		Assert.assertEquals(actualMillis, expected);
+		
+		actualMillis = DateNaturalLanguageExpressionParser.toMillis("2 days");
+		expected = 2 * 24 * 60 * 60 * 1000;
+		Assert.assertEquals(actualMillis, expected);
 
 		actualMillis = DateNaturalLanguageExpressionParser.toMillis("1 hour");
 		expected = 1 * 60 * 60 * 1000;

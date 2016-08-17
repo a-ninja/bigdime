@@ -267,9 +267,9 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		}
 		long nextIndexToRead = getTotalReadFromJournal();
 		logger.info(getHandlerPhase(),
-				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={}", getId(),
-				nextIndexToRead, handlerConfig.getBufferSize(), inputDescriptor.getFileChannel().isOpen(),
-				inputDescriptor.getCurrentFilePath());
+				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
+				getId(), nextIndexToRead, handlerConfig.getBufferSize(), inputDescriptor.getFileChannel().isOpen(),
+				inputDescriptor.getCurrentFilePath(), getTotalSizeFromJournal());
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(getBufferSize());
 		Status statustoReturn = Status.READY;

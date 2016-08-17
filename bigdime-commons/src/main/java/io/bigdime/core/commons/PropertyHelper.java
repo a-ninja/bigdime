@@ -230,4 +230,37 @@ public final class PropertyHelper {
 			}
 		}
 	}
+
+	public static String getStringPropertyFromPropertiesOrSrcDesc(
+			final Map<? extends String, ? extends Object> defaultMap,
+			Map<? extends String, ? extends Object> overrideMap, String propertyName, String defaultValue) {
+		String propertyValue = PropertyHelper.getStringProperty(defaultMap, propertyName, defaultValue);
+		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		if (overrideMap == null)
+			return propertyValue;
+
+		propertyValue = PropertyHelper.getStringProperty(overrideMap, propertyName, propertyValue);
+		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		return propertyValue;
+	}
+
+	public static int getIntPropertyFromPropertiesOrSrcDesc(final Map<? extends String, ? extends Object> defaultMap,
+			Map<? extends String, ? extends Object> overrideMap, String propertyName, int defaultValue) {
+		int propertyValue = PropertyHelper.getIntProperty(defaultMap, propertyName, defaultValue);
+		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		if (overrideMap == null)
+			return propertyValue;
+
+		propertyValue = PropertyHelper.getIntProperty(overrideMap, propertyName, propertyValue);
+		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+		return propertyValue;
+	}
+
 }

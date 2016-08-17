@@ -16,16 +16,11 @@ import org.springframework.stereotype.Component;
 public class YarnJobHelper {
 	private static final Logger logger = LoggerFactory.getLogger(YarnJobHelper.class);
 
-	private JobClient getJobClient(Configuration conf) {
-		try {
-			JobClient jc = new JobClient(conf);
-			logger.debug("Got connection, jc={}", jc);
-			logger.debug("Cluster Status, status_null={}", jc.getClusterStatus() == null);
-			return jc;
-		} catch (Throwable e) {
-			logger.warn("jobclient", "error in job client", e);
-		}
-		return null;
+	private JobClient getJobClient(Configuration conf) throws IOException {
+		JobClient jc = new JobClient(conf);
+		logger.debug("Got connection, jc={}", jc);
+		logger.debug("Cluster Status, status_null={}", jc.getClusterStatus() == null);
+		return jc;
 	}
 
 	public JobStatus[] getStatusForAllJobs(Configuration conf) throws IOException {

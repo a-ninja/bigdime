@@ -111,4 +111,10 @@ public class HiveReaderDescriptor implements InputDescriptor<String> {
 		this.jobName = jobName;
 	}
 
+	@Override
+	public String toString() {
+		return "HiveReaderDescriptor [entityName=" + entityName + ", hiveConfDate=" + hiveConfDate
+				+ ", hiveConfDirectory=" + hiveConfDirectory + ", hiveQuery=" + hiveQuery + ", jobName=" + jobName
+				+ "]";
+	}
 }

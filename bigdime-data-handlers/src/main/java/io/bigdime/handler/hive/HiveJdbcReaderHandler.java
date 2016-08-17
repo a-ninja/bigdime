@@ -152,8 +152,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		entityName = PropertyHelper.getStringProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.ENTITY_NAME);
 		hiveQuery = PropertyHelper.getStringProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.HIVE_QUERY);
 
-		goBackDays = PropertyHelper.getIntProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.GO_BACK_DAYS,
-				DEFAULT_GO_BACK_DAYS);
+		goBackDays = PropertyHelper.getIntPropertyFromPropertiesOrSrcDesc(properties, srcDescValueMap,
+				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS, DEFAULT_GO_BACK_DAYS);
 
 		long sleep = PropertyHelper.getLongProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.SLEEP_BETWEEN_RETRY_SECONDS, DEFAULT_SLEEP_BETWEEN_RETRIES_SECONDS);
@@ -173,8 +173,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		Preconditions.checkArgument(goBackDays >= 0,
 				HiveJdbcReaderHandlerConstants.GO_BACK_DAYS + " has to be a non-negative value.");
 
-		String minGoBackExpression = PropertyHelper.getStringProperty(getPropertyMap(),
-				HiveJdbcReaderHandlerConstants.MIN_GO_BACK, DEFAULT_MIN_GO_BACK);
+		String minGoBackExpression = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(properties,
+				srcDescValueMap, HiveJdbcReaderHandlerConstants.MIN_GO_BACK, DEFAULT_MIN_GO_BACK);
+
 		long minGoBackMillis = DateNaturalLanguageExpressionParser.toMillis(minGoBackExpression);
 
 		Preconditions.checkArgument(goBackDays * MILLS_IN_A_DAY >= minGoBackMillis,
@@ -237,7 +238,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					.putAll(PropertyHelper.getMapProperty(srcDescValueMap, HiveJdbcReaderHandlerConstants.HIVE_CONF));
 		}
 		logger.info(getHandlerPhase(), "hiveConfs=\"{}\"", hiveConfigurations);
-
 	}
 
 	private org.apache.hadoop.conf.Configuration conf;
@@ -297,12 +297,14 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			// now - goBackDays * MILLS_IN_A_DAY;
 			// } else if (now - hiveConfDateTime > intervalInMillis) {
 		} else if (now - hiveConfDateTime > handlerConfig.getMinGoBack()) {
+
 			hiveConfDateTime = hiveConfDateTime + intervalInMillis;
 			logger.info(getHandlerPhase(),
 					"_message=\"time to set hiveConfDateTime.\" now={} hiveConfDateTime={} intervalInMillis={} hiveConfDate={}",
 					now, hiveConfDateTime, intervalInMillis, getHiveConfDate());
 		} else {
-			logger.info("/", "now={} hiveConfDateTime={} intervalInMillis={}", now, hiveConfDateTime, intervalInMillis);
+			logger.info("nothing to do", "now={} hiveConfDateTime={} intervalInMillis={}", now, hiveConfDateTime,
+					intervalInMillis);
 			return false;
 		}
 		setHdfsOutputDirectory();
@@ -336,7 +338,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		final String hdfsOutputPathDate = hdfsOutputPathDtf.print(hiveConfDateTime);
 		outputDirectory = outputDirectory + hdfsOutputPathDate + FORWARD_SLASH + getEntityName();
 
-		logger.debug(getHandlerPhase(), "hiveConfDate={} hdfsOutputPathDate={} outputDirectory=\"{}\"", hiveConfDate,
+		logger.info(getHandlerPhase(), "hiveConfDate={} hdfsOutputPathDate={} outputDirectory=\"{}\"", hiveConfDate,
 				hdfsOutputPathDate, outputDirectory);
 
 		hiveConfigurations.put("DIRECTORY", outputDirectory);
@@ -671,7 +673,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
 			if (jobStatus != null)
 				runState = jobStatus.getRunState();
-		} catch (IOException ex) {
+		} catch (Exception ex) {
 			logger.warn(getHandlerPhase(),
 					"_message=\"processPreviouslySubmittedJobInfo: unable to get the job status\" jobName={}", jobName,
 					ex);
@@ -771,7 +773,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 						updatedRuntime, newJobStatus.getJobID().toString(), jobName, newJobStatus.getRunState(),
 						JobStatus.getJobRunState(newJobStatus.getRunState()));
 			}
-		} catch (IOException ex) {
+		} catch (Exception ex) {
 			logger.warn(getHandlerPhase(),
 					"_message=\"processStatusForNewJob:unable to get the job status\" jobName={}", jobName, ex);
 		}
