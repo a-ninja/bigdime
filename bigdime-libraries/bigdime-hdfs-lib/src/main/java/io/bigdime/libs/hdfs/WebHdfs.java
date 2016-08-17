@@ -448,8 +448,12 @@ public class WebHdfs {
 			logger.error("_message=\"{} failed:\"", method.getName(), e1);
 		}
 		if (!isSuccess) {
-			logger.error("_message=\"{} failed After 3 retries :\", args={}", method.getName(), args);
+			logger.error("_message=\"{} failed After {} retries :\", args={}", method.getName(), maxAttempts, args);
 			throw new WebHdfsException(exceptionReason);
+		} else {
+			if (attempts > 1) {
+				logger.info("_message=\"recovered from an earlire error after {} attempts", attempts);
+			}
 		}
 		return null;
 	}

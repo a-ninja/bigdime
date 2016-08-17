@@ -3,6 +3,7 @@ package io.bigdime.handler.swift;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
@@ -63,6 +64,7 @@ public abstract class SwiftAbstractByteWriterHandler extends SwiftWriterHandler 
 	protected StoredObject uploadBytes(final Container container, final String objectName, final byte[] data) {
 		StoredObject object = container.getObject(objectName);
 		object.uploadObject(data);
+		object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
 		logger.debug(getHandlerPhase(),
 				"_message=\"wrote to swift\" swift_object_name={} object_etag={} object_public_url={}", objectName,
 				object.getEtag(), object.getPublicURL());

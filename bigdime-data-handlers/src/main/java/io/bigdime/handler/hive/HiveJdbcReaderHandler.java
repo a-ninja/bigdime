@@ -258,7 +258,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					}
 					UserGroupInformation.setConfiguration(conf);
 					UserGroupInformation.loginUserFromKeytab(handlerConfig.getUserName(), handlerConfig.getPassword());
-					// yarnJobHelper = new YarnJobHelper();
 					logger.info(getHandlerPhase(), "initialized yarn JobClient instance");
 				}
 			} catch (Throwable e) {
@@ -315,8 +314,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		properties.put("hiveConfDirectory", outputDirectory);
 		properties.put("hiveQuery", getHiveQuery());
 
-		String jobName = "bigdime" + "." + getEntityName() + "." + ProcessHelper.getInstance().getProcessId() + "."
-				+ getJobDtf().print(System.currentTimeMillis());
+		String jobName = computeJobName();
 		logger.info(getHandlerPhase(),
 				"findAndAddRuntimeInfoRecords: hiveQuery=\"{}\" hiveConfigurations=\"{}\" outputDirectory={} jobName={}",
 				getHiveQuery(), hiveConfigurations, outputDirectory, jobName);
@@ -390,7 +388,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				returnStatus = processNullDescriptor();
 			} else {
 				logger.info(getHandlerPhase(), "\"found inputDescriptor\" inputDescriptor={}", inputDescriptor);
-
 				jobName = inputDescriptor.getJobName();
 				returnStatus = processPreviouslySubmittedJobInfo(jobName, outputEvent);
 				if (returnStatus == null) {
@@ -407,7 +404,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			logger.info(getHandlerPhase(), "_message=\"completed process\" headers=\"{}\" returnStatus={} jobName={}",
 					outputEvent.getHeaders(), returnStatus, jobName);
 		} catch (final Exception e) {
-			throw new HandlerException("unable to process" + e.getMessage(), e);
+			throw new HandlerException("unable to process:" + e.getMessage(), e);
 		}
 		return returnStatus;
 	}
@@ -691,7 +688,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			} catch (Exception ex) {
 				logger.info(getHandlerPhase(), "_message=\"sleep interrupted before call back\" exception={}", ex);
 			}
-			returnStatus = Status.CALLBACK;
+			returnStatus = Status.CALLBACK; // callback since there could be
+											// other pending tasks that other
+											// handlers want to process
 		} else if (runState == JobStatus.SUCCEEDED) {
 			logger.info(getHandlerPhase(),
 					"_message=\"job is successfully completed.\" jobID={} hiveQuery=\"{}\" hiveConfigurations=\"{}\" jobName={}",
@@ -705,8 +704,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	private String computeJobName() {
-		return "bigdime" + "." + getEntityName() + "." + ProcessHelper.getInstance().getProcessId() + "."
-				+ getJobDtf().print(System.currentTimeMillis());
+		return "bigdime" + "." + getEntityName() + "." + getHiveConfDate() + "."
+				+ ProcessHelper.getInstance().getProcessId() + "." + getJobDtf().print(System.currentTimeMillis());
 	}
 
 	private void runWithRetries(ActionEvent outputEvent, String jobName)
