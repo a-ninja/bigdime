@@ -131,7 +131,8 @@ public class WebHDFSDirectoryListingReaderHandler extends AbstractSourceHandler 
 		String sourceFileName = inputEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
 		String hdfsPath = StringHelper.getStringBeforeLastToken(sourceFileName, FORWARD_SLASH);
 
-		logger.debug(getHandlerPhase(), "hdfsPath={}", hdfsPath);
+		logger.info(getHandlerPhase(), "_message=\"entering process0\" PARENT_RUNTIME_ID={} hdfsPath={}",
+				inputEvent.getHeaders().get(ActionEventHeaderConstants.PARENT_RUNTIME_ID), hdfsPath);
 		try {
 			byte[] body = prepareBodyContents(hdfsPath);
 			ActionEvent outputEvent = new ActionEvent();

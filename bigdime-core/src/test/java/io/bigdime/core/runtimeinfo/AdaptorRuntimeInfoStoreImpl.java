@@ -49,4 +49,8 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 		throw new NotImplementedException();
 	}
 
+	@Override
+	public RuntimeInfo getById(int runtimeInfoId) throws RuntimeInfoStoreException {
+		throw new NotImplementedException();
+	}
 }

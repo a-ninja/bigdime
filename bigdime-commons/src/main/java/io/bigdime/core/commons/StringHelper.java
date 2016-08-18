@@ -257,6 +257,10 @@ public final class StringHelper {
 		return StringUtils.isBlank(arg);
 	}
 
+	public static boolean isNotBlank(final String arg) {
+		return !isBlank(arg);
+	}
+
 	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString) {
 		Pattern p = Pattern.compile("\\$\\{(\\w+)\\}+");
 		return getTokenToTokenNameMap(tokenizedString, p);

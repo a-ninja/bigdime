@@ -161,5 +161,9 @@ public class RuntimeInfoRepositoryService {
 		Assert.notNull(entityName);
 		return runtimeInfoRepository.findFirstByAdaptorNameAndEntityNameOrderByRuntimeIdDesc(adaptorName, entityName);
 	}
+	
+	public RuntimeInfoDTO getById(int runtimeInfoId) {
+		return runtimeInfoRepository.findOne(runtimeInfoId);
+	}
 
 }

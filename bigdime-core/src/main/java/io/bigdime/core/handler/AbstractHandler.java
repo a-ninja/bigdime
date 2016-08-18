@@ -496,6 +496,17 @@ public abstract class AbstractHandler implements Handler {
 		return null;
 	}
 
+	public int getParentRuntimeIdFromHeader() {
+		List<ActionEvent> eventList = getHandlerContext().getEventList();
+		if (eventList != null && !eventList.isEmpty()) {
+			String runtimeIdStr = eventList.get(0).getHeaders().get(ActionEventHeaderConstants.PARENT_RUNTIME_ID); 
+			if (runtimeIdStr != null) {
+				return Integer.valueOf(runtimeIdStr);
+			}
+		}
+		return -1;
+	}
+
 	@Override
 	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
 		setHandlerPhase("processing " + getName());

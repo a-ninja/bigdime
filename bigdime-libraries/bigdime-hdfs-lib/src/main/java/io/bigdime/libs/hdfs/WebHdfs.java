@@ -452,7 +452,7 @@ public class WebHdfs {
 			throw new WebHdfsException(exceptionReason);
 		} else {
 			if (attempts > 1) {
-				logger.info("_message=\"recovered from an earlire error after {} attempts", attempts);
+				logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
 			}
 		}
 		return null;

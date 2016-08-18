@@ -25,6 +25,7 @@ import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.CollectionUtil;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.commons.StringHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
@@ -234,7 +235,9 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		if (isFirstRun()) {
 			if (getReadHdfsPathFrom() == READ_HDFS_PATH_FROM.HEADERS) {
 				entityName = getEntityNameFromHeader();
-				logger.info(getHandlerPhase(), "from header, entityName={} ", entityName);
+				int parentRuntimeId = getParentRuntimeIdFromHeader();
+				logger.info(getHandlerPhase(), "from header, entityName={} parentRuntimeId={}", entityName,
+						parentRuntimeId);
 			} else {
 				logger.info(getHandlerPhase(), "from config, entityName={} ", entityName);
 			}
@@ -267,9 +270,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		}
 		long nextIndexToRead = getTotalReadFromJournal();
 		logger.info(getHandlerPhase(),
-				"handler_id={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
-				getId(), nextIndexToRead, handlerConfig.getBufferSize(), inputDescriptor.getFileChannel().isOpen(),
-				inputDescriptor.getCurrentFilePath(), getTotalSizeFromJournal());
+				"handler_id={} entityName={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
+				getId(), getEntityName(), nextIndexToRead, handlerConfig.getBufferSize(),
+				inputDescriptor.getFileChannel().isOpen(), inputDescriptor.getCurrentFilePath(),
+				getTotalSizeFromJournal());
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(getBufferSize());
 		Status statustoReturn = Status.READY;
@@ -279,7 +283,13 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			getSimpleJournal().setTotalRead((nextIndexToRead + bytesRead));
 			long readCount = getSimpleJournal().getReadCount();
 			getSimpleJournal().setReadCount(readCount + 1);
+
+			List<ActionEvent> eventList = getHandlerContext().getEventList();
+
 			ActionEvent outputEvent = new ActionEvent();
+			if (CollectionUtil.isNotEmpty(eventList)) {
+				outputEvent.getHeaders().putAll(eventList.get(0).getHeaders());
+			}
 			byte[] readBody = new byte[bytesRead];
 			logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} readBody.length={} fileLength={} readCount={}",
 					getId(), bytesRead, readBody.length, inputDescriptor.getCurrentFileStatus().getLength(),
@@ -298,6 +308,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.FULL_DESCRIPTOR,
 					inputDescriptor.getFullDescriptor());
 			outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_SIZE,
+					Long.toString(getTotalSizeFromJournal()));
+			outputEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_READ,
+					Long.toString(getTotalReadFromJournal()));
 
 			if (processingDirty)
 				outputEvent.getHeaders().put(ActionEventHeaderConstants.CLEANUP_REQUIRED, "true");
@@ -411,11 +425,24 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		return false;
 	}
 
+	protected boolean parentRuntimeRecordValid() throws RuntimeInfoStoreException {
+		int parentRuntimeId = getParentRuntimeIdFromHeader();
+		logger.info(getHandlerPhase(), "parentRuntimeId={}", parentRuntimeId);
+		if (parentRuntimeId != -1) {
+			RuntimeInfo rti = runtimeInfoStore.getById(Integer.valueOf(parentRuntimeId));
+			logger.info(getHandlerPhase(), "runtimeRecordStatus={}", rti.getStatus());
+			return (rti.getStatus() == RuntimeInfoStore.Status.PENDING);
+		}
+		logger.info(getHandlerPhase(), "runtimeRecordStatus is valid, by default");
+		return true;
+	}
+
 	private boolean initializeRuntimeInfoRecords(String directoryPath)
 			throws RuntimeInfoStoreException, IOException, WebHdfsException {
 		boolean recordsFound = false;
 		try {
-			if (isReadyFilePresent(directoryPath)) {
+			boolean parentRecordValid = parentRuntimeRecordValid();
+			if (parentRecordValid && isReadyFilePresent(directoryPath)) {
 				List<String> fileNames = webHdfsReader.list(directoryPath, false);
 				for (final String fileName : fileNames) {
 					Map<String, String> properties = new HashMap<>();
@@ -429,8 +456,9 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 							properties);
 				}
 			} else {
-				logger.info(getHandlerPhase(), "_message=\"ready file is not present\" waitForFileName={}",
-						getWaitForFileName());
+				logger.info(getHandlerPhase(),
+						"_message=\"ready file is not present\" waitForFileName={} parentRecordValid={}",
+						getWaitForFileName(), parentRecordValid);
 			}
 		} catch (WebHdfsException e) {
 			logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",

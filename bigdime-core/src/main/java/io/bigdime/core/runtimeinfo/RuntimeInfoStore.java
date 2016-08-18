@@ -56,6 +56,8 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		INVALID
 	};
 
+	public T getById(int runtimeInfoId) throws RuntimeInfoStoreException;
+
 	/**
 	 * Gets the collection of RuntimeInfo objects for the jobs for given
 	 * adaptor, entity.

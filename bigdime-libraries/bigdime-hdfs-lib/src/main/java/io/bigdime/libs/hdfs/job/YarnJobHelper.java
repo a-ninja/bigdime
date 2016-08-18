@@ -78,7 +78,7 @@ public class YarnJobHelper {
 				return js;
 			}
 		}
-		logger.debug("_message=\"getPositiveStatusForJob: no status found\"  jobName={}", jobName);
+		logger.info("_message=\"getPositiveStatusForJob: no status found\"  jobName={}", jobName);
 		return null;
 	}
 
@@ -88,17 +88,24 @@ public class YarnJobHelper {
 	public JobStatus getStatusForNewJob(String jobName, Configuration conf) throws IOException {
 		long startTime = System.currentTimeMillis();
 		long endTime = startTime;
+		JobStatus latestJob = null;
 		do {
 			endTime = System.currentTimeMillis();
 			logger.debug("_message=\"after submitting job, getting status of job\" jobName={}", jobName);
 			JobStatus[] jobStatuses = getStatusForJob(jobName, conf);
 			if (jobStatuses != null && jobStatuses.length > 0) {
 				for (JobStatus js : jobStatuses) {
+					if (latestJob == null)
+						latestJob = js;
+					else if (latestJob.getStartTime() < js.getStartTime()) {
+						latestJob = js;
+					}
 					logger.info("_message=\"after submitting job, got job status\" jobId={} jobName={} runState={}",
 							js.getJobID(), js.getJobName(), js.getRunState());
 
-					return js;
+					// return js;
 				}
+				return latestJob;
 			} else {
 				try {
 					Thread.sleep(sleepTimeBetweenStatusCall);

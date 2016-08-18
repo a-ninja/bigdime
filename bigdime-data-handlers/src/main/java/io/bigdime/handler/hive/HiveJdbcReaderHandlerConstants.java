@@ -29,4 +29,5 @@ public enum HiveJdbcReaderHandlerConstants {
 	public static final String YARN_CONF = "yarn-conf";
 	public static final String SLEEP_BETWEEN_RETRY_SECONDS = "sleep-between-retry-seconds";
 	public static final String MAX_RETRIES = "max-retries";
+	public static final String YARN_SITE_XML_PATH = "yarn-site-xml-path";
 }

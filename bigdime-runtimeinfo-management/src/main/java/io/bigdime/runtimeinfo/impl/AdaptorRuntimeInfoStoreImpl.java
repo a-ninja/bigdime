@@ -126,4 +126,9 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 			return objectEntityMapper.mapObject(runtimeInfoRepositoryService.getLatestRecord(adaptorName, entityName));
 	}
 
+	@Override
+	public RuntimeInfo getById(int runtimeInfoId) throws RuntimeInfoStoreException {
+		return objectEntityMapper.mapObject(runtimeInfoRepositoryService.getById(runtimeInfoId));
+	}
+
 }
