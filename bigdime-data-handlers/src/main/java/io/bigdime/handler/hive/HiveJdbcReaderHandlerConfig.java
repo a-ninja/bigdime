@@ -31,6 +31,15 @@ public class HiveJdbcReaderHandlerConfig {
 	 * 
 	 */
 	private long minGoBack;
+
+	/**
+	 * Latency between source data and data available in hadoop.
+	 * 
+	 * <br>
+	 * 12 hours means, it takes 12 hours to get the data in hdfs from the live
+	 * data source. Default value is 0.
+	 */
+	private long latency;
 	/**
 	 * intervalInMins, cron expression and goBackDays properties are highly
 	 * dependent on each other. As a thumb rule, intervalInMins must be same as
@@ -147,13 +156,20 @@ public class HiveJdbcReaderHandlerConfig {
 		this.minGoBack = minGoBack;
 	}
 
+	public long getLatency() {
+		return latency;
+	}
+
+	public void setLatency(long latency) {
+		this.latency = latency;
+	}
+
 	@Override
 	public String toString() {
 		return "HiveJdbcReaderHandlerConfig [jdbcUrl=" + jdbcUrl + ", driverClassName=" + driverClassName
-				+ ", authOption=" + authOption + ", userName=" + userName + ", password=" + "******"
+				+ ", authOption=" + authOption + ", userName=" + userName + ", password=" + password
 				+ ", baseOutputDirectory=" + baseOutputDirectory + ", entityName=" + entityName + ", hiveQuery="
-				+ hiveQuery + ", goBackDays=" + goBackDays + ", minGoBack=" + minGoBack + ", frequency=" + frequency
-				+ ", outputDirectoryPattern=" + outputDirectoryPattern + "]";
+				+ hiveQuery + ", goBackDays=" + goBackDays + ", minGoBack=" + minGoBack + ", latency=" + latency
+				+ ", frequency=" + frequency + ", outputDirectoryPattern=" + outputDirectoryPattern + "]";
 	}
-
 }

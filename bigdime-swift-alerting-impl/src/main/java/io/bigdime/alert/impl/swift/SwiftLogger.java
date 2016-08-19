@@ -21,6 +21,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.helpers.FormattingTuple;
 import org.slf4j.helpers.MessageFormatter;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import io.bigdime.alert.AlertMessage;
@@ -29,7 +30,6 @@ import io.bigdime.alert.Logger;
 public class SwiftLogger implements Logger {
 	private static final ConcurrentMap<String, SwiftLogger> loggerMap = new ConcurrentHashMap<>();
 	private String swiftAlertLevel;
-	private int swiftDebugInfoBatchSize;
 
 	public static final String EMPTYSTRING = "";
 	private static final String APPLICATION_CONTEXT_PATH = "META-INF/application-context-monitoring.xml";
@@ -40,12 +40,14 @@ public class SwiftLogger implements Logger {
 	public static final String SWIFT_TENANT_NAME_PROPERTY = "${swift.tenant.name}";
 	public static final String SWIFT_ALERT_CONTAINER_NAME_PROPERTY = "${swift.alert.container.name}";
 	public static final String SWIFT_ALERT_LEVEL_PROPERTY = "${swift.alert.level}";
+	public static final String SWIFT_BUFFER_SIZE_PROPERTY = "${swift.debugInfo.bufferSize}";
+
 	public static final String IP_INIT_VAL = "10";
 	private ExecutorService executorService;
 	private Container container;
 	private static String hostName = "UNKNOWN";
 	private static String hostIp;
-
+	long capacity = 10 * 1024;
 	private boolean debugEnabled = false;
 	private boolean infoEnabled = false;
 	private boolean warnEnabled = false;
@@ -85,6 +87,7 @@ public class SwiftLogger implements Logger {
 			ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH);
 
 			AccountConfig config = new AccountConfig();
+			ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
 			String containerName = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY);
 			config.setUsername(context.getBeanFactory().resolveEmbeddedValue(SWIFT_USER_NAME_PROPERTY));
 			config.setPassword(context.getBeanFactory().resolveEmbeddedValue(SWIFT_PASSWORD_PROPERTY));
@@ -94,6 +97,14 @@ public class SwiftLogger implements Logger {
 			Account account = new AccountFactory(config).createAccount();
 			logger.container = account.getContainer(containerName);
 			logger.swiftAlertLevel = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY);
+			long bufferSize = Integer.valueOf(beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY));
+			try {
+				logger.capacity = Long.valueOf(bufferSize);
+				System.out.println("setting buffer size from property as:" + logger.capacity);
+			} catch (Exception ex) {
+				logger.capacity = 4 * 1024;
+				System.out.println("setting default buffer size as:" + logger.capacity);
+			}
 
 			if (logger.swiftAlertLevel != null) {
 				if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) {
@@ -106,7 +117,7 @@ public class SwiftLogger implements Logger {
 			}
 			logger.executorService = Executors.newFixedThreadPool(1);
 			System.out.println("swiftAlertContainerName=" + containerName + ", swiftAlertLevel="
-					+ logger.swiftAlertLevel + ", swiftDebugInfoBatchSize=" + logger.swiftDebugInfoBatchSize);
+					+ logger.swiftAlertLevel + ", capacity=" + logger.capacity);
 			context.close();
 		}
 		return logger;
@@ -223,14 +234,10 @@ public class SwiftLogger implements Logger {
 		argArray[i++] = alertCause.getDescription();
 
 		FormattingTuple ft = MessageFormatter.arrayFormat(sb.toString(), argArray);
-		// System.out.println(ft.getMessage());
 		writeToSwift(source, ft.getMessage().getBytes());
 	}
 
-	// ByteBuffer byteBuffer = ByteBuffer.allocate(500);
-	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-	int capacity = 10 * 1024;
+	private static ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
 	private byte[] getExceptionByteArray(Throwable t) {
 		byte[] b = null;
@@ -259,11 +266,12 @@ public class SwiftLogger implements Logger {
 		StringBuilder sb = new StringBuilder();
 		byte[] dataTowrite = null;
 		byte[] put = buildArgArray(level, sb, source, shortMessage, message, "").getBytes();
-		System.out.println("size=" + baos.size() + "put.length=" + put.length);
-		baos.write(put, 0, put.length);
-		if (baos.size() >= capacity) {
-			dataTowrite = baos.toByteArray();
-			baos.reset();
+		synchronized (baos) {
+			baos.write(put, 0, put.length);
+			if (baos.size() >= capacity) {
+				dataTowrite = baos.toByteArray();
+				baos.reset();
+			}
 		}
 		if (dataTowrite != null) {
 			writeToSwift(source, dataTowrite);
@@ -308,5 +316,4 @@ public class SwiftLogger implements Logger {
 		FormattingTuple ft = MessageFormatter.arrayFormat(sb.toString(), argArray);
 		return ft.getMessage();
 	}
-
 }
