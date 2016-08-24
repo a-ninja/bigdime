@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
@@ -292,7 +293,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		DateTime parsed = getHiveQueryDtf().withZone(dateTimeZone).parseDateTime(hiveConfDate);
 		hiveConfDateTime = parsed.getMillis();
 		logger.info(getHandlerPhase(),
-				"_nmessage=\"setting hiveConfDateTime in initRecordToProcess\" hiveConfDateTime={}", hiveConfDateTime);
+				"_message=\"setting hiveConfDateTime in initRecordToProcess\" hiveConfDateTime={}", hiveConfDateTime);
 
 		outputDirectory = runtimeProperty.get("hiveConfDirectory");
 		final String hiveQuery = runtimeProperty.get("hiveQuery");
@@ -448,7 +449,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		final String hiveConfDate = getHiveQueryDtf().print(hiveConfDateTime);
 		DateTime parsed = getHiveQueryDtf().withZone(dateTimeZone).parseDateTime(hiveConfDate);
 		hiveConfDateTime = parsed.getMillis();
-		logger.info(getHandlerPhase(), "_nmessage=\"setting hiveConfDateTime\" hiveConfDateTime={}", hiveConfDateTime);
+		logger.info(getHandlerPhase(), "_message=\"setting hiveConfDateTime\" hiveConfDateTime={}", hiveConfDateTime);
 		return hiveConfDate;
 	}
 

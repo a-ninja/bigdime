@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import io.bigdime.core.commons.CollectionUtil;
+
 @Component
 public class YarnJobHelper {
 	private static final Logger logger = LoggerFactory.getLogger(YarnJobHelper.class);
@@ -66,16 +68,24 @@ public class YarnJobHelper {
 
 	public JobStatus getPositiveStatusForJob(String jobName, Configuration conf) throws IOException {
 		int runState = -1;
+		JobStatus latestJob = null;
 		JobStatus[] jobStatuses = getStatusForJob(jobName, conf);
 		for (JobStatus js : jobStatuses) {
 			logger.debug("getPositiveStatusForJob: jobId={} jobName={} runState={}", js.getJobID(), js.getJobName(),
 					js.getRunState());
-			runState = js.getRunState();
+			if (latestJob == null)
+				latestJob = js;
+			else if (latestJob.getStartTime() < js.getStartTime()) {
+				latestJob = js;
+			}
+		}
+		if (latestJob != null) {
+			runState = latestJob.getRunState();
 			if (runState == JobStatus.RUNNING || runState == JobStatus.PREP || runState == JobStatus.SUCCEEDED) {
 				logger.info(
 						"_message=\"found a running or prep or succeeded jobStatus\" jobId={} jobName={} runState={}",
-						js.getJobID(), js.getJobName(), js.getRunState());
-				return js;
+						latestJob.getJobID(), latestJob.getJobName(), latestJob.getRunState());
+				return latestJob;
 			}
 		}
 		logger.info("_message=\"getPositiveStatusForJob: no status found\"  jobName={}", jobName);
@@ -102,8 +112,6 @@ public class YarnJobHelper {
 					}
 					logger.info("_message=\"after submitting job, got job status\" jobId={} jobName={} runState={}",
 							js.getJobID(), js.getJobName(), js.getRunState());
-
-					// return js;
 				}
 				return latestJob;
 			} else {
@@ -144,5 +152,24 @@ public class YarnJobHelper {
 		} while ((endTime - startTime) < maxWait);
 		logger.info("_message=\"getStatusForNewJob: no status found\"  jobName={}", jobName);
 		return null;
+	}
+
+	public static JobStatus getNewestJobStatusFromArray(JobStatus[] jobStatuses) {
+		JobStatus newestJob = null;
+		if (jobStatuses == null || jobStatuses.length == 0) {
+			logger.info("jobStatuses is null, null will be returned as the newest job");
+		}
+		if (jobStatuses != null) {
+			for (JobStatus js : jobStatuses) {
+				logger.debug("getNewestJobStatusFromArray: jobId={} jobName={} runState={}", js.getJobID(),
+						js.getJobName(), js.getRunState());
+				if (newestJob == null)
+					newestJob = js;
+				else if (newestJob.getStartTime() < js.getStartTime()) {
+					newestJob = js;
+				}
+			}
+		}
+		return newestJob;
 	}
 }

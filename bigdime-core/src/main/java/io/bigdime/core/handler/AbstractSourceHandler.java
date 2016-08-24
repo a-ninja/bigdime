@@ -115,7 +115,7 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
 	 * @throws HandlerException
 	 */
 	public void initDescriptorForNormal() throws RuntimeInfoStoreException, HandlerException {
-		logger.info(getHandlerPhase(), "_message=\"initializing a clean record\"");
+		logger.info(getHandlerPhase(), "initializing a clean record");
 		processingDirty = false;
 		// InputDescriptor<T> inputDescriptor = null;
 		RuntimeInfo queuedRecord = getOneQueuedRuntimeInfo(runtimeInfoStore, getEntityName(),

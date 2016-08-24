@@ -97,8 +97,8 @@ public class SwiftLogger implements Logger {
 			Account account = new AccountFactory(config).createAccount();
 			logger.container = account.getContainer(containerName);
 			logger.swiftAlertLevel = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY);
-			long bufferSize = Integer.valueOf(beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY));
 			try {
+				long bufferSize = Long.valueOf(beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY));
 				logger.capacity = Long.valueOf(bufferSize);
 				System.out.println("setting buffer size from property as:" + logger.capacity);
 			} catch (Exception ex) {
@@ -278,10 +278,13 @@ public class SwiftLogger implements Logger {
 		}
 	}
 
+	FutureTask<Object> futureTask = null;
+
 	private void writeToSwift(final String source, byte[] dataTowrite) {
 		SwiftLogTask logTask = new SwiftLogTask(container, source, dataTowrite);
-		FutureTask<Object> futureTask = new FutureTask<>(logTask);
+		futureTask = new FutureTask<>(logTask);
 		executorService.execute(futureTask);
+		startHealthcheckThread();
 	}
 
 	private static void setDebugEnabled(SwiftLogger logger) {
@@ -315,5 +318,20 @@ public class SwiftLogger implements Logger {
 		}
 		FormattingTuple ft = MessageFormatter.arrayFormat(sb.toString(), argArray);
 		return ft.getMessage();
+	}
+
+	protected void startHealthcheckThread() {
+		new Thread() {
+			@Override
+			public void run() {
+				try {
+					System.out.print("heathcheck thread for swiftLogger");
+					futureTask.get();
+					System.out.print("heathcheck thread for swiftLogger, future task completed");
+				} catch (Exception e) {
+					e.printStackTrace(System.err);
+				}
+			}
+		}.start();
 	}
 }
