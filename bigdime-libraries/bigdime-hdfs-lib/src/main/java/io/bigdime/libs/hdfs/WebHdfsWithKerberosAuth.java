@@ -7,8 +7,6 @@ package io.bigdime.libs.hdfs;
 import java.io.IOException;
 import java.security.Principal;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -24,7 +22,6 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * 
@@ -90,21 +87,4 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 
 		return httpClient.execute(httpRequest, context);
 	}
-
-	private static final String APPLICATION_CONTEXT_PATH = "META-INF/application-context-monitoring.xml";
-	private static final String HDFS_USER = "hdfs_user";
-	private static final String HDFS_SECRET = "hdfs_secret";
-
-	protected void loginUser() throws IOException {
-		try (ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH)) {
-			String hdfsUser = context.getBeanFactory().resolveEmbeddedValue(HDFS_USER);
-			String hdfsSecret = context.getBeanFactory().resolveEmbeddedValue(HDFS_SECRET);
-			logger.info("hdfsUser={} hdfsSecret={}", hdfsUser, hdfsSecret);
-
-			Configuration conf = new Configuration();
-			UserGroupInformation.setConfiguration(conf);
-			UserGroupInformation.loginUserFromKeytab(hdfsUser, hdfsSecret);
-		}
-	}
-
 }

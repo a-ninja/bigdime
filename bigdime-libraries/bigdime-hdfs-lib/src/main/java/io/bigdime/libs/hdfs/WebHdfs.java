@@ -431,13 +431,6 @@ public class WebHdfs {
 					if (statusCode == 200 || statusCode == 201) {
 						isSuccess = true;
 						return response;
-					} else if (statusCode == 401) {
-						logger.warn(
-								"_message=\"executed method: {}\" got 401, will attempt to re-authenticate and retry:\"",
-								method.getName(), args);
-						exceptionReason = response.getStatusLine().getReasonPhrase();
-						releaseConnection();
-						loginUser();
 					} else if (statusCode == 404) {
 						logger.info("_message=\"executed method: {}\" file not found:\"", method.getName(), args);
 						exceptionReason = response.getStatusLine().getReasonPhrase();
@@ -475,9 +468,4 @@ public class WebHdfs {
 			logger.warn("sleep interrupted", e);
 		}
 	}
-
-	protected void loginUser() throws IOException {
-
-	}
-
 }
