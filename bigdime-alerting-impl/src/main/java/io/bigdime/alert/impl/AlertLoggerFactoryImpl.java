@@ -65,6 +65,7 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
 									| IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 								System.err.println("unable to get the instance of Logger for:" + loggerClassName
 										+ ". ex=" + e.getMessage());
+								e.printStackTrace(System.err);
 							}
 						}
 					}

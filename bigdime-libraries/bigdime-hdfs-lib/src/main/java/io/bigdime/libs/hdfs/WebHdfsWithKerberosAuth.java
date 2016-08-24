@@ -7,6 +7,8 @@ package io.bigdime.libs.hdfs;
 import java.io.IOException;
 import java.security.Principal;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -22,6 +24,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * 
@@ -32,6 +35,7 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 	private static Logger logger = LoggerFactory.getLogger(WebHdfsWithKerberosAuth.class);
 
 	private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
+	private static String DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf";
 
 	protected WebHdfsWithKerberosAuth(String host, int port) {
 		super(host, port);
@@ -39,16 +43,22 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 		if (krb5ConfigPath == null) {
 			krb5ConfigPath = DEFAULT_KRB5_CONFIG_LOCATION;
 		}
+		String loginConfigPath = System.getProperty("java.security.auth.login.config");
+		if (loginConfigPath == null) {
+			loginConfigPath = DEFAULT_LOGIN_CONFIG_LOCATION;
+		}
+		logger.info("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
 		boolean skipPortAtKerberosDatabaseLookup = true;
 		System.setProperty("java.security.krb5.conf", krb5ConfigPath);
 		System.setProperty("sun.security.krb5.debug", "true");
 		System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+		System.setProperty("java.security.auth.login.config", loginConfigPath);
 		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
 				.register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
 
 		setHttpClient(HttpClientBuilder.create().setDefaultAuthSchemeRegistry(authSchemeRegistry).build());// new
 
-//		this.addParameter("anonymous", "true");
+		// this.addParameter("anonymous", "true");
 	}
 
 	public static WebHdfsWithKerberosAuth getInstance(String host, int port) {
@@ -75,10 +85,26 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 		// this.addParameter("anonymous=true", "true");
 		logger.debug("WebHdfsWithKerberosAuth getting from:{}", uri);
 		httpRequest = new HttpGet(uri);
-		logger.debug("File status request: {}", httpRequest.getURI());
+		logger.debug("HTTP request: {}", httpRequest.getURI());
 		uri = null;
 
 		return httpClient.execute(httpRequest, context);
+	}
+
+	private static final String APPLICATION_CONTEXT_PATH = "META-INF/application-context-monitoring.xml";
+	private static final String HDFS_USER = "hdfs_user";
+	private static final String HDFS_SECRET = "hdfs_secret";
+
+	protected void loginUser() throws IOException {
+		try (ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH)) {
+			String hdfsUser = context.getBeanFactory().resolveEmbeddedValue(HDFS_USER);
+			String hdfsSecret = context.getBeanFactory().resolveEmbeddedValue(HDFS_SECRET);
+			logger.info("hdfsUser={} hdfsSecret={}", hdfsUser, hdfsSecret);
+
+			Configuration conf = new Configuration();
+			UserGroupInformation.setConfiguration(conf);
+			UserGroupInformation.loginUserFromKeytab(hdfsUser, hdfsSecret);
+		}
 	}
 
 }

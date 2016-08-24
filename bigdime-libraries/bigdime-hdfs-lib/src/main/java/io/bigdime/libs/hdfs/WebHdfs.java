@@ -416,6 +416,7 @@ public class WebHdfs {
 	protected HttpResponse invokeWithRetry(Method method, short maxAttempts, String... args) throws WebHdfsException {
 
 		boolean isSuccess = false;
+		int statusCode = 0;
 		String exceptionReason = null;
 		int attempts = 0;
 		try {
@@ -426,16 +427,23 @@ public class WebHdfs {
 					if (httpRequest == null)
 						initConnection();
 					HttpResponse response = (HttpResponse) method.invoke(this, args);
-					int statusCode = response.getStatusLine().getStatusCode();
+					statusCode = response.getStatusLine().getStatusCode();
 					if (statusCode == 200 || statusCode == 201) {
 						isSuccess = true;
 						return response;
+					} else if (statusCode == 401) {
+						logger.warn(
+								"_message=\"executed method: {}\" got 401, will attempt to re-authenticate and retry:\"",
+								method.getName(), args);
+						exceptionReason = response.getStatusLine().getReasonPhrase();
+						releaseConnection();
+						loginUser();
 					} else if (statusCode == 404) {
 						logger.info("_message=\"executed method: {}\" file not found:\"", method.getName(), args);
 						exceptionReason = response.getStatusLine().getReasonPhrase();
 						releaseConnection();
 					} else {
-						exceptionReason = logResponse(response, method.getName(), attempts, args);
+						logResponse(response, method.getName(), attempts, args);
 						releaseConnection();
 					}
 				} catch (Exception e) {
@@ -448,7 +456,7 @@ public class WebHdfs {
 		}
 		if (!isSuccess) {
 			logger.error("_message=\"{} failed After {} retries :\", args={}", method.getName(), maxAttempts, args);
-			throw new WebHdfsException(exceptionReason);
+			throw new WebHdfsException(statusCode, exceptionReason);
 		} else {
 			if (attempts > 1) {
 				logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
@@ -457,17 +465,19 @@ public class WebHdfs {
 		return null;
 	}
 
-	private String logResponse(HttpResponse response, String message, int attempts, String... args) {
+	private void logResponse(HttpResponse response, String message, int attempts, String... args) {
 		int statusCode = response.getStatusLine().getStatusCode();
-		String exceptionReason = statusCode + ":" + response.getStatusLine().getReasonPhrase();
-		logger.warn("_message=\"{}" + " failed \" responseCode={}  responseMessage={} attempts={} args={}", message,
+		logger.warn("_message=\"{} failed\" responseCode={} responseMessage={} attempts={} args={}", message,
 				statusCode, response.getStatusLine().getReasonPhrase(), attempts, args);
 		try {
 			Thread.sleep(SLEEP_TIME * (attempts + 1));
 		} catch (InterruptedException e) {
 			logger.warn("sleep interrupted", e);
 		}
-		return exceptionReason;
+	}
+
+	protected void loginUser() throws IOException {
+
 	}
 
 }

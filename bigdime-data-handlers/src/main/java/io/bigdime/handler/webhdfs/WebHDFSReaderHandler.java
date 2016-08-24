@@ -461,8 +461,13 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 						getWaitForFileName(), parentRecordValid);
 			}
 		} catch (WebHdfsException e) {
-			logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
-					directoryPath, e.getMessage());
+			if (e.getStatusCode() == 404)
+				logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
+						directoryPath, e.getMessage());
+			else if (e.getStatusCode() == 401 || e.getStatusCode() == 403) {
+				logger.warn(getHandlerPhase(), "_message=\"auth error\" directoryPath={} error_message={}",
+						directoryPath, e.getMessage());
+			}
 		}
 		return recordsFound;
 	}
