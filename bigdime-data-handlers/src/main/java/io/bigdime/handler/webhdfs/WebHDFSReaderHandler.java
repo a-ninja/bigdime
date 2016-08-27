@@ -265,7 +265,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	@Override
 	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		if (isInputDescriptorNull()) {
-			logger.debug(getHandlerPhase(), "returning BACKOFF");
+			logger.info(getHandlerPhase(), "null descriptor found, returning BACKOFF");
 			return io.bigdime.core.ActionEvent.Status.BACKOFF;
 		}
 		long nextIndexToRead = getTotalReadFromJournal();
@@ -597,4 +597,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		}
 	}
 
+	@Override
+	protected void setInputDescriptorToNull() {
+		inputDescriptor = null;
+	}
 }

@@ -40,12 +40,6 @@ public final class ActionEventHeaderConstants {
 
 	public static final String SOURCE_FILE_NAME = "sourceFileName";
 
-	// public static final String ABSOLUTE_FILE_PATH = "absoluteFilePath"; //
-	// absolute
-	// file
-	// path
-	// with
-	// name
 	public static final String PRESERVE_BASE_PATH = "preserveBasePath";
 	public static final String PRESERVE_RELATIVE_PATH = "preserveRelativePath";
 	public static final String BASE_PATH = "basePath";
@@ -99,6 +93,8 @@ public final class ActionEventHeaderConstants {
 		public static final String MAPRED_JOB_COMPLETION_STATUS = "mapReduceJobCompletionStatus";
 		public static final String MAPRED_JOB_FAILURE_INFO = "mapReduceJobFailureInfo";
 	}
+	
+	
 
 	public static class SwiftHeaders {
 		public static final String USER_NAME = "swiftUserName";

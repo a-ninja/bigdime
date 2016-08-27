@@ -36,13 +36,21 @@ public class WebHdfsReader {
 	private String hdfsUser;
 	final HDFS_AUTH_OPTION authOption;
 	private WebHdfs webHdfsForInputStream = null;
-	private static short maxAttempts = 5;
+	private static short DEFAULT_MAX_ATTEMPTS = 5;
+	private short maxAttempts;
+
+	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption,
+			short _maxAttempts) {
+		this(_hostNames, _port, _hdfsUser, _authOption);
+		this.maxAttempts = _maxAttempts;
+	}
 
 	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption) {
 		hostNames = _hostNames;
 		port = _port;
 		hdfsUser = _hdfsUser;
 		authOption = _authOption;
+		this.maxAttempts = DEFAULT_MAX_ATTEMPTS;
 	}
 
 	public InputStream getInputStream(String hdfsFilePath) throws IOException, WebHdfsException {
@@ -53,6 +61,7 @@ public class WebHdfsReader {
 
 		try {
 			webHdfsForInputStream = getWebHdfs();
+			webHdfsForInputStream.addParameter("buffersize", "1048576");
 			Method method = WebHdfs.class.getMethod("openFile", String.class);
 			HttpResponse response = webHdfsForInputStream.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
 			return response.getEntity().getContent();

@@ -109,14 +109,16 @@ public class WebHdfs {
 
 	protected void initConnection() {
 		this.httpClient = HttpClientBuilder.create().build();// new
-		ObjectMapper mapper = new ObjectMapper();
-		this.jsonParameters = mapper.createObjectNode();
+//		ObjectMapper mapper = new ObjectMapper();
+//		this.jsonParameters = mapper.createObjectNode();
 		roundRobinStrategy.setHosts(host);
 	}
 
 	protected WebHdfs(String host, int port) {
 		this.host = host;
 		this.port = port;
+		ObjectMapper mapper = new ObjectMapper();
+		this.jsonParameters = mapper.createObjectNode();
 		initConnection();
 	}
 
@@ -432,7 +434,7 @@ public class WebHdfs {
 						isSuccess = true;
 						return response;
 					} else if (statusCode == 404) {
-						logger.info("_message=\"executed method: {}\" file not found:\"", method.getName(), args);
+						logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
 						exceptionReason = response.getStatusLine().getReasonPhrase();
 						releaseConnection();
 					} else {

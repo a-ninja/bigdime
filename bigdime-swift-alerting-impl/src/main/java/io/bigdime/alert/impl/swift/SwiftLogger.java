@@ -72,7 +72,7 @@ public class SwiftLogger implements Logger {
 			System.err.print("The host name is " + hostName);
 
 		} catch (SocketException e1) {
-			System.err.print("Error while connecting to " + hostName + " host");
+			System.err.print("Error while connecting to " + hostName + " host" + ", hostIp=" + hostIp);
 		}
 	}
 
@@ -84,41 +84,43 @@ public class SwiftLogger implements Logger {
 		if (logger == null) {
 			logger = new SwiftLogger();
 			loggerMap.put(loggerName, logger);
-			ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH);
+			try (ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
+					APPLICATION_CONTEXT_PATH)) {
 
-			AccountConfig config = new AccountConfig();
-			ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
-			String containerName = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY);
-			config.setUsername(context.getBeanFactory().resolveEmbeddedValue(SWIFT_USER_NAME_PROPERTY));
-			config.setPassword(context.getBeanFactory().resolveEmbeddedValue(SWIFT_PASSWORD_PROPERTY));
-			config.setAuthUrl(context.getBeanFactory().resolveEmbeddedValue(SWIFT_AUTH_URL_PROPERTY));
-			config.setTenantId(context.getBeanFactory().resolveEmbeddedValue(SWIFT_TENANT_ID_PROPERTY));
-			config.setTenantName(context.getBeanFactory().resolveEmbeddedValue(SWIFT_TENANT_NAME_PROPERTY));
-			Account account = new AccountFactory(config).createAccount();
-			logger.container = account.getContainer(containerName);
-			logger.swiftAlertLevel = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY);
-			try {
-				long bufferSize = Long.valueOf(beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY));
-				logger.capacity = Long.valueOf(bufferSize);
-				System.out.println("setting buffer size from property as:" + logger.capacity);
-			} catch (Exception ex) {
-				logger.capacity = 4 * 1024;
-				System.out.println("setting default buffer size as:" + logger.capacity);
-			}
-
-			if (logger.swiftAlertLevel != null) {
-				if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) {
-					setDebugEnabled(logger);
-				} else if (logger.swiftAlertLevel.equalsIgnoreCase("info")) {
-					setInfoEnabled(logger);
-				} else if (logger.swiftAlertLevel.equalsIgnoreCase("warn")) {
-					setWarnEnabled(logger);
+				AccountConfig config = new AccountConfig();
+				ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+				String containerName = context.getBeanFactory()
+						.resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY);
+				config.setUsername(context.getBeanFactory().resolveEmbeddedValue(SWIFT_USER_NAME_PROPERTY));
+				config.setPassword(context.getBeanFactory().resolveEmbeddedValue(SWIFT_PASSWORD_PROPERTY));
+				config.setAuthUrl(context.getBeanFactory().resolveEmbeddedValue(SWIFT_AUTH_URL_PROPERTY));
+				config.setTenantId(context.getBeanFactory().resolveEmbeddedValue(SWIFT_TENANT_ID_PROPERTY));
+				config.setTenantName(context.getBeanFactory().resolveEmbeddedValue(SWIFT_TENANT_NAME_PROPERTY));
+				Account account = new AccountFactory(config).createAccount();
+				logger.container = account.getContainer(containerName);
+				logger.swiftAlertLevel = context.getBeanFactory().resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY);
+				try {
+					long bufferSize = Long.valueOf(beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY));
+					logger.capacity = Long.valueOf(bufferSize);
+					System.out.println("setting buffer size from property as:" + logger.capacity);
+				} catch (Exception ex) {
+					logger.capacity = 4 * 1024;
+					System.out.println("setting default buffer size as:" + logger.capacity);
 				}
+
+				if (logger.swiftAlertLevel != null) {
+					if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) {
+						setDebugEnabled(logger);
+					} else if (logger.swiftAlertLevel.equalsIgnoreCase("info")) {
+						setInfoEnabled(logger);
+					} else if (logger.swiftAlertLevel.equalsIgnoreCase("warn")) {
+						setWarnEnabled(logger);
+					}
+				}
+				logger.executorService = Executors.newFixedThreadPool(1);
+				System.out.println("swiftAlertContainerName=" + containerName + ", swiftAlertLevel="
+						+ logger.swiftAlertLevel + ", capacity=" + logger.capacity);
 			}
-			logger.executorService = Executors.newFixedThreadPool(1);
-			System.out.println("swiftAlertContainerName=" + containerName + ", swiftAlertLevel="
-					+ logger.swiftAlertLevel + ", capacity=" + logger.capacity);
-			context.close();
 		}
 		return logger;
 	}

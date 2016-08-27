@@ -21,4 +21,8 @@ public class DataValidationException extends Exception {
 		super(message);
 	}
 
+	public DataValidationException(String message, Throwable t) {
+		super(message, t);
+	}
+
 }

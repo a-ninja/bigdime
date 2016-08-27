@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
@@ -431,6 +430,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return returnStatus;
 	}
 
+	/**
+	 * If there was nothing new to run.
+	 * 
+	 * @return
+	 */
 	protected Status processNullDescriptor() {
 		if (isFirstRun()) {
 			logger.info(getHandlerPhase(),
