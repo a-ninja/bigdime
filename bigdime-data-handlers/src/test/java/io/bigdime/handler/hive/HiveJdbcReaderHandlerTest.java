@@ -56,17 +56,18 @@ public class HiveJdbcReaderHandlerTest {
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2015-07-29");
 	}
 
-	@Test(threadPoolSize = 1)
+	@Test(threadPoolSize = 1, enabled = false)
 	public void testProcessWithNullInputDescriptor() throws Throwable {
 		HiveJdbcReaderHandler hiveJdbcReaderHandler = createHiveJdbcReaderHandler(getDefaultProperties());
 		ReturnStatus returnStatus = setupHandler(hiveJdbcReaderHandler);
 		Assert.assertEquals(returnStatus.getStatus(), Status.READY);
 	}
 
-	@Test(threadPoolSize = 1)
+	@Test(threadPoolSize = 1, enabled = false)
 	public void testProcessWithNonNullInputDescriptor() throws Throwable {
 		HiveJdbcReaderHandler hiveJdbcReaderHandler = createHiveJdbcReaderHandler(getDefaultProperties());
-		HiveReaderDescriptor inputDescriptor = new HiveReaderDescriptor("unit-entity", "2016-01-01", "/user/johndoe/bigdime/2016-01-01/unit-entity", "unit-hive-query");
+		HiveReaderDescriptor inputDescriptor = new HiveReaderDescriptor("unit-entity", "2016-01-01",
+				"/user/johndoe/bigdime/2016-01-01/unit-entity", "unit-hive-query");
 		ReflectionTestUtils.setField(hiveJdbcReaderHandler, "inputDescriptor", inputDescriptor);
 		ReturnStatus returnStatus = setupHandler(hiveJdbcReaderHandler);
 		Assert.assertEquals(returnStatus.getStatus(), Status.READY);
@@ -129,26 +130,26 @@ public class HiveJdbcReaderHandlerTest {
 
 		@SuppressWarnings("unchecked")
 		RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
-		
+
 		List<RuntimeInfo> runtimeInfos = new ArrayList<>();
-		
+
 		RuntimeInfo runtimeInfo = new RuntimeInfo();
 		runtimeInfos.add(runtimeInfo);
 		Mockito.when(runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), "unit-entity",
 				RuntimeInfoStore.Status.STARTED)).thenReturn(null);
 		Mockito.when(runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), "unit-entity",
 				RuntimeInfoStore.Status.QUEUED)).thenReturn(runtimeInfos);
-		
+
 		runtimeInfo.setInputDescriptor("hiveConfDate:");
-		
+
 		Map<String, String> runtimeProperty = new HashMap<>();
 		runtimeProperty.put("hiveConfDate", "hiveConfDateFromFB");
 		runtimeProperty.put("hiveConfDirectory", "hiveConfDirectoryFromDB");
 		runtimeProperty.put("hiveConfDate", "hiveQueryFromDB");
-		
+
 		runtimeInfo.setProperties(runtimeProperty);
 		ReflectionTestUtils.setField(hiveJdbcReaderHandler, "runtimeInfoStore", runtimeInfoStore);
-		
+
 		// final List<RuntimeInfo> runtimeInfos =
 		// runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
 		// entityName, RuntimeInfoStore.Status.STARTED);
