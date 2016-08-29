@@ -415,7 +415,7 @@ public class WebHdfs {
 
 	private static final long SLEEP_TIME = 3000;
 
-	protected HttpResponse invokeWithRetry(Method method, short maxAttempts, String... args) throws WebHdfsException {
+	protected HttpResponse invokeWithRetry(Method method, int maxAttempts, String... args) throws WebHdfsException {
 
 		boolean isSuccess = false;
 		int statusCode = 0;

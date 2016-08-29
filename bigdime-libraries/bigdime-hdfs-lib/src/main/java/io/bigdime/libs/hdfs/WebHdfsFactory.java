@@ -40,11 +40,11 @@ public class WebHdfsFactory {
 		else if (authOption == HDFS_AUTH_OPTION.PASSWORD) {
 			webHdfs = WebHdfs.getInstance(host, port).addHeader(WebHDFSConstants.CONTENT_TYPE,
 					WebHDFSConstants.APPLICATION_OCTET_STREAM);
+			if (!StringUtils.isBlank(hdfsUser)) {
+				webHdfs.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
+			}
 		} else {
 			throw new IllegalArgumentException("Unknown auth option: " + authOption);
-		}
-		if (!StringUtils.isBlank(hdfsUser)) {
-			webHdfs.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
 		}
 		return webHdfs;
 	}

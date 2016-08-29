@@ -31,4 +31,6 @@ public enum HiveJdbcReaderHandlerConstants {
 	public static final String MAX_RETRIES = "max-retries";
 	public static final String LATENCY = "latency";
 	public static final String YARN_SITE_XML_PATH = "yarn-site-xml-path";
+	public static final String TOUCH_FILE = "touch-file";
+	
 }

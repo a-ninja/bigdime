@@ -10,11 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipInputStream;
 
+import javax.annotation.PostConstruct;
+
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import io.bigdime.core.commons.StringHelper;
 
@@ -25,24 +30,41 @@ import io.bigdime.core.commons.StringHelper;
  *
  */
 
+@Component
+@Scope("prototype")
 public class WebHdfsReader {
 	private static final Logger logger = LoggerFactory.getLogger(WebHdfsReader.class);
 
 	public static final String FORWARD_SLASH = "/";
 	private static final String WEBHDFS_PREFIX = "/webhdfs/v1";
 
+	@Value("${hdfs_hosts}")
 	private String hostNames;
+
+	@Value("${hdfs_port}")
 	private int port;
+
+	@Value("${hdfs_user}")
 	private String hdfsUser;
-	final HDFS_AUTH_OPTION authOption;
-	private WebHdfs webHdfsForInputStream = null;
-	private static short DEFAULT_MAX_ATTEMPTS = 5;
+
+	@Value("${webhdfs.auth.choice:kerberos}")
+	private String authChoice;
+
+	@Value("${webhdfs_max_attempts:5}")
 	private short maxAttempts;
 
-	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption,
-			short _maxAttempts) {
-		this(_hostNames, _port, _hdfsUser, _authOption);
-		this.maxAttempts = _maxAttempts;
+	HDFS_AUTH_OPTION authOption;
+
+	private WebHdfs webHdfsForInputStream = null;
+
+	public WebHdfsReader() {
+	}
+
+	@PostConstruct
+	public void init() throws Exception {
+		logger.info("PostConstruct: authChoice={} authOption={}", authChoice, authOption);
+		authOption = HDFS_AUTH_OPTION.getByName(authChoice);
+		logger.info("post PostConstruct: authChoice={} authOption={}", authChoice, authOption);
 	}
 
 	public WebHdfsReader(String _hostNames, int _port, String _hdfsUser, final HDFS_AUTH_OPTION _authOption) {
@@ -50,7 +72,6 @@ public class WebHdfsReader {
 		port = _port;
 		hdfsUser = _hdfsUser;
 		authOption = _authOption;
-		this.maxAttempts = DEFAULT_MAX_ATTEMPTS;
 	}
 
 	public InputStream getInputStream(String hdfsFilePath) throws IOException, WebHdfsException {
@@ -187,7 +208,15 @@ public class WebHdfsReader {
 		return getFileStatus(webhdfsFilePath);
 	}
 
+	public FileStatus getFileStatusWithoutRetry(final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(hdfsFilePath, 1);
+	}
+
 	public FileStatus getFileStatus(final String hdfsFilePath) throws IOException, WebHdfsException {
+		return getFileStatus(hdfsFilePath, maxAttempts);
+	}
+
+	public FileStatus getFileStatus(final String hdfsFilePath, int attempts) throws IOException, WebHdfsException {
 		if (StringHelper.isBlank(hdfsFilePath))
 			throw new IllegalArgumentException("invalid filePath: empty or null");
 
@@ -197,7 +226,7 @@ public class WebHdfsReader {
 		try {
 			webHdfs = getWebHdfs();
 			Method method = WebHdfs.class.getMethod("fileStatus", String.class);
-			HttpResponse response = webHdfs.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+			HttpResponse response = webHdfs.invokeWithRetry(method, attempts, webhdfsFilePath);
 			final ObjectMapper mapper = new ObjectMapper();
 			WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
 					WebHdfsGetFileStatusResponse.class);
@@ -252,6 +281,36 @@ public class WebHdfsReader {
 	public void releaseWebHdfsForInputStream() throws IOException, WebHdfsException {
 		if (webHdfsForInputStream != null)
 			webHdfsForInputStream.releaseConnection();
+	}
+
+	public String getHostNames() {
+		return hostNames;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public String getHdfsUser() {
+		return hdfsUser;
+	}
+
+	public String getAuthChoice() {
+		return authChoice;
+	}
+
+	public short getMaxAttempts() {
+		return maxAttempts;
+	}
+
+	public HDFS_AUTH_OPTION getAuthOption() {
+		return authOption;
+	}
+
+	@Override
+	public String toString() {
+		return "WebHdfsReader [hostNames=" + hostNames + ", port=" + port + ", hdfsUser=" + hdfsUser + ", authChoice="
+				+ authChoice + ", maxAttempts=" + maxAttempts + ", authOption=" + authOption + "]";
 	}
 
 }

@@ -41,7 +41,7 @@ public abstract class SwiftAbstractByteWriterHandler extends SwiftWriterHandler 
 			actionEvents.clear();
 			byte[] dataToWrite = baos.toByteArray();
 			baos.close();
-			logger.debug(getHandlerPhase(), "_message=\"writing to swift\" swift_object_name={} object_length={}",
+			logger.info(getHandlerPhase(), "_message=\"writing to swift\" swift_object_name={} object_length={}",
 					swiftObjectName, dataToWrite.length);
 			StoredObject object = uploadBytes(container, swiftObjectName, dataToWrite);
 			final ActionEvent outputEvent = new ActionEvent();

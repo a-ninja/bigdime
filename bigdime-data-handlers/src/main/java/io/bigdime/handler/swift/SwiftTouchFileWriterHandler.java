@@ -76,7 +76,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 
 			String[] fileNames = new String(body, Charset.defaultCharset()).split("\n");
 			body = null;
-			logger.info(getHandlerPhase(), "fileNames.count={}", fileNames.length);
+			logger.info(getHandlerPhase(), "sourceFileNames.count={}", fileNames.length);
 			String sourceFileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
 
 			// Get the source file name =
@@ -88,7 +88,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 			logger.debug(getHandlerPhase(), "_message=\"swiftDirListing\" swiftDirListing_null={} swiftPrefix={}",
 					(swiftDirListing == null), swiftPrefix);
 			if (swiftDirListing != null) {
-				logger.debug(getHandlerPhase(), "_message=\"swiftDirListing\" swiftDirListing.count={} swiftPrefix={}",
+				logger.info(getHandlerPhase(), "_message=\"swiftDirListing\" swiftDirListing.count={} swiftPrefix={}",
 						swiftDirListing.size(), swiftPrefix);
 			}
 

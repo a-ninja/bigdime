@@ -86,6 +86,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 	private static final String INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebHDFSReaderHandler,webhdfsPath:";
 
 	private WebHDFSReaderHandlerConfig handlerConfig = new WebHDFSReaderHandlerConfig();
+	@Autowired
 	private WebHdfsReader webHdfsReader;
 	// handlerName:list:directoryPath
 	// handlerName:file:filePath
@@ -218,7 +219,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 				throw new InvalidValueConfigurationException("Invalid value for readHdfsPathFrom: \"" + readHdfsPathFrom
 						+ "\" not supported. Supported values are:" + READ_HDFS_PATH_FROM.values());
 			}
-			webHdfsReader = new WebHdfsReader(hostNames, port, hdfsUser, authOption);
+			// webHdfsReader = new WebHdfsReader(hostNames, port, hdfsUser,
+			// authOption);
 		} catch (final Exception ex) {
 			throw new AdaptorConfigurationException(ex);
 		}
