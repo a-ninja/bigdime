@@ -60,6 +60,8 @@ public class HiveJdbcReaderHandlerConfig {
 
 	private String outputDirectoryPattern;
 
+	private String touchFile;
+
 	public String getJdbcUrl() {
 		return jdbcUrl;
 	}
@@ -164,12 +166,22 @@ public class HiveJdbcReaderHandlerConfig {
 		this.latency = latency;
 	}
 
+	public String getTouchFile() {
+		return touchFile;
+	}
+
+	public void setTouchFile(String touchFile) {
+		this.touchFile = touchFile;
+	}
+
 	@Override
 	public String toString() {
 		return "HiveJdbcReaderHandlerConfig [jdbcUrl=" + jdbcUrl + ", driverClassName=" + driverClassName
 				+ ", authOption=" + authOption + ", userName=" + userName + ", password=" + password
 				+ ", baseOutputDirectory=" + baseOutputDirectory + ", entityName=" + entityName + ", hiveQuery="
 				+ hiveQuery + ", goBackDays=" + goBackDays + ", minGoBack=" + minGoBack + ", latency=" + latency
-				+ ", frequency=" + frequency + ", outputDirectoryPattern=" + outputDirectoryPattern + "]";
+				+ ", frequency=" + frequency + ", outputDirectoryPattern=" + outputDirectoryPattern + ", touchFile="
+				+ touchFile + "]";
 	}
+
 }

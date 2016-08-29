@@ -45,6 +45,7 @@ import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
+import io.bigdime.libs.hdfs.WebHdfsReader;
 import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
 import io.bigdime.libs.hdfs.job.YarnJobHelper;
 
@@ -85,6 +86,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	final Map<String, String> hiveConfigurations = new HashMap<>();
 	@Autowired
 	HiveJdbcConnectionFactory hiveJdbcConnectionFactory;
+
+	@Autowired
+	private WebHdfsReader webHdfsReader;
+
+	private HiveNextRunChecker hiveNextRunDateTime;
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
 
@@ -118,6 +124,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		setHandlerPhase("building HiveJdbcReaderHandler");
 		super.build();
 		logger.info(getHandlerPhase(), "properties={}", getPropertyMap());
+
+		logger.info(getHandlerPhase(), "webHdfsReader={}", webHdfsReader);
 
 		String jdbcUrl = null;
 		String driverClassName = null;
@@ -218,6 +226,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				HiveJdbcReaderHandlerConstants.OUTPUT_DIRECTORY_DATE_FORMAT, OUTPUT_DIRECTORY_DATE_FORMAT);
 		hdfsOutputPathDtf = DateTimeFormat.forPattern(outputDirectoryPattern);
 
+		String touchFile = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.TOUCH_FILE);
+		if (touchFile == null) {
+			hiveNextRunDateTime = new LatencyBasedNextRunChecker();
+		} else {
+			hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
+		}
 		logger.info(getHandlerPhase(),
 				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={}",
 				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory,
@@ -233,6 +248,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		handlerConfig.setUserName(userName);
 		handlerConfig.setMinGoBack(minGoBackMillis);
 		handlerConfig.setLatency(latencyInMillis);
+		handlerConfig.setTouchFile(touchFile);
 		logger.info(getHandlerPhase(), "handlerConfig={}", handlerConfig);
 	}
 
@@ -310,32 +326,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
-		long systemTime = System.currentTimeMillis();
-		DateTime nowPacific = DateTime.now(dateTimeZone);
-		long now = nowPacific.getMillis();
-
-		now = now - handlerConfig.getLatency();
-
-		if (hiveConfDateTime == 0) {// this is the first time
-
-			hiveConfDateTime = now - getGoBackDays() * MILLS_IN_A_DAY;
-			logger.info(getHandlerPhase(),
-					"_message=\"first run, set hiveConfDateTime done\" systemTime={} hiveConfDateTime={} hiveConfDate={}",
-					systemTime, hiveConfDateTime, getHiveConfDate());
-			// } else if (now - hiveConfDateTime > intervalInMillis) {
-		} else if (now - hiveConfDateTime > handlerConfig.getMinGoBack()) {
-			// default the current time to now - 3 hours, so that current time
-			// is pacific or smaller than that, just to be on safer side.
-
-			hiveConfDateTime = hiveConfDateTime + intervalInMillis;
-			logger.info(getHandlerPhase(),
-					"_message=\"time to set hiveConfDateTime.\" systemTime={} now={} hiveConfDateTime={} intervalInMillis={} hiveConfDate={}",
-					systemTime, now, hiveConfDateTime, intervalInMillis, getHiveConfDate());
-		} else {
-			logger.info("nothing to do",
-					"systemTime={} now={} hiveConfDateTime={} intervalInMillis={} time_until_next_run={}", systemTime,
-					now, hiveConfDateTime, intervalInMillis, handlerConfig.getMinGoBack() - (now - hiveConfDateTime));
+		long nextRunDateTime = hiveNextRunDateTime.getDateTimeInMillisForNextRun(hiveConfDateTime, handlerConfig,
+				getPropertyMap());
+		if (nextRunDateTime == 0) {
+			logger.info("nothing to do", "hiveConfDateTime={}", hiveConfDateTime);
 			return false;
+		} else {
+			hiveConfDateTime = nextRunDateTime;
 		}
 		setHdfsOutputDirectory();
 		final HiveReaderDescriptor descriptor = new HiveReaderDescriptor(getEntityName(), getHiveConfDate(),
@@ -633,8 +630,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		try {
 			YarnJobHelper yarnJobHelper = new YarnJobHelper();
 			jobStatus = yarnJobHelper.getPositiveStatusForJob(jobName, conf);
-			if (jobStatus != null)
+			if (jobStatus != null) {
 				runState = jobStatus.getRunState();
+			} else {
+				logger.info(getHandlerPhase(), "processPreviouslySubmittedJobInfo: found a null jobStatus");
+			}
 		} catch (Exception ex) {
 			logger.warn(getHandlerPhase(),
 					"_message=\"processPreviouslySubmittedJobInfo: unable to get the job status\" jobName={}", jobName,
@@ -668,8 +668,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			logger.info(getHandlerPhase(), "updatedRuntime={}", updatedRuntime);
 			returnStatus = Status.READY;
 		}
+		logger.info(getHandlerPhase(), "_message=\"returning from processPreviouslySubmittedJobInfo.\" returnStatus={}",
+				returnStatus);
 		return returnStatus;
-
 	}
 
 	private String computeJobName() {
