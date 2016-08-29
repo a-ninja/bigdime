@@ -187,7 +187,7 @@ public class DataSourceTest {
 		dataSource.start();
 
 		try {
-			Thread.sleep(20);
+			Thread.sleep(100);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -219,13 +219,13 @@ public class DataSourceTest {
 		Mockito.when(handlerManager.execute()).thenReturn(Status.BACKOFF);
 		dataSource.start();
 		try {
-			Thread.sleep(20);
+			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		dataSource.stop();
 		try {
-			Thread.sleep(20);
+			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

@@ -7,11 +7,15 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Preconditions;
 
+import io.bigdime.core.commons.StringCase;
+import io.bigdime.core.commons.StringHelper;
+
 public class HdfsFileNameBuilder {
 	private String prefix;
 	private String channelDesc;
 	private String sourceFileName;
 	private String extension;
+	private StringCase stringCase = StringCase.DEFAULT;
 
 	public HdfsFileNameBuilder withPrefix(String prefix) {
 		this.prefix = prefix;
@@ -38,8 +42,8 @@ public class HdfsFileNameBuilder {
 		Preconditions.checkNotNull(channelDesc, "channelDesc can't be null");
 		Preconditions.checkNotNull(extension, "extension can't be null");
 		if (StringUtils.isBlank(sourceFileName)) {
-			return prefix + channelDesc + extension;
+			return StringHelper.formatField(prefix + channelDesc + extension, stringCase);
 		}
-		return prefix + sourceFileName + extension;
+		return StringHelper.formatField(prefix + sourceFileName + extension, stringCase);
 	}
 }

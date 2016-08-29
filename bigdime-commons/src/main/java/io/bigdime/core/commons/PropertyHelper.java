@@ -4,6 +4,11 @@
 package io.bigdime.core.commons;
 
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to get the property from the map.
@@ -12,6 +17,7 @@ import java.util.Map;
  *
  */
 public final class PropertyHelper {
+	private static final Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
 	private static final PropertyHelper instance = new PropertyHelper();
 
 	private PropertyHelper() {
@@ -35,7 +41,7 @@ public final class PropertyHelper {
 	 *             if the property with name specified by argument name does not
 	 *             exist in propertyMap.
 	 */
-	public static int getIntProperty(Map<String, Object> propertyMap, String name) {
+	public static int getIntProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		return getIntProperty(propertyMap.get(name));
 	}
 
@@ -55,7 +61,8 @@ public final class PropertyHelper {
 	 * @throws NumberFormatException
 	 *             if the property's value cannot be parsed as an integer.
 	 */
-	public static int getIntProperty(Map<String, Object> propertyMap, String name, int defaultValue) {
+	public static int getIntProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			int defaultValue) {
 		return getIntProperty(propertyMap.get(name), defaultValue);
 	}
 
@@ -143,7 +150,8 @@ public final class PropertyHelper {
 	 * @throws NumberFormatException
 	 *             if the property's value cannot be parsed as a long.
 	 */
-	public static long getLongProperty(Map<String, Object> propertyMap, String name, long defaultValue) {
+	public static long getLongProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			long defaultValue) {
 		final Object value = propertyMap.get(name);
 		return getLongProperty(value, defaultValue);
 	}
@@ -157,7 +165,7 @@ public final class PropertyHelper {
 	 *            name of the property to look for
 	 * @return value of the property if the property is found, null otherwise
 	 */
-	public static String getStringProperty(Map<String, Object> propertyMap, String name) {
+	public static String getStringProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		final Object value = propertyMap.get(name);
 		if (value == null)
 			return null;
@@ -174,7 +182,8 @@ public final class PropertyHelper {
 	 *            name of the property to look for
 	 * @return value of the property if the property is found, null otherwise
 	 */
-	public static String getStringProperty(Map<String, Object> propertyMap, String name, String defaultValue) {
+	public static String getStringProperty(Map<? extends String, ? extends Object> propertyMap, String name,
+			String defaultValue) {
 		String value = getStringProperty(propertyMap, name);
 		if (value == null)
 			return defaultValue;
@@ -182,10 +191,76 @@ public final class PropertyHelper {
 			return value;
 	}
 
-	public static boolean getBooleanProperty(Map<String, Object> propertyMap, String name) {
+	public static boolean getBooleanProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
 		final Object value = String.valueOf(propertyMap.get(name));
 		if (value == null || value.equals("null"))
 			return false;
 		return Boolean.parseBoolean(String.valueOf(value));
 	}
+
+	@SuppressWarnings("rawtypes")
+	public static Map getMapProperty(Map<? extends String, ? extends Object> propertyMap, String name) {
+		final Object value = propertyMap.get(name);
+		if (value == null || value.equals("null"))
+			return null;
+		if (value instanceof Map) {
+			return (Map) value;
+		} else {
+			throw new IllegalArgumentException(
+					name + " field in given map is not of type Map, rather is of type: " + value.getClass());
+		}
+	}
+
+	public static void redeemTokensFromAppProperties(final Map<? super String, ? super Object> properties,
+			final Properties applicationProperties) {
+		for (Entry<? super String, ? super Object> property : properties.entrySet()) {
+			logger.info("property_name=\"{}\" value=\"{}\" isString=\"{}\"", property.getKey(), property.getValue(),
+					(property.getValue() instanceof String));
+			if (property.getValue() instanceof String) {
+				String propValue = property.getValue().toString();
+				String newValue = StringHelper.getInstance().redeemToken(propValue, applicationProperties);
+				if (!propValue.equals(newValue)) {
+					property.setValue(newValue);
+					logger.info("property_name=\"{}\" old_value=\"{}\" new_value=\"{}\"", property.getKey(), propValue,
+							newValue);
+				}
+			} else if (property.getValue() instanceof Map) {
+				redeemTokensFromAppProperties((Map) property.getValue(), applicationProperties);
+
+			}
+		}
+	}
+
+	public static String getStringPropertyFromPropertiesOrSrcDesc(
+			final Map<? extends String, ? extends Object> defaultMap,
+			Map<? extends String, ? extends Object> overrideMap, String propertyName, String defaultValue) {
+		String propertyValue = PropertyHelper.getStringProperty(defaultMap, propertyName, defaultValue);
+		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		if (overrideMap == null)
+			return propertyValue;
+
+		propertyValue = PropertyHelper.getStringProperty(overrideMap, propertyName, propertyValue);
+		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		return propertyValue;
+	}
+
+	public static int getIntPropertyFromPropertiesOrSrcDesc(final Map<? extends String, ? extends Object> defaultMap,
+			Map<? extends String, ? extends Object> overrideMap, String propertyName, int defaultValue) {
+		int propertyValue = PropertyHelper.getIntProperty(defaultMap, propertyName, defaultValue);
+		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+
+		if (overrideMap == null)
+			return propertyValue;
+
+		propertyValue = PropertyHelper.getIntProperty(overrideMap, propertyName, propertyValue);
+		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
+				propertyName, propertyValue, defaultValue);
+		return propertyValue;
+	}
+
 }

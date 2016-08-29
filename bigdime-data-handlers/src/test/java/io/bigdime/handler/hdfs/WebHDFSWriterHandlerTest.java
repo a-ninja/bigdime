@@ -29,6 +29,7 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.SinkHandlerException;
+import io.bigdime.core.commons.StringCase;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
@@ -236,7 +237,8 @@ public class WebHDFSWriterHandlerTest {
 		ReflectionTestUtils.setField(WebHDFSWriterHandler, "hdfsFileName", "unitFile");
 		ReflectionTestUtils.setField(WebHDFSWriterHandler, "tokenToHeaderNameMap", tokenToHeaderNameMap);
 		ReflectionTestUtils.setField(WebHDFSWriterHandler, "runtimeInfoStore", runtimeInfoStore);
-		ReflectionTestUtils.setField(WebHDFSWriterHandler, "channelDesc", "unit-channel");
+		ReflectionTestUtils.setField(WebHDFSWriterHandler, "channelDesc", "unit-Channel");
+		ReflectionTestUtils.setField(WebHDFSWriterHandler, "hdfsPathCaseEnum", StringCase.LOWER);
 
 		return WebHDFSWriterHandler;
 
@@ -317,6 +319,69 @@ public class WebHDFSWriterHandlerTest {
 		WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
 		WebHDFSWriterHandler.setPropertyMap(new HashMap<String, Object>());
 		WebHDFSWriterHandler.build();
+	}
+
+	@Test
+	public void testBuildWithHdfsPathLowerCase() throws AdaptorConfigurationException {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put(WebHDFSWriterHandlerConstants.PORT, 1);
+		properties.put(WebHDFSWriterHandlerConstants.HOST_NAMES, "host1");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH, "/webhDFs/${account}/{timestamp}");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_PREFIX, "raw-data");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH_LOWER_UPPER_CASE, "lower");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_EXTENSION, ".txt");
+		WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
+		WebHDFSWriterHandler.setPropertyMap(properties);
+		WebHDFSWriterHandler.build();
+		Object hdfsPathLowerCase = ReflectionTestUtils.getField(WebHDFSWriterHandler, "hdfsPathCaseEnum");
+		Assert.assertEquals(hdfsPathLowerCase, StringCase.LOWER);
+
+	}
+
+	@Test
+	public void testBuildWithHdfsPathUpperCase() throws AdaptorConfigurationException {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put(WebHDFSWriterHandlerConstants.PORT, 1);
+		properties.put(WebHDFSWriterHandlerConstants.HOST_NAMES, "host1");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH, "/webhDFs/${account}/{timestamp}");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_PREFIX, "raw-data");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH_LOWER_UPPER_CASE, "upper");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_EXTENSION, ".txt");
+		WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
+		WebHDFSWriterHandler.setPropertyMap(properties);
+		WebHDFSWriterHandler.build();
+		Object hdfsPathLowerCase = ReflectionTestUtils.getField(WebHDFSWriterHandler, "hdfsPathCaseEnum");
+		Assert.assertEquals(hdfsPathLowerCase, StringCase.UPPER);
+	}
+
+	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "io.bigdime.core.InvalidValueConfigurationException: invalid value for hdfsPathCase, only.*")
+	public void testBuildWithHdfsPathInvalidCase() throws AdaptorConfigurationException {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put(WebHDFSWriterHandlerConstants.PORT, 1);
+		properties.put(WebHDFSWriterHandlerConstants.HOST_NAMES, "host1");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH, "/webhDFs/${account}/{timestamp}");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_PREFIX, "raw-data");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH_LOWER_UPPER_CASE, "invalid");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_EXTENSION, ".txt");
+		WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
+		WebHDFSWriterHandler.setPropertyMap(properties);
+		WebHDFSWriterHandler.build();
+	}
+
+	@Test
+	public void testBuildWithHdfsPathEmptyCase() throws AdaptorConfigurationException {
+		Map<String, Object> properties = new HashMap<>();
+		properties.put(WebHDFSWriterHandlerConstants.PORT, 1);
+		properties.put(WebHDFSWriterHandlerConstants.HOST_NAMES, "host1");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH, "/webhDFs/${account}/{timestamp}");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_PREFIX, "raw-data");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_PATH_LOWER_UPPER_CASE, "");
+		properties.put(WebHDFSWriterHandlerConstants.HDFS_FILE_NAME_EXTENSION, ".txt");
+		WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
+		WebHDFSWriterHandler.setPropertyMap(properties);
+		WebHDFSWriterHandler.build();
+		Object hdfsPathLowerCase = ReflectionTestUtils.getField(WebHDFSWriterHandler, "hdfsPathCaseEnum");
+		Assert.assertEquals(hdfsPathLowerCase, StringCase.DEFAULT);
 	}
 
 	/**
@@ -454,7 +519,7 @@ public class WebHDFSWriterHandlerTest {
 
 		Status status = webHDFSWriterHandler.process();
 		Mockito.verify(mockWebHdfs, Mockito.times(1)).mkdir("/webhdfs/mweb-us/20151111");
-		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151111/unit-channel"),
+		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151111/unit-Channel"),
 				Mockito.any(InputStream.class));
 		Assert.assertSame(status, Status.CALLBACK);
 		Assert.assertEquals(((WebHDFSWriterHandlerJournal) handlerContext.getJournal(webHDFSWriterHandler.getId()))
@@ -465,7 +530,7 @@ public class WebHDFSWriterHandlerTest {
 		ReflectionTestUtils.setField(webHDFSWriterHandler, "webHdfs", mockWebHdfs);
 		status = webHDFSWriterHandler.process();
 		Mockito.verify(mockWebHdfs, Mockito.times(1)).mkdir("/webhdfs/mweb-us/20151112");
-		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151112/unit-channel"),
+		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151112/unit-Channel"),
 				Mockito.any(InputStream.class));
 		Assert.assertSame(status, Status.CALLBACK);
 		Assert.assertEquals(((WebHDFSWriterHandlerJournal) handlerContext.getJournal(webHDFSWriterHandler.getId()))
@@ -477,7 +542,7 @@ public class WebHDFSWriterHandlerTest {
 		status = webHDFSWriterHandler.process();
 		Mockito.verify(mockWebHdfs, Mockito.times(1)).mkdir("/webhdfs/mweb-us/20151113");
 		Assert.assertNull(((WebHDFSWriterHandlerJournal) handlerContext.getJournal(webHDFSWriterHandler.getId())));
-		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151113/unit-channel"),
+		Mockito.verify(mockWebHdfs, Mockito.times(1)).append(Mockito.eq("/webhdfs/mweb-us/20151113/unit-Channel"),
 				Mockito.any(InputStream.class));
 		Assert.assertSame(status, Status.READY);
 

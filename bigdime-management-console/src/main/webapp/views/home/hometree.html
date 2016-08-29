@@ -1,0 +1,6 @@
+<div>
+	<a class="applicationnames" ui-sref=".search" href=""
+		ng-repeat="application in applicationlist track by $index"
+		ng-click="updateRoot(application.label)" id={{application.label}}> {{application.label}} <br>
+	</a>
+</div>

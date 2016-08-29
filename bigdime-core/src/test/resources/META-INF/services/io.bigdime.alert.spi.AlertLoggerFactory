@@ -1,1 +1,1 @@
-io.bigdime.alert.impl.Log4jLoggerFactory
+io.bigdime.alert.impl.AlertLoggerFactoryImpl

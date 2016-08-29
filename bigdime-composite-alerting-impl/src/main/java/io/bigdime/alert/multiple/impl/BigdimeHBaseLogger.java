@@ -6,8 +6,13 @@ package io.bigdime.alert.multiple.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,6 +62,8 @@ public class BigdimeHBaseLogger implements Logger {
 	public static final byte[] ALERT_ALERT_MESSAGE_COLUMN = Bytes.toBytes(ColumnQualifier.ALERT_ALERT_MESSAGE);
 	public static final byte[] ALERT_ALERT_DATE_COLUMN = Bytes.toBytes(ColumnQualifier.ALERT_ALERT_DATE);
 	public static final byte[] ALERT_ALERT_EXCEPTION_COLUMN = Bytes.toBytes(ColumnQualifier.ALERT_ALERT_EXCEPTION);
+	public static final byte[] ALERT_HOST_NAME = Bytes.toBytes(ColumnQualifier.ALERT_HOST_NAME);
+	public static final byte[] ALERT_HOST_IP = Bytes.toBytes(ColumnQualifier.ALERT_HOST_IP);
 	public static final byte[] LOG_LEVEL = Bytes.toBytes(ColumnQualifier.LOG_LEVEL);
 
 	// Constants
@@ -65,12 +72,40 @@ public class BigdimeHBaseLogger implements Logger {
 	public static final String HBASE_TABLE_NAME_PROPERTY = "${hbase.table.name}";
 	public static final String HBASE_ALERT_LEVEL_PROPERTY = "${hbase.alert.level}";
 	public static final String HBASE_DEBUG_INFO_BATCH_SIZE = "${hbase.debugInfo.batchSize}";
+	public static final String IP_INIT_VAL = "10";
 
 	private boolean debugEnabled = false;
 	private boolean infoEnabled = false;
 	private boolean warnEnabled = false;
 	private ExecutorService executorService;
-
+    private static String hostName="UNKNOWN";
+    private static String hostIp;
+     
+    static{
+    	try {
+			hostName=InetAddress.getLocalHost().getHostName();			
+			Enumeration e = NetworkInterface.getNetworkInterfaces();
+			while(e.hasMoreElements())
+			{
+			    NetworkInterface n = (NetworkInterface) e.nextElement();
+			    Enumeration ee = n.getInetAddresses();
+			    while (ee.hasMoreElements())
+			    {
+			        InetAddress i = (InetAddress) ee.nextElement();
+			        if(i.getHostAddress().startsWith(IP_INIT_VAL)){
+			        	 hostIp=i.getHostAddress();
+			        	 break;
+			        }
+			    }
+			}
+		} catch (UnknownHostException e) {	
+			System.err.print("The host name is "+hostName);
+			
+		} catch (SocketException e1) {
+			System.err.print("Error while connecting to "+hostName +" host");
+		}
+    }
+    
 	private BigdimeHBaseLogger() {
 	}
 
@@ -252,6 +287,8 @@ public class BigdimeHBaseLogger implements Logger {
 		Put put = new Put(createRowKey(source));
 		addToPut(put, ALERT_ADAPTOR_NAME_COLUMN, source);
 		addToPut(put, ALERT_MESSAGE_CONTEXT_COLUMN, shortMessage);
+		addToPut(put, ALERT_HOST_NAME, hostName);
+		addToPut(put, ALERT_HOST_IP, hostIp);
 
 		if (alertMessage != null) {
 			if (alertMessage.getType() != null) {

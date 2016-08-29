@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.org/stubhub/bigdime.svg?branch=develop)](https://travis-ci.org/stubhub/bigdime)
+[![Build Status](https://travis-ci.org/stubhub/bigdime.svg?branch=master)](https://travis-ci.org/stubhub/bigdime)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.bigdime/bigdime-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.bigdime/bigdime-core)
+
 What is BigDime
 =====
 BigDime is code name for Data Ingestion Eco System Project. It stands for Big Data Ingestion Made Easy. More information about BigDime can be found [here](https://github.com/stubhub/bigdime/wiki).

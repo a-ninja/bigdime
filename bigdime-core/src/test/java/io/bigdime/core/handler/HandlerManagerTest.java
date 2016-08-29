@@ -26,6 +26,7 @@ public class HandlerManagerTest {
 	public void testProcessWithNullHandlers()
 			throws HandlerException, InterruptedException, IllegalHandlerStateException {
 		HandlerManager handlerManager = new HandlerManager(null, null);
+		ReflectionTestUtils.setField(handlerManager, "thresholdErrorCount", 0);
 		handlerManager.execute();
 	}
 
@@ -141,6 +142,7 @@ public class HandlerManagerTest {
 	public void testUpdateStateRunningToError() throws HandlerException {
 		HandlerManager handlerManager = setupHandlerManagerWithHandlerThrowingException();
 		ReflectionTestUtils.setField(handlerManager, "state", HandlerManager.STATE.INITIALIZED);
+		ReflectionTestUtils.setField(handlerManager, "thresholdErrorCount", 0);
 		try {
 			handlerManager.execute();
 			Assert.fail("must have thrown an excepion");
@@ -156,6 +158,7 @@ public class HandlerManagerTest {
 		HandlerManager handlerManager = setupHandlerManagerWithHandlerThrowingException();
 
 		ReflectionTestUtils.setField(handlerManager, "state", HandlerManager.STATE.INITIALIZED);
+		ReflectionTestUtils.setField(handlerManager, "thresholdErrorCount", 0);
 		try {
 			handlerManager.execute();
 			Assert.fail("must have thrown an excepion");

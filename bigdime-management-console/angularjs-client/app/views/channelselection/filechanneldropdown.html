@@ -1,0 +1,51 @@
+<form>
+  <div ng-if="channel.hasOwnProperty('name')" class="form-group row">
+    <label class="col-xs-3" id="name">Name</label>
+    <div class="col-xs-8" ng-switch on="channel">
+      <input ng-if="channels.indexOf(channel)==0"  type="text" class="form-control"  placeholder="name" ng-model="channel.name" >
+      <input ng-if="channels.indexOf(channel)>0"  type="text" class="form-control" placeholder="name" ng-model="channel.name">
+    </div>
+  </div>
+  <div ng-if="channel.hasOwnProperty('description')" class="form-group row">
+    <label for="channeldescription{{$index}}" class="col-xs-3" id="description" >Description</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channeldescription{{$index}}" placeholder="description" ng-model="channel.description" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="channel.hasOwnProperty('channel-class')" class="form-group row">
+    <label for="channelclass{{$index}}" class="col-xs-3" id="channel-class"> Channel Class</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelclass{{$index}}" placeholder=" Channel class" ng-model="channel['channel-class']" ng-change="shownext()" disabled>
+    </div>
+  </div>
+  <div ng-if="channel.properties.hasOwnProperty('print-stats')" class="form-group row">
+    <label for="channelprintstats{{$index}}" class="col-xs-3" id="print-stats">printstats</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelprintstats{{$index}}" placeholder="Print Stats" ng-model="channel.properties['print-stats']" ng-change="shownext()">
+    </div>
+  </div>
+<!--   <div class="form-group row">
+    <label for="channelbatchsize" class="col-xs-3 ">Channel Batch Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelbatchsize" placeholder="Channel Batch Size " ng-model="channel.properties.batchSize" ng-change="shownext()">
+    </div>
+  </div> -->
+    <div ng-if="channel.properties.hasOwnProperty('print-stats-duration-in-seconds')" class="form-group row">
+    <label for="printstatsdurationinseconds" class="col-xs-3" id="print-stats-duration-in-seconds">Print Stats Duration In Seconds</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="printstatsdurationinseconds" placeholder="Print Stats Duration In Seconds" ng-model="channel.properties['print-stats-duration-in-seconds']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="channel.properties.hasOwnProperty('channel-capacity')" class="form-group row">
+    <label for="channelcapacity" class="col-xs-3" id="channel-capacity">Channel Capacity</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelcapacity" placeholder="Channel Capacity" ng-model="channel.properties['channel-capacity']" ng-change="shownext()">
+    </div>
+  </div>
+    
+  <div class="form-group row pull-right">
+    <button type="button" class="btn btn-default reset" ng-click="reset($index)">reset</button>
+    <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" ng-click="cancel($index)">cancel</button>
+    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" >ok</button>
+  </div>
+</form>

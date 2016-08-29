@@ -39,35 +39,13 @@ import org.testng.annotations.Test;
 public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 	
 	@Test(expectedExceptions = IllegalArgumentException.class)
-	public void validateNullHiveHostTest() throws DataValidationException {
+	public void validateNullHiveUriTest() throws DataValidationException {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
 		@SuppressWarnings("unchecked")
 		Map<String, String> mockMap = Mockito.mock(Map.class);
 		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
 		when(mockMap.get(anyString())).thenReturn("");
-		columnCountValidator.validate(mockActionEvent);
-	}
-
-	@Test(expectedExceptions = IllegalArgumentException.class)
-	public void validateNullHivePortNumberTest() throws DataValidationException {
-		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
-		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
-		@SuppressWarnings("unchecked")
-		Map<String, String> mockMap = Mockito.mock(Map.class);
-		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
-		when(mockMap.get(anyString())).thenReturn("hiveHost").thenReturn(null);
-		columnCountValidator.validate(mockActionEvent);
-	}
-	
-	@Test(expectedExceptions = NumberFormatException.class)
-	public void validatePortNumberFormatTest() throws DataValidationException {
-		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
-		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
-		@SuppressWarnings("unchecked")
-		Map<String, String> mockMap = Mockito.mock(Map.class);
-		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
-		when(mockMap.get(anyString())).thenReturn("hiveHost").thenReturn("port");
 		columnCountValidator.validate(mockActionEvent);
 	}
 	
@@ -78,7 +56,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 		@SuppressWarnings("unchecked")
 		Map<String, String> mockMap = Mockito.mock(Map.class);
 		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
-		when(mockMap.get(anyString())).thenReturn("hiveHost").thenReturn("1234").thenReturn(null);
+		when(mockMap.get(anyString())).thenReturn("hiveUri").thenReturn(null);
 		columnCountValidator.validate(mockActionEvent);
 	}
 	
@@ -89,11 +67,11 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 		@SuppressWarnings("unchecked")
 		Map<String, String> mockMap = Mockito.mock(Map.class);
 		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
-		when(mockMap.get(anyString())).thenReturn("hiveHost").thenReturn("1234").thenReturn("mockDB").thenReturn(null);
+		when(mockMap.get(anyString())).thenReturn("hiveUri").thenReturn("mockDB").thenReturn(null);
 		columnCountValidator.validate(mockActionEvent);
 	}
 	
-	@Test(priority = 6)
+	@Test
 	public void validateHiveTableNotCreated() throws DataValidationException, HCatException{
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
@@ -105,7 +83,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 		Assert.assertEquals(columnCountValidator.validate(mockActionEvent).getValidationResult(), ValidationResult.INCOMPLETE_SETUP);
 	}
 	
-	@Test(priority = 7)
+	@Test
 	public void validateEntityNotFound() throws DataValidationException, HCatException, MetadataAccessException {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
@@ -125,7 +103,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 	}
 	
 	@SuppressWarnings("unchecked")
-	@Test(priority = 8)
+	@Test
 	public void validateColumnCountMatch() throws DataValidationException, HCatException, MetadataAccessException {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
@@ -153,7 +131,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 	}
 	
 	@SuppressWarnings("unchecked")
-	@Test(priority = 9)
+	@Test
 	public void validateColumnCountMismatchHiveMore() throws DataValidationException, HCatException, MetadataAccessException {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
@@ -179,7 +157,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 	}
 	
 	@SuppressWarnings("unchecked")
-	@Test(priority = 10)
+	@Test
 	public void validateColumnCountMismatchSourceMore() throws DataValidationException, HCatException, MetadataAccessException {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
@@ -204,7 +182,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 		Assert.assertEquals(columnCountValidator.validate(mockActionEvent).getValidationResult(), ValidationResult.COLUMN_COUNT_MISMATCH);
 	}
 	
-	@Test(priority = 11)
+	@Test
 	public void gettersAndSettersTest() {
 		ColumnCountValidator columnCountValidator = new ColumnCountValidator();
 		columnCountValidator.setName("testName");
@@ -213,8 +191,7 @@ public class SourceColumnCountValidatorTest extends PowerMockTestCase {
 	
 	private Map<String, String> setCommonParameters(ActionEvent actionEvent){
 		Map<String, String> headers = new HashMap<>();
-		headers.put(ActionEventHeaderConstants.HIVE_HOST_NAME, "host");
-		headers.put(ActionEventHeaderConstants.HIVE_PORT, "1234");
+		headers.put(ActionEventHeaderConstants.HIVE_METASTORE_URI, "hiveUri");
 		headers.put(ActionEventHeaderConstants.HIVE_DB_NAME, "mockDB");
 		headers.put(ActionEventHeaderConstants.HIVE_TABLE_NAME, "mockTable");
 		return headers;

@@ -8,7 +8,7 @@ import java.util.Date;
 /**
  * Defines an object to provide fields needed to query alerts.
  *
- * @author Neeraj Jain
+ * @author Neeraj Jain,Sandeep reddy Murthy
  *
  */
 public class AlertServiceRequest {
@@ -35,7 +35,11 @@ public class AlertServiceRequest {
 	 * number of messages to fetch, max is 50.
 	 */
 	private int limit;
-
+	/**
+	 * search criteria for the alerts to be fetched with.
+	 */
+	private String search;
+	
 	/**
 	 * Get the alert id, can be used to get the alert conditions.
 	 *
@@ -95,6 +99,14 @@ public class AlertServiceRequest {
 
 	public void setLimit(int limit) {
 		this.limit = limit;
+	}
+	
+	public String getSearch() {
+		return search;
+	}
+
+	public void setSearch(String search) {
+		this.search = search;
 	}
 
 }

@@ -45,7 +45,7 @@ import org.springframework.util.StringUtils;
  * available in cache or else from repository.
  * 
  * 
- * @author Neeraj Jain, psabinikari
+ * @author Neeraj Jain, Pavan Sabinikari
  * 
  * @version 1.0
  * 
@@ -152,25 +152,25 @@ public class MetadataStoreImpl implements MetadataStore {
 			}
 		}
 
-		// Just printing values for test. will remove this staement later
-		logger.debug(SOURCENAME,
+		// Just printing values for test. will remove this statement later
+		/*logger.debug(SOURCENAME,
 				"Printing Cached Metasegments and its associated entity",
 				"Listing below");
 		for (Entry<String, Metasegment> entry : cachedSchemaDetails.entrySet()) {
 			logger.debug(SOURCENAME, "Metasegment with its Entity details",
 					"Key: {} ; Value: {}", entry.getKey(), entry.getValue());
 
-		}
+		}*/
 
 		// Just printing values for check. Will remove this statements later
-		logger.debug(SOURCENAME,
+		/*logger.debug(SOURCENAME,
 				"Printing Cached Metasegment with associated entities list",
 				"Listing below");
 		for (Entry<String, Set<String>> entry : adaptorEntities.entrySet()) {
 			logger.debug(SOURCENAME, "Metasegment with its entities list",
 					"Key: {} ; Value: {}", entry.getKey(), entry.getValue());
 
-		}
+		}*/
 	}
 
 	/**

@@ -20,12 +20,13 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.Segment;
 import io.bigdime.core.commons.StringHelper;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 
 @Component
 @Scope("prototype")
-public class LineHandler extends AbstractHandler {
+public class LineHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(LineHandler.class));
 
 	private String handlerPhase;
@@ -148,6 +149,10 @@ public class LineHandler extends AbstractHandler {
 		ActionEvent outputEvent = null;
 		Map<String, String> headers = null;
 		getHandlerContext().setEventList(null);
+		/*
+		 * For each event if the event contains a line process it else get next
+		 * event
+		 */
 		while (actionEventIter.hasNext()) {
 			ActionEvent actionEvent = actionEventIter.next();
 			actionEventIter.remove();
@@ -158,22 +163,22 @@ public class LineHandler extends AbstractHandler {
 			else
 				lineData = ArrayUtils.addAll(lineData, actionEvent.getBody());
 
-			byte[][] partitionedData = StringHelper.partitionByNewLine(lineData);
+			Segment lineDataSegment = StringHelper.partitionByNewLine(lineData);
 			/*
 			 * If the newline was found in dataToPartition, create an event for
 			 * this and set in HandlerContext. Put rest of the data in another
 			 * event in journal.
 			 * 
 			 */
-			if (partitionedData != null) {
+			if (lineDataSegment != null) {
 				outputEvent = new ActionEvent();
-				outputEvent.setBody(partitionedData[0]);
+				outputEvent.setBody(lineDataSegment.getLines());
 				logger.debug(handlerPhase, "headers={}", actionEvent.getHeaders());
 				outputEvent.setHeaders(actionEvent.getHeaders());
 				getHandlerContext().createSingleItemEventList(outputEvent);
-				if (partitionedData[1] != null && partitionedData[1].length != 0) {
+				if (lineDataSegment.getLeftoverData() != null && lineDataSegment.getLeftoverData().length != 0) {
 					leftoverEvent = new ActionEvent();
-					leftoverEvent.setBody(partitionedData[1]);
+					leftoverEvent.setBody(lineDataSegment.getLeftoverData());
 					leftoverEvent.setHeaders(actionEvent.getHeaders());
 					// mutableList.add(leftoverEvent);
 				}
@@ -190,7 +195,8 @@ public class LineHandler extends AbstractHandler {
 		/*
 		 * If there was an output event
 		 */
-		processChannelSubmission(outputEvent);
+		if (outputEvent != null)
+			processChannelSubmission(outputEvent);
 
 		if (leftoverEvent != null) {
 			journal.setLeftoverEvent(leftoverEvent);

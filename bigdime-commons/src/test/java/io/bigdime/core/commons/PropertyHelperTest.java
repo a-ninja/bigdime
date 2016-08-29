@@ -5,6 +5,7 @@ package io.bigdime.core.commons;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 
 import org.testng.Assert;
@@ -201,4 +202,78 @@ public class PropertyHelperTest {
 		Assert.assertFalse(
 				PropertyHelper.getBooleanProperty(propertyMap, "unit-test-testGetBooleanPropertyWithInvalidValue"));
 	}
+
+	@Test
+	public void testRedeemTokensFromAppProperties() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Properties applicationProperties = new Properties();
+
+		Map<String, String> yarnConfs = new HashMap<>();
+		yarnConfs.put("fs.defaultFS", "${fs.defaultFS}");
+		yarnConfs.put("ipc.client.connect.max.retries", "${ipc.client.connect.max.retries}");
+		yarnConfs.put("yarn.resourcemanager.principal", "${yarn.resourcemanager.principal}");
+
+		propertyMap.put("yarn-confs", yarnConfs);
+		propertyMap.put("hive-jdbc-user-name", "unit-user");
+
+		applicationProperties.put("yarn.resourcemanager.principal", "unit-yarn.resourcemanager.principal");
+		applicationProperties.put("ipc.client.connect.max.retries", "87");
+		applicationProperties.put("hive-jdbc-user-name", "unit-user");
+		PropertyHelper.redeemTokensFromAppProperties(propertyMap, applicationProperties);
+
+		Assert.assertEquals(PropertyHelper.getStringProperty(propertyMap, "hive-jdbc-user-name"), "unit-user");
+		Assert.assertEquals(
+				PropertyHelper.getMapProperty(propertyMap, "yarn-confs").get("yarn.resourcemanager.principal"),
+				"unit-yarn.resourcemanager.principal");
+		Assert.assertEquals(
+				PropertyHelper.getMapProperty(propertyMap, "yarn-confs").get("ipc.client.connect.max.retries"), "87");
+
+	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Map<String, Object> srcDescMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+		srcDescMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromSrcDesc");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, srcDescMap,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromSrcDesc";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDescWithNoValueInSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+		Map<String, Object> srcDescMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, srcDescMap,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
+	@Test
+	public void testGetPropertyFromPropertiesOrSrcDescWithNullSrcDesc() {
+		Map<String, Object> propertyMap = new HashMap<>();
+
+		propertyMap.put("unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty");
+
+		String actualValue = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(propertyMap, null,
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc",
+				"unit-test-testGetPropertyFromPropertiesOrSrcDesc-default");
+		String expectedValue = "unit-test-testGetPropertyFromPropertiesOrSrcDesc-fromProperty";
+		Assert.assertEquals(actualValue, expectedValue);
+	}
+
 }

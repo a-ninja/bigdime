@@ -16,10 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
@@ -31,7 +31,7 @@ import io.bigdime.core.commons.TimeManager;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.handler.HandlerJournal;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
@@ -52,7 +52,7 @@ import io.bigdime.libs.kafka.utills.KafkaUtils;
 
 @Component
 @Scope("prototype")
-public class KafkaReaderHandler extends AbstractHandler {
+public class KafkaReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(KafkaReaderHandler.class));
 	private long totalInvocations;
 	private static final String KAFKA_MESSAGE_READER_OFFSET = "kafka_message_offset";
@@ -67,7 +67,8 @@ public class KafkaReaderHandler extends AbstractHandler {
 	private static final DateTimeFormatter formatter = DateTimeFormat.forPattern(DF).withZone(timeZone);
 	private final String TIMESTAMP = "DT";
 	private final String HOUR = "HOUR";
-
+	private static  final String PARTITION = "PARTITION";
+	private String entityName = null;
 	/**
 	 * KakfaConsumer component that's used to fetch data from Kafka.
 	 */
@@ -114,9 +115,18 @@ public class KafkaReaderHandler extends AbstractHandler {
 			throw new InvalidValueConfigurationException(
 					 "incorrect value specified in src-desc "+ ex.getMessage());
 		}
+		
+		entityName = inputDescriptor.getEntityName();
+		// if entityName not found, assign the topic name to entity.
+		if(entityName == null){
+			entityName = inputDescriptor.getTopic();
+		}
 
 		try {
 			currentOffset = getOffsetFromRuntimeInfo(runtimeInfoStore,inputDescriptor.getEntityName(), String.valueOf(inputDescriptor.getPartition()), KAFKA_MESSAGE_READER_OFFSET);
+			if(currentOffset > 0){
+				currentOffset++;
+			}	
 		} catch (RuntimeInfoStoreException e) {
 			throw new AdaptorConfigurationException(e);
 		}
@@ -154,7 +164,8 @@ public class KafkaReaderHandler extends AbstractHandler {
 		totalInvocations++;
 	}
 
-	private Status preProcess() throws RuntimeInfoStoreException , HandlerException{
+	@Override
+	protected Status preProcess() throws RuntimeInfoStoreException , HandlerException{
 
 		if (shallProcessNew()) {
 			logger.debug(handlerPhase, "will process new batch");
@@ -170,7 +181,7 @@ public class KafkaReaderHandler extends AbstractHandler {
 				throw new HandlerException("Unable to read the messages from Kafka", e);
 			}			
 			if (kafkaMessages == null || kafkaMessages.isEmpty()) {
-				logger.info(handlerPhase, "no data in the kafka , will BACKOFF");
+				logger.info(handlerPhase, "no data in the kafka , will BACKOFF topicName={} partition={} currentOffset={}",inputDescriptor.getTopic(),inputDescriptor.getPartition(),currentOffset);
 				return Status.BACKOFF;
 			}
 
@@ -235,9 +246,12 @@ public class KafkaReaderHandler extends AbstractHandler {
 		long totalRead = nextIndexToRead + 1;
 		getSimpleJournal().setTotalRead(totalRead);
 
-		actionEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, inputDescriptor.getTopic());
+		actionEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, entityName);
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR,
 				String.valueOf(inputDescriptor.getPartition()));
+		actionEvent.getHeaders().put(PARTITION,
+				String.valueOf(inputDescriptor.getPartition()));		
+		
 		actionEvent.getHeaders().put(KAFKA_MESSAGE_READER_OFFSET, String.valueOf(messageOffset));
 
 		DateTime dt = timeManager.getLocalDateTime();
@@ -248,6 +262,7 @@ public class KafkaReaderHandler extends AbstractHandler {
 		
 		processChannelSubmission(actionEvent);
 
+		// default behavior is hour partition.
 		if (getTotalReadFromJournal() == getTotalSizeFromJournal()) {
 			logger.info(handlerPhase, "totalRead from Journal ={}", getTotalSizeFromJournal());
 

@@ -5,6 +5,8 @@ package io.bigdime.core.commons;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -108,17 +110,18 @@ public final class StringHelper {
 	 * @return byte[][] or throws an {@link IllegalArgumentException} if data is
 	 *         null
 	 */
-	public static byte[][] partitionByNewLine(final byte[] data) {
+
+	public static Segment partitionByNewLine(final byte[] data) {
 		Preconditions.checkNotNull(data);
 		String str = new String(data, Charset.defaultCharset());
 		int lastNewLineCharIndex = str.lastIndexOf("\n");
 		if (lastNewLineCharIndex == -1) {
 			return null;
 		} else {
-			byte[][] lines = new byte[2][];
-			lines[0] = Arrays.copyOf(data, lastNewLineCharIndex + 1);
-			lines[1] = Arrays.copyOfRange(data, lastNewLineCharIndex + 1, str.length());
-			return lines;
+			Segment segment = new Segment();
+			segment.setLines(Arrays.copyOf(data, lastNewLineCharIndex + 1));
+			segment.setLeftoverData(Arrays.copyOfRange(data, lastNewLineCharIndex + 1, str.length()));
+			return segment;
 		}
 	}
 
@@ -136,21 +139,20 @@ public final class StringHelper {
 	 * @param secondPart
 	 * @return
 	 */
-	@Deprecated
-	public static byte[][] appendAndPartitionByNewLine(final byte[] firstPart, final byte[] secondPart) {
-		byte[][] partitionedArray = partitionByNewLine(secondPart);
+
+	public static Segment appendAndPartitionByNewLine(final byte[] firstPart, final byte[] secondPart) {
+		Segment partitionedArray = partitionByNewLine(secondPart);
 
 		if (partitionedArray != null) {
-			partitionedArray[0] = ArrayUtils.addAll(firstPart, partitionedArray[0]);
+			partitionedArray.setLines(ArrayUtils.addAll(firstPart, partitionedArray.getLines()));
 			return partitionedArray;
 		} else {
 			if (new String(firstPart).isEmpty())
 				return null;
-			partitionedArray = new byte[2][];
-			partitionedArray[0] = firstPart;
-			partitionedArray[1] = secondPart;
-			return partitionedArray;// appendAndPartitionByNewLine("".getBytes(),
-									// firstPart);
+			Segment segment = new Segment();
+			segment.setLines(firstPart);
+			segment.setLeftoverData(secondPart);
+			return segment;
 		}
 	}
 
@@ -160,5 +162,132 @@ public final class StringHelper {
 		if (StringUtils.isBlank(basePath))
 			return absolutePath;
 		return absolutePath.substring(basePath.length());
+	}
+
+	public static String formatField(final String inputValue, StringCase stringCase) {
+		if (StringUtils.isBlank(inputValue))
+			return inputValue;
+		switch (stringCase) {
+		case LOWER:
+			return inputValue.toLowerCase();
+		case UPPER:
+			return inputValue.toUpperCase();
+		default:
+			return inputValue;
+		}
+	}
+
+	public static String getStringAfterLastToken(final String inputValue, final String token) {
+		if (token.isEmpty())
+			return inputValue;
+		if (inputValue.isEmpty())
+			return inputValue;
+
+		int index = inputValue.lastIndexOf(token);
+		if (index >= 0 && inputValue.length() > index) {
+			return inputValue.substring(index + 1);
+		} else
+			return null;
+	}
+
+	public static String getStringBeforeLastToken(final String inputValue, final String token) {
+		if (token.isEmpty() || inputValue.isEmpty())
+			return inputValue;
+
+		int index = inputValue.lastIndexOf(token);
+		if (index >= 0) {
+			return inputValue.substring(0, index);
+		} else
+			return null;
+	}
+
+	/**
+	 * Convert string like
+	 * "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt" to
+	 * "2016-07-01__path6/file_123.txt" or "2016-07-01/file_123.txt".
+	 * 
+	 * Less than 10 tokens are supported. Tokens are in $1, $2... format.
+	 * 
+	 * @param inputString
+	 *            string without any tokens.
+	 * @param outPattern
+	 * @param inPattern
+	 * @return
+	 */
+	public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern) {
+
+		Preconditions.checkArgument(inputString != null, "inputString must be not null");
+		Preconditions.checkArgument(outPattern != null, "outPattern must be not null");
+		Preconditions.checkArgument(inPattern != null, "inPattern must be not null");
+
+		String outputString = outPattern;
+		final Matcher m = inPattern.matcher(inputString);
+
+		while (m.find()) {
+			String key = null;
+
+			for (int i = m.groupCount(); i >= 1; i--) {
+				key = "$" + i;
+				String temp = m.group(i);
+				outputString = outputString.replace(key, temp);
+			}
+		}
+		return outputString;
+	}
+
+	public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern,
+			Map<? extends String, ? extends String> properties) {
+		String val = replaceTokens(inputString, outPattern, inPattern);
+		for (final String key : properties.keySet()) {
+			String pattern = "(.*)(\\$" + key + ")([\\W]*.*)";
+			if (val.matches(pattern)) {
+				val = val.replaceAll(pattern, "$1" + properties.get(key) + "$3");
+			}
+		}
+		return val;
+	}
+
+	/**
+	 * bigdime wrapper for StringUtils.isBlank.
+	 * 
+	 * @param arg
+	 * @return
+	 */
+	public static boolean isBlank(final String arg) {
+		return StringUtils.isBlank(arg);
+	}
+
+	public static boolean isNotBlank(final String arg) {
+		return !isBlank(arg);
+	}
+
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString) {
+		Pattern p = Pattern.compile("\\$\\{(\\w+)\\}+");
+		return getTokenToTokenNameMap(tokenizedString, p);
+	}
+
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString, final String pattern) {
+		Pattern p = Pattern.compile(pattern);
+		return getTokenToTokenNameMap(tokenizedString, p);
+	}
+
+	public static Map<String, String> getTokenToTokenNameMap(final String tokenizedString, final Pattern pattern) {
+		final Map<String, String> tokenToTokenNameMap = new HashMap<>();
+		Matcher m = pattern.matcher(tokenizedString);
+
+		while (m.find()) {
+			String token = m.group();// e.g. token=${yyyy}
+			String tokenName = m.group(1);// e.g.tokenName=yyyy
+			tokenToTokenNameMap.put(token, tokenName);
+		}
+		return tokenToTokenNameMap;
+	}
+
+	public static boolean equalsIgnoreCaseAndTrimmed(String arg1, String arg2) {
+		if (arg1 != null)
+			arg1 = StringUtils.trim(arg1);
+		if (arg2 != null)
+			arg2 = StringUtils.trim(arg2);
+		return StringUtils.equalsIgnoreCase(arg1, arg2);
 	}
 }

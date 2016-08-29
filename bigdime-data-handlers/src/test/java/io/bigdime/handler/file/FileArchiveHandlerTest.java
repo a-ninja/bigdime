@@ -66,9 +66,9 @@ public class FileArchiveHandlerTest {
 	public void testProcessWithReadCompleteAsTrue() throws Throwable {
 		ActionEvent actionEvent = new ActionEvent();
 		String tempDir = System.getProperty("java.io.tmpdir");
-		File sourceFilePath = new File(tempDir + "tempsrc");
+		File sourceFilePath = new File(tempDir, "tempsrc");
 		sourceFilePath.mkdirs();
-		File destPath = new File(tempDir + "tempdest");
+		File destPath = new File(tempDir, "tempdest");
 		File sourceFile = File.createTempFile("temp-file-name-" + 0, ".tmp", sourceFilePath);
 
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, "true");
@@ -98,8 +98,8 @@ public class FileArchiveHandlerTest {
 	public void testProcessWithSourceFileDoesntExist() throws Throwable {
 		ActionEvent actionEvent = new ActionEvent();
 		String tempDir = System.getProperty("java.io.tmpdir");
-		File destPath = new File(tempDir + "tempdest");
-		File sourceFile = new File(tempDir + "/tempsrc/tempfile.txt");
+		File destPath = new File(tempDir, "tempdest");
+		File sourceFile = new File(tempDir, "/tempsrc/tempfile.txt");
 
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, "true");
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_PATH, sourceFile.getAbsolutePath());

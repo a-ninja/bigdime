@@ -31,8 +31,6 @@ import org.testng.annotations.Test;
 
 @PrepareForTest({ AuthenticationService.class })
 public class AuthenticationServiceTest extends PowerMockTestCase {
-	private static final Logger logger = LoggerFactory
-			.getLogger(AuthenticationServiceTest.class);
 
 	AuthenticationService authenticationService;
 
@@ -43,7 +41,6 @@ public class AuthenticationServiceTest extends PowerMockTestCase {
 
 	@BeforeTest
 	public void setup() {
-		logger.info("source type", "Test Phase", "Setting the environment");
 		System.setProperty("env", "test");
 	}
 

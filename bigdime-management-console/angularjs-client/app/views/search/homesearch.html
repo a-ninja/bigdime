@@ -1,0 +1,67 @@
+ <div ng-model="dataLoad" ng-if="dataLoad.dataLoading">
+		               <img class="waitimagealign"
+			           src="data:image/gif;base64,R0lGODlhEAAQAPIAAP///wAAAMLCwkJCQgAAAGJiYoKCgpKSkiH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAADMwi63P4wyklrE2MIOggZnAdOmGYJRbExwroUmcG2LmDEwnHQLVsYOd2mBzkYDAdKa+dIAAAh+QQJCgAAACwAAAAAEAAQAAADNAi63P5OjCEgG4QMu7DmikRxQlFUYDEZIGBMRVsaqHwctXXf7WEYB4Ag1xjihkMZsiUkKhIAIfkECQoAAAAsAAAAABAAEAAAAzYIujIjK8pByJDMlFYvBoVjHA70GU7xSUJhmKtwHPAKzLO9HMaoKwJZ7Rf8AYPDDzKpZBqfvwQAIfkECQoAAAAsAAAAABAAEAAAAzMIumIlK8oyhpHsnFZfhYumCYUhDAQxRIdhHBGqRoKw0R8DYlJd8z0fMDgsGo/IpHI5TAAAIfkECQoAAAAsAAAAABAAEAAAAzIIunInK0rnZBTwGPNMgQwmdsNgXGJUlIWEuR5oWUIpz8pAEAMe6TwfwyYsGo/IpFKSAAAh+QQJCgAAACwAAAAAEAAQAAADMwi6IMKQORfjdOe82p4wGccc4CEuQradylesojEMBgsUc2G7sDX3lQGBMLAJibufbSlKAAAh+QQJCgAAACwAAAAAEAAQAAADMgi63P7wCRHZnFVdmgHu2nFwlWCI3WGc3TSWhUFGxTAUkGCbtgENBMJAEJsxgMLWzpEAACH5BAkKAAAALAAAAAAQABAAAAMyCLrc/jDKSatlQtScKdceCAjDII7HcQ4EMTCpyrCuUBjCYRgHVtqlAiB1YhiCnlsRkAAAOwAAAAAAAAAAAA==" />
+	  </div>
+	
+	<div  ng-model="dataLoad" ng-if="!dataLoad.isEmpty">
+				<div class="vssearch"  ng-if="dataLoad.itemCount>0">
+								<div class="col-xs-12 nopadding">
+									<input type="text" ng-model="search.query" ng-change="search()"
+										class="noborder form-control searchAlertSource leftborderradius rightborderradius"
+										placeholder="Search" id="searchAlertSourceID">
+								</div>
+				</div>
+				<div class="scrollable">
+	               <table  ng-if="dataLoad.itemCount>0" class="table table-bordered table-striped searchtable scrollable">
+					<thead>
+						<tr>
+							<th class="applicationName col-xs-1">Source<a ng-click="sort_by('applicationName')"><i
+									class="fa fa-fw fa-sort"></i></a></th>
+							<th class="logLevel col-xs-1">Severity<a ng-click="sort_by('logLevel')"><i
+									class="fa fa-fw fa-sort"></i></a></th>
+							<th class="dateTime col-xs-1">Time<a
+								ng-click="sort_by('dateTime')"><i class="fa fa-fw fa-sort"></i></a></th>
+							<th class="comment col-xs-1">Status<a
+								ng-click="sort_by('comment')"><i class="fa fa-fw fa-sort"></i></a></th>
+							<th class="messageContext col-xs-2">Message<a
+								ng-click="sort_by('messageContext')"><i class="fa fa-fw fa-sort"></i></a></th>
+							<th class="message col-xs-6">Detailed Message<a
+								ng-click="sort_by('message')"><i class="fa fa-fw fa-sort"></i></a></th>
+						</tr>
+					</thead>
+					<tfoot>
+						<td colspan="6">
+							<div>
+								<ul class="pagination pull-right">
+									<li class="pagination li" ng-class="{disabled: currentPage == 0}"><a href
+										ng-click="prevPage()">« Prev</a></li>
+									<li class="pagination li" ng-repeat="n in range(pagedItems.length)"
+										ng-class="{active: n == currentPage}" ng-click="setPage()">
+										<a href ng-bind="n + 1">1</a>
+									</li>
+									<li class="pagination li" ng-class="{disabled: currentPage == pagedItems.length - 1}">
+										<a href ng-click="nextPage()">Next »</a>
+									</li>
+								</ul>
+							</div>
+						</td>
+					</tfoot>
+					<tbody ng-init="init()">
+						<tr
+							ng-repeat="item in pagedItems[currentPage] | orderBy:sortingOrder:reverse">
+							<td>{{item.applicationName}}</td>
+							<td>{{item.logLevel}}({{item.severity}})</td>
+							<td>{{item.dateTimeString}}</td>
+							<td>{{item.comment}}</td>
+							<td>{{item.messageContext}}</td>
+							<td>{{item.message}}</td>					
+						</tr>
+					</tbody>
+				</table>
+		 </div>
+ 	</div>
+ 	<div ng-if="dataLoad.isEmpty">
+ 	         <span ng-model="applicatioName"><strong>No alerts present for the application {{applicatioName}}</strong></span>	
+ 	</div>
+ 
+ 

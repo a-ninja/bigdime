@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -224,5 +225,78 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
 		Assert.assertTrue(properties.get("arrayKey") instanceof ArrayList);
 		Assert.assertTrue(((ArrayList<?>) properties.get("arrayKey")).contains("array1"));
 		Assert.assertTrue(((ArrayList<?>) properties.get("arrayKey")).contains("array2"));
+	}
+	/**
+	 *  if a required key is not present in the node,  an IllegalArgumentException is thrown.
+	 */
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "no node found with key=notTextualRequiredNodeKey")
+	public void testGetRequiredProperty() {
+		JsonNode node = Mockito.mock(JsonNode.class);
+		String notTextualRequiredNodeKey = "notTextualRequiredNodeKey";
+		Mockito.when(node.get(notTextualRequiredNodeKey)).thenReturn(null);
+		jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Mockito.verify(node, Mockito.times(1)).get(notTextualRequiredNodeKey);
+	}
+	/**
+	 * Make sure that if a required key is  present in the node,  an IllegalArgumentException is thrown.
+	 */
+	@Test
+	public void testGetRequiredPropertyIfPresent() {
+		Long nodeLongValue = 100l;
+		Boolean nodeBooleanValue = true;
+		int nodeNumberValue = 111;
+		double nodeDoubleValue = 11.101;
+		String nodeStringValue = "testnodeStringValue";
+		
+		JsonNode node = Mockito.mock(JsonNode.class);
+		String notTextualRequiredNodeKey = "notTextualRequiredNodeKey";
+		JsonNode notTextualRequiredNode = Mockito.mock(JsonNode.class);
+		Mockito.when(notTextualRequiredNode.isBoolean()).thenReturn(true).thenReturn(false);
+		Mockito.when(notTextualRequiredNode.isNumber()).thenReturn(true).thenReturn(false);
+		Mockito.when(notTextualRequiredNode.isLong()).thenReturn(true).thenReturn(false);
+		Mockito.when(notTextualRequiredNode.isDouble()).thenReturn(true).thenReturn(false);
+		Mockito.when(notTextualRequiredNode.isTextual()).thenReturn(true).thenReturn(false);
+
+		Mockito.when(notTextualRequiredNode.getTextValue()).thenReturn(nodeStringValue);
+		Mockito.when(notTextualRequiredNode.getLongValue()).thenReturn(nodeLongValue);
+		Mockito.when(notTextualRequiredNode.getBooleanValue()).thenReturn(nodeBooleanValue);
+		Mockito.when(notTextualRequiredNode.getNumberValue()).thenReturn(nodeNumberValue);
+		Mockito.when(notTextualRequiredNode.getDoubleValue()).thenReturn(nodeDoubleValue);
+		Mockito.when(notTextualRequiredNode.asText()).thenReturn(nodeStringValue);
+
+		Mockito.when(node.get(notTextualRequiredNodeKey)).thenReturn(notTextualRequiredNode);
+		
+		Object object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeBooleanValue);
+		object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeNumberValue);
+		object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeLongValue);
+		object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeDoubleValue);
+		object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeStringValue);
+		object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+		Assert.assertEquals(object, nodeStringValue);		
+		Mockito.verify(node, Mockito.times(6)).get(notTextualRequiredNodeKey);
+	}	
+	
+	
+	@Test
+	public void testFindJsonNode() throws JsonProcessingException, IOException{
+		String jsonString = "{\"unit-input\" : {\"entity-name\" : \"unit-entity-name-value\",\"topic\" : \"topic1\",\"partition\" : \"1\", \"unit-separator\" : \"unit-separator-value\"}}";
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode node = objectMapper.readTree(jsonString.getBytes());
+
+		ObjectNode objectNode = jsonHelper.find(node, "partition1");
+		Assert.assertNull(objectNode);
+
+		objectNode = jsonHelper.find(node, "topic");
+		Object nodeValue = jsonHelper.getRequiredProperty(objectNode, "topic");
+		Assert.assertEquals(nodeValue, "topic1");
+
+		objectNode = jsonHelper.find(node, "partition");
+		nodeValue = jsonHelper.getRequiredProperty(objectNode, "partition");
+		Assert.assertEquals(nodeValue,"1");
 	}
 }

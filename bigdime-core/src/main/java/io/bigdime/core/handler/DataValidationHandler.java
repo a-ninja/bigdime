@@ -21,7 +21,9 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.ValidationHandlerConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.validation.DataValidationException;
@@ -62,14 +64,15 @@ public class DataValidationHandler extends AbstractHandler {
 	@Override
 	public void build() throws AdaptorConfigurationException {
 		super.build();
-		logger.debug("building validation handler", "property_map=\"{}\"", getPropertyMap());
+		setHandlerPhase("building validation handler");
+		logger.debug(getHandlerPhase(), "property_map=\"{}\"", getPropertyMap());
 
 		final String validationTypeProperty = (String) getPropertyMap()
 				.get(ValidationHandlerConfigConstants.VALIDATION_TYPE);
 		final String[] validationTypes = validationTypeProperty.split("\\|");
 		for (String type : validationTypes) {
 			type = type.trim();
-			logger.debug("building validation handler", "validation_type=\"{}\"", type);
+			logger.debug(getHandlerPhase(), "validation_type=\"{}\"", type);
 			validators.add(validatorFactory.getValidator(type.trim()));
 		}
 	}
@@ -83,29 +86,33 @@ public class DataValidationHandler extends AbstractHandler {
 		Preconditions.checkArgument(!actionEvents.isEmpty(), "eventList in HandlerContext can't be empty");
 		ActionEvent actionEvent = actionEvents.get(0);
 		process0(actionEvent);
+
+		processLastHandler();
 		return Status.READY;
 	}
 
 	private void process0(ActionEvent actionEvent) throws HandlerException {
 		logger.debug("DataValidationHandler processing event", "actionEvent==null=\"{}\"", actionEvent == null);
-		boolean validationPassed = false;
+		boolean validationPassed = true;
+		ValidationResult validationReady = ValidationResult.NOT_READY;
 		if (actionEvent == null) {
 			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.VALIDATION_ERROR, ALERT_SEVERITY.BLOCKER,
 					"_message=\"validation failed, null ActionEvent found in HandlerContext\"");
 			throw new ValidationHandlerException("validation failed, null ActionEvent found in HandlerContext");
 		}
-
 		for (final Validator validator : validators) {
+
 			try {
 				ValidationResponse validationResponse = validator.validate(actionEvent);
+				validationReady = validationResponse.getValidationResult();
+				if (validationReady != ValidationResult.NOT_READY) {
+					validationPassed = validationPassed
+							& (validationResponse.getValidationResult() == ValidationResult.PASSED);
 
-				if (validationResponse.getValidationResult() != ValidationResult.NOT_READY) {
-					validationPassed = validationResponse.getValidationResult() == ValidationResult.PASSED;
-					logger.debug("DataValidationHandler processing event", "updating runtime info");
-					updateRuntimeInfoToStoreAfterValidation(runtimeInfoStore, validationPassed, actionEvent);
-					logger.debug("DataValidationHandler processing event", "updated runtime info");
+					logger.debug("DataValidationHandler processing event", "received validation results", actionEvent);
 				} else {
 					logger.debug("DataValidationHandler processing event", "validation was skipped");
+					break;
 				}
 			} catch (DataValidationException e) {
 				logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.VALIDATION_ERROR, ALERT_SEVERITY.BLOCKER,
@@ -117,5 +124,16 @@ public class DataValidationHandler extends AbstractHandler {
 				throw new HandlerException(e.getMessage(), e);
 			}
 		}
+		try {
+			if (validationReady != ValidationResult.NOT_READY) {
+				logger.debug("DataValidationHandler processing event", "updating runtime info actionEvent={}",
+						actionEvent);
+				updateRuntimeInfoToStoreAfterValidation(runtimeInfoStore, validationPassed, actionEvent);
+			}
+		} catch (Exception e) {
+			logger.debug("exception during validation", "src_desc=\"{}\"", actionEvent.getHeaders().get("src-desc"));
+			throw new HandlerException(e.getMessage(), e);
+		}
+		logger.debug("DataValidationHandler processing event", "updated runtime info");
 	}
 }

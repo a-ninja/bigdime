@@ -11,6 +11,7 @@ public class SimpleJournal implements HandlerJournal {
 
 	private long totalRead;
 	private long totalSize;
+	private long readCount;
 	private List<ActionEvent> eventList;
 
 	/*
@@ -82,5 +83,14 @@ public class SimpleJournal implements HandlerJournal {
 		setTotalRead(0);
 		setEventList(null);
 		setTotalSize(0);
+		setReadCount(0);
+	}
+
+	public long getReadCount() {
+		return readCount;
+	}
+
+	public void setReadCount(long readCount) {
+		this.readCount = readCount;
 	}
 }

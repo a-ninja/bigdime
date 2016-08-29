@@ -28,6 +28,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
@@ -45,7 +47,8 @@ import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.validation.common.AbstractValidator;
 
 @Factory(id = "raw_checksum", type = RawChecksumValidator.class)
-
+@Component
+@Scope("prototype")
 /**
  * Performs validation by comparing expected(from event header) and actual
  * checksum(from actual document on disk).

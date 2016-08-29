@@ -1,6 +1,13 @@
 /**
  * Copyright (C) 2015 Stubhub.
  */
+
+/**
+ * 
+ * @author  Sandeep Reddy,Murthy
+ *
+ */
+
 package io.bigdime.management.common;
 
 public class ApplicationProperties {
@@ -11,6 +18,8 @@ public class ApplicationProperties {
 	private String devPort;
 	private String qaPort;
 	private String prodPort;
+	private String application;
+	private String rowsPerPage;
 	
 	public String getDevHost() {
 		return devHost;
@@ -47,6 +56,19 @@ public class ApplicationProperties {
 	}
 	public void setProdPort(String prodPort) {
 		this.prodPort = prodPort;
+	}
+	
+	public String getApplication() {
+		return application;
+	}
+	public void setApplication(String application) {
+		this.application = application;
+	}
+	public String getRowsPerPage() {
+		return rowsPerPage;
+	}
+	public void setRowsPerPage(String rowsPerPage) {
+		this.rowsPerPage = rowsPerPage;
 	}
 	
 	

@@ -145,7 +145,7 @@ public class KafkaReaderHandlerTest {
 				@SuppressWarnings("unchecked")
 				RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
 				ReflectionTestUtils.setField(kafkaReaderHandler, "runtimeInfoStore", runtimeInfoStore);
-
+				ReflectionTestUtils.setField(kafkaReaderHandler, "entityName", "unit-topic");
 				RuntimeInfo runtimeInfo = new RuntimeInfo();
 				runtimeInfo.setProperties(new HashMap<String, String>());
 				runtimeInfo.getProperties().put("kafka_message_offset", "0");

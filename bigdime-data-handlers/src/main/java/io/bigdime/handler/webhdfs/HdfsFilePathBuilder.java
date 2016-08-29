@@ -16,6 +16,8 @@ import com.google.common.base.Preconditions;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidDataException;
+import io.bigdime.core.commons.StringCase;
+import io.bigdime.core.commons.StringHelper;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 /**
@@ -29,6 +31,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
  */
 public class HdfsFilePathBuilder {
 	private String hdfsPath;
+	private String backupPath;
 	private String basePath;
 	private String relativePath;
 	private Map<String, String> tokenToHeaderNameMap;
@@ -36,9 +39,20 @@ public class HdfsFilePathBuilder {
 	private String partitionNames;
 	private String partitionValues;
 	private Map<String, String> hivePartitionNameValueMap = new LinkedHashMap<>();
+	private StringCase stringCase = StringCase.DEFAULT;
+
+	public HdfsFilePathBuilder withCase(StringCase stringCase) {
+		this.stringCase = stringCase;
+		return this;
+	}
 
 	public HdfsFilePathBuilder withHdfsPath(String hdfsPath) {
 		this.hdfsPath = hdfsPath;
+		return this;
+	}
+
+	public HdfsFilePathBuilder withBackupPath(String backupPath) {
+		this.backupPath = backupPath;
 		return this;
 	}
 
@@ -96,6 +110,17 @@ public class HdfsFilePathBuilder {
 		setSourceFileRelativePath();
 
 		String path = addTrailingSlashToPath(hdfsPath);
+		
+		if (!StringUtils.isBlank(backupPath)) {
+			int $Index = hdfsPath.indexOf("${");
+			if ($Index != -1) {
+				String baseHdfsPath = hdfsPath.substring(0, $Index);
+				path = addTrailingSlashToPath(baseHdfsPath) + addTrailingSlashToPath(backupPath)
+						+ addTrailingSlashToPath(hdfsPath.substring($Index));
+			} else {
+				path = addTrailingSlashToPath(hdfsPath) + addTrailingSlashToPath(backupPath);
+			}
+		}
 		if (!StringUtils.isBlank(basePath)) {
 			path += basePath;
 			path = addTrailingSlashToPath(path);
@@ -105,6 +130,7 @@ public class HdfsFilePathBuilder {
 			path += relativePath;
 			path = addTrailingSlashToPath(path);
 		}
+		
 		return path;
 	}
 
@@ -152,11 +178,12 @@ public class HdfsFilePathBuilder {
 			StringBuilder builder = new StringBuilder(detokenizedHdfsPath);
 			int partitionIndex = 0;
 			for (String partitionValue : partitionList) {
-				builder.append(partitionValue).append(File.separator);
+				String tempPartitionValue = formatField(partitionValue);
+				builder.append(tempPartitionValue).append(File.separator);
 				if (partitionNameList != null && partitionNameList.length >= partitionIndex)
-					hivePartitionNameValueMap.put(partitionNameList[partitionIndex], partitionValue);
+					hivePartitionNameValueMap.put(partitionNameList[partitionIndex], tempPartitionValue);
 				else
-					hivePartitionNameValueMap.put(partitionValue, partitionValue);
+					hivePartitionNameValueMap.put(partitionValue, tempPartitionValue);
 				partitionIndex++;
 			}
 			detokenizedHdfsPath = builder.toString();
@@ -168,17 +195,29 @@ public class HdfsFilePathBuilder {
 		int $Index = path.indexOf("${");
 		if ($Index != -1) {
 			for (final Entry<String, String> tokenHeaderNameEntry : tokenToHeaderNameMap.entrySet()) {
-				String headerValue = actionEvent.getHeaders().get(tokenHeaderNameEntry.getValue().toUpperCase());
+				String headerValue = actionEvent.getHeaders().get(tokenHeaderNameEntry.getValue());
 				if (headerValue == null) {
-					throw new InvalidDataException("no header with name=" + tokenHeaderNameEntry.getValue()
+					String isPartitionPathRequired = actionEvent.getHeaders().get(ActionEventHeaderConstants.HIVE_PARTITION_REQUIRED);
+					if (isPartitionPathRequired != null && isPartitionPathRequired.equalsIgnoreCase("false")){
+						detokenizedHdfsPath = detokenizedHdfsPath.replace(tokenHeaderNameEntry.getKey(), "");
+						detokenizedHdfsPath = addTrailingSlashToPath(detokenizedHdfsPath);
+					} else{
+						throw new InvalidDataException("no header with name=" + tokenHeaderNameEntry.getValue()
 							+ " found in ActionEvent. This is needed to compute the filepath on hdfs. src="
 							+ actionEvent.getHeaders().get("src-desc"));
+					}
+				} else{
+					headerValue = formatField(headerValue);
+					hivePartitionNameValueMap.put(tokenHeaderNameEntry.getValue(), headerValue);
+					detokenizedHdfsPath = detokenizedHdfsPath.replace(tokenHeaderNameEntry.getKey(), headerValue);
 				}
-				hivePartitionNameValueMap.put(tokenHeaderNameEntry.getValue(), headerValue);
-
-				detokenizedHdfsPath = detokenizedHdfsPath.replace(tokenHeaderNameEntry.getKey(), headerValue);
 			}
 		}
 		return detokenizedHdfsPath;
 	}
+
+	private String formatField(final String inputValue) {
+		return StringHelper.formatField(inputValue, stringCase);
+	}
+
 }

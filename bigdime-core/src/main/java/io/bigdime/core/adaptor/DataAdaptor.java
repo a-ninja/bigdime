@@ -61,8 +61,8 @@ public final class DataAdaptor implements Adaptor {
 	@Autowired
 	private DataAdaptorJob dataAdaptorJob;
 	private boolean adaptorStopped = false;
-	private static long DEFAULT_SLEEP_DURATION_SECONDS = 3000;
-	private long heartbeatSleepDurationSecs = DEFAULT_SLEEP_DURATION_SECONDS;
+	private static long DEFAULT_SLEEP_DURATION_SECONDS = 30;
+	private long heartbeatSleepDurationMillis = DEFAULT_SLEEP_DURATION_SECONDS * 1000;
 	private Thread heartbeatThread = null;
 	@Autowired
 	private MetadataStore metadataStore;
@@ -134,14 +134,8 @@ public final class DataAdaptor implements Adaptor {
 	public synchronized boolean start() throws DataAdaptorException {
 		logger.info("starting adaptor", "command received to start adaptor");
 		if (adaptorCurrentPhase == AdaptorPhase.STARTING || adaptorCurrentPhase == AdaptorPhase.STARTED) {
-			if (!isSourceRunning()) {
-				startSources();
-			} else {
-				logger.warn("starting adaptor",
-						"adaptor already running, at least one source is still running. can't start the sources");
-				// throw new DataAdaptorException("adaptor already started");
-				return false;
-			}
+			boolean started = startSources();
+			return started;
 		} else {
 			setAdaptorCurrentPhase(AdaptorPhase.STARTING);
 			startChannels();
@@ -221,14 +215,24 @@ public final class DataAdaptor implements Adaptor {
 		}
 	}
 
-	private void startSources() throws AdaptorConfigurationException {
+	private boolean startSources() throws AdaptorConfigurationException {
+		int numSourcesStarted = 0;
 		sourceRunning = true;
 		Collection<Source> sources = getSources();
 		logger.debug("adaptor calling start on each source", "sources.size=\"{}\"", sources.size());
 		for (final Source source : sources) {
-			logger.debug("adaptor calling start on source", "source_name=\"{}\"", source.getName());
-			source.start();
+			if (!(source.getLifecycleState() == LifecycleState.START)) {
+				numSourcesStarted++;
+				logger.debug("adaptor calling start on source", "source_name=\"{}\" count={}", source.getName(),
+						numSourcesStarted);
+				source.start();
+			} else {
+				logger.info("starting adaptor",
+						"_message=\"source is still running. can't start the source\" source_name=\"{}\"",
+						source.getName());
+			}
 		}
+		return (numSourcesStarted > 0);
 	}
 
 	private void startSink() throws AdaptorConfigurationException {
@@ -244,18 +248,19 @@ public final class DataAdaptor implements Adaptor {
 			@Override
 			public void run() {
 				try {
+					Thread.currentThread().setName("healthcheck for DataAdaptor");
 					logger.info("heartbeat thread for DataAdaptor", "heathcheck thread for DataAdaptor");
 					while (!adaptorStopped) {
 						isSourceRunning();
 						isSinkRunning();
 						logger.debug("heartbeat thread for DataAdaptor", "source_running=\"{}\" sink_running=\"{}\"",
 								sourceRunning, sinkRunning);
-						sleep(heartbeatSleepDurationSecs);
+						sleep(heartbeatSleepDurationMillis);
 					}
 				} catch (Exception e) {
 					logger.warn("heartbeat thread for DataAdaptor",
 							"DataAdaptor heartbeat thread received an exception, will duck it. sleep_duration=\"{}\"",
-							heartbeatSleepDurationSecs, e);
+							heartbeatSleepDurationMillis, e);
 				}
 			}
 		};

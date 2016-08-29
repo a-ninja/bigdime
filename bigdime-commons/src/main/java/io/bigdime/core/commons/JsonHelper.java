@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ObjectNode;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,6 +46,68 @@ public final class JsonHelper {
 			return childNode.getTextValue();
 		}
 		throw new IllegalArgumentException("no text node found with key=" + key);
+	}
+	
+	/**
+	 * Return's string object if the required key presents in Json node.
+	 * if it is present, it will check the type of the object and return's corresponding object.
+	 * if not present, it throws IllegalArgumentException
+	 * 
+	 * @param node
+	 * @param key
+	 * @return
+	 */
+	public Object getRequiredProperty(final JsonNode node, final String key) {
+		final JsonNode childNode = getRequiredNode(node, key);
+		if(childNode == null)
+			throw new IllegalArgumentException("no text node found with key=" + key);
+
+		if(childNode.isBoolean()){
+			return childNode.getBooleanValue();
+		}
+		if(childNode.isNumber()){
+			return childNode.getNumberValue();
+		}
+		if(childNode.isLong()){
+			return childNode.getLongValue();
+		}		
+		if(childNode.isDouble()){
+			return childNode.getDoubleValue();
+		}
+		if (childNode.isTextual()) {
+			return childNode.getTextValue();
+		}		
+		// all others, send as a text
+		return childNode.asText();
+	}	
+	
+	/**
+	 * Returns the Object node until it find's the node for corresponding fieldname.
+	 * @param node
+	 * @param fieldName
+	 * @return
+	 */
+	public  ObjectNode find(JsonNode node, String fieldName) {
+		Iterator<Entry<String, JsonNode>>iter = node.getFields();
+		ObjectNode on = null; 
+		while (iter.hasNext()) {
+			Entry<String, JsonNode> entry = iter.next();
+			if (entry.getKey().equals(fieldName)) {
+				on = new ObjectMapper().createObjectNode();
+				on.put(entry.getKey(), entry.getValue());
+				break;
+			}
+			else if (entry.getValue().isArray()) {
+				for (JsonNode jnode : entry.getValue()) {
+					on = find(jnode, fieldName);
+				}
+			}
+			else if (entry.getValue().isObject()) {
+				JsonNode jnode = entry.getValue();
+				on = find(jnode, fieldName);
+			}	
+		}
+		return on;
 	}
 
 	public JsonNode getRequiredNode(final JsonNode node, final String key) {

@@ -68,7 +68,7 @@ public class DataSinkTest {
 	 * @throws AdaptorConfigurationException
 	 * @throws HandlerException
 	 */
-	@Test
+	//@Test
 	public void testStartStreamingAdaptor() throws AdaptorConfigurationException, HandlerException {
 
 		AdaptorConfig.getInstance().setType(ADAPTOR_TYPE.STREAMING);
@@ -121,7 +121,7 @@ public class DataSinkTest {
 	 * @throws AdaptorConfigurationException
 	 * @throws HandlerException
 	 */
-	@Test
+	//@Test
 	public void testStartWithHandlerManagerThrowingException() throws AdaptorConfigurationException, HandlerException {
 		AdaptorConfig.getInstance().setType(ADAPTOR_TYPE.STREAMING);
 
@@ -154,7 +154,7 @@ public class DataSinkTest {
 	 * @throws AdaptorConfigurationException
 	 * @throws HandlerException
 	 */
-	@Test
+	//@Test
 	public void testStartAndStop() throws AdaptorConfigurationException, HandlerException {
 		AdaptorConfig.getInstance().setType(ADAPTOR_TYPE.STREAMING);
 

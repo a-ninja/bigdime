@@ -3,6 +3,7 @@
  */
 package io.bigdime.core.config;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,7 @@ public class SourceConfig {
 	}
 
 	public Set<HandlerConfig> getHandlerConfigs() {
+		Collections.unmodifiableSet(handlerConfigs);
 		return handlerConfigs;
 	}
 

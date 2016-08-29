@@ -1,0 +1,42 @@
+<form  class="adptform">
+	<div class="form-group row" style="padding-top: 2vh;">
+		<label class="col-xs-4">Name</label>
+		 <label class="col-xs-4">Details</label>
+	</div>
+	<div class="form-group row"
+		ng-repeat="selected in selectedAdaptorObjectArray track by $index"
+		id="sqlselection{{$index}}">
+		<div class="col-xs-4">
+			<input type="text" class="form-control" id="sqlinput{{$index}}"
+				placeholder="input here" ng-change="showNext()"
+				ng-model="selected.name">
+		</div>
+		<div class="col-xs-4">
+			<input type="text" class="form-control" id="sqlquery{{$index}}"
+				placeholder="sql query here" ng-change="showNext()"
+				ng-model="selected.query"> <input type="text"
+				class="form-control" id="sqlincrementby{{$index}}"
+				placeholder="increment by here" ng-change="showNext()"
+				ng-model="selected.incrementby"> <input type="text"
+				class="form-control" id="sqltargettable{{$index}}"
+				placeholder="target table name here" ng-change="showNext()"
+				ng-model="selected.targettable"> <input type="text"
+				class="form-control" id="sqlpartitionedcolumns{{$index}}"
+				placeholder="partition columns here" ng-change="showNext()"
+				ng-model="selected.partitioncoulmns">
+		</div>
+		<div class="col-xs-4 nopadding">
+			<a type="button" class="col-xs-2 glyphicon glyphicon-plus plus" ng-click="addMore()"></a>
+		    <a type="button"
+				class="col-xs-2 glyphicon glyphicon-minus minus"
+				ng-if="selectedAdaptorObjectArray.indexOf(selected)>0"
+				ng-click="remove($index)"></a>
+		</div>
+	</div>
+</form>
+<div class="form-group row text-right bottom-align-next" ng-if="isFilled">
+	   <div class="col-xs-12">
+					<a ui-sref="homepage.sourcehandlers" href=""
+						class="btn btn-success" type="button" ng-click="updateAdaptor();">Next</a>
+	  </div>
+</div>

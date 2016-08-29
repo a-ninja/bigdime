@@ -10,7 +10,7 @@ import javax.ws.rs.core.Response;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
+import io.bigdime.alert.AlertException;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.impl.biz.dao.AlertListDao;
@@ -28,6 +28,7 @@ import io.bigdime.impl.biz.service.AlertDataResponderService;
 
 @Component
 public class AlertDataResponderServiceImpl implements AlertDataResponderService {
+
 
 	private static final Logger logger = LoggerFactory
 			.getLogger(AlertDataResponderServiceImpl.class);
@@ -61,21 +62,23 @@ public class AlertDataResponderServiceImpl implements AlertDataResponderService 
 	}
 
 	@Override
-	public Response getAlerts(String alertName) {
+	public Response getAlerts(String alertName, long start, int limit,String search) {
 		try {
 			return Response
-					.ok(alertListDao.getAlerts(alertName))
+					.ok(alertListDao.getAlerts(alertName, start, limit,search))
 					.header("Access-Control-Allow-Origin", "*")
 					.header("Access-Control-Allow-Methods",
 							"POST, GET, OPTIONS, DELETE, PUT")
 					.header("Access-Control-Max-Age", "100000").build();
 		} catch (AuthorizationException e) {
+			e.printStackTrace();
 			logger.warn(SOURCE_TYPE,
 					"Error occured while calling alert serivce", e.getMessage());
 			return Response.status(Response.Status.NOT_ACCEPTABLE)
 					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
 
 		} catch (Exception e) {
+			e.printStackTrace();
 			logger.warn(SOURCE_TYPE,
 					"Error occured while calling alert serivce", e.getMessage());
 			return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
@@ -123,7 +126,92 @@ public class AlertDataResponderServiceImpl implements AlertDataResponderService 
 			return Response.status(Response.Status.NOT_ACCEPTABLE)
 					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
 
-		}catch (Exception e) {
+		} catch (Exception e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+
+		}
+	}
+
+	@Override
+	public Response getDates(String alertName,long start) {
+		try {
+			return Response
+					.ok(alertListDao.getDates(alertName,start))
+					.header("Access-Control-Allow-Origin", "*")
+					.header("Access-Control-Allow-Methods",
+							"POST, GET, OPTIONS, DELETE, PUT")
+					.header("Access-Control-Max-Age", "100000").build();
+		} catch (AlertException e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alerts Dates", e.getMessage());
+			return Response.status(Response.Status.NOT_ACCEPTABLE)
+					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
+
+		}
+	}
+
+	@Override
+	public Response getJSON(String templateId) {
+		try {
+			return Response
+					.ok(alertListDao.getJSON(templateId))
+					.header("Access-Control-Allow-Origin", "*")
+					.header("Access-Control-Allow-Methods",
+							"POST, GET, OPTIONS, DELETE, PUT")
+					.header("Access-Control-Max-Age", "100000").build();
+		} catch (AuthorizationException e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.NOT_ACCEPTABLE)
+					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
+
+		} catch (Exception e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+
+		}
+	}
+	
+	public Response getHandler(String handlerId) {
+		try {
+			return Response
+					.ok(alertListDao.getHandler(handlerId))
+					.header("Access-Control-Allow-Origin", "*")
+					.header("Access-Control-Allow-Methods",
+							"POST, GET, OPTIONS, DELETE, PUT")
+					.header("Access-Control-Max-Age", "100000").build();
+		} catch (AuthorizationException e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.NOT_ACCEPTABLE)
+					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
+
+		} catch (Exception e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+
+		}
+	}
+	
+	public Response getAdaptorConstants(){
+		try {
+			return Response
+					.ok(alertListDao.getAdaptorConstants())
+					.header("Access-Control-Allow-Origin", "*")
+					.header("Access-Control-Allow-Methods",
+							"POST, GET, OPTIONS, DELETE, PUT")
+					.header("Access-Control-Max-Age", "100000").build();
+		} catch (AuthorizationException e) {
+			logger.warn(SOURCE_TYPE,
+					"Error occured while calling alert serivce", e.getMessage());
+			return Response.status(Response.Status.NOT_ACCEPTABLE)
+					.entity(e.getMessage()).type(MediaType.TEXT_PLAIN).build();
+
+		} catch (Exception e) {
 			logger.warn(SOURCE_TYPE,
 					"Error occured while calling alert serivce", e.getMessage());
 			return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();

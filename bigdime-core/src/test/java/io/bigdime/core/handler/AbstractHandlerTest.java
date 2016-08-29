@@ -113,14 +113,18 @@ public class AbstractHandlerTest {
 		Assert.assertTrue(memoryChannelInputHandler.hashCode() == memoryChannelInputHandler1.hashCode());
 	}
 
-	@Test
-	public void testProcessChannelSubmission() {
-		MemoryChannelInputHandler memoryChannelInputHandler = new MemoryChannelInputHandler();
-		DataChannel dataChannel = Mockito.mock(DataChannel.class);
-		memoryChannelInputHandler.setOutputChannel(dataChannel);
-		memoryChannelInputHandler.processChannelSubmission(new ActionEvent());
-		Mockito.verify(dataChannel, Mockito.times(1)).put(Mockito.any(ActionEvent.class));
-	}
+	// Wrong test, no need for MemoryChannelInputHandler to process channel
+	// submission
+	// @Test
+	// public void testProcessChannelSubmission() {
+	// MemoryChannelInputHandler memoryChannelInputHandler = new
+	// MemoryChannelInputHandler();
+	// DataChannel dataChannel = Mockito.mock(DataChannel.class);
+	// memoryChannelInputHandler.setOutputChannel(dataChannel);
+	// memoryChannelInputHandler.processChannelSubmission(new ActionEvent());
+	// Mockito.verify(dataChannel,
+	// Mockito.times(1)).put(Mockito.any(ActionEvent.class));
+	// }
 
 	@Test
 	public void testGetNonNullJournalGetNewJournal() throws HandlerException {

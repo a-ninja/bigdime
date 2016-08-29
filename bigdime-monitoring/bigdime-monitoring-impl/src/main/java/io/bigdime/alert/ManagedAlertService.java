@@ -4,6 +4,7 @@
 package io.bigdime.alert;
 
 import java.util.Enumeration;
+import java.util.List;
 
 /**
  * Provides methods to get and update the alerts from a managed alert store.
@@ -46,4 +47,12 @@ public interface ManagedAlertService extends AlertService<ManagedAlert> {
 	 *         statuses are same
 	 */
 	public boolean updateAlert(Alert alertMessage, ALERT_STATUS alertStatus, String comment) throws AlertException;
+	
+	/**
+	 * @param alertServiceRequest
+	 *        provides the request parameters based on which the alerts offset dates are fetched.
+	 * @return list of dates as per the request criteria.       
+	 */
+	public List<Long> getDates(AlertServiceRequest alertServiceRequest) throws AlertException;
+
 }

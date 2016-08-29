@@ -2,7 +2,6 @@ package io.bigdime.adaptor.metadata.impl;
 
 import java.util.Date;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -65,8 +64,8 @@ public class MetadataRepositoryService {
 	 * 
 	 * @param metasegment
 	 */
-	public void createOrUpdateMetasegment(MetasegmentDTO metasegment,
-			boolean inreaseVersion) {
+	public synchronized void createOrUpdateMetasegment(
+			MetasegmentDTO metasegment, boolean inreaseVersion) {
 
 		Assert.notNull(metasegment, "MetasegmentDTO object should not be null");
 
@@ -85,7 +84,7 @@ public class MetadataRepositoryService {
 		if (metaDBDetails != null) {
 			if (metasegment.getEntitees() != null) {
 				// Set<EntiteeDTO> entitees = metaDBDetails.getEntitees();
-				logger.debug("SOURCENAME", "Metasegment size", metasegment
+				logger.debug(SOURCENAME, "Metasegment size", metasegment
 						.getEntitees().size() + "");
 				for (EntiteeDTO entity : metasegment.getEntitees()) {
 
@@ -104,7 +103,6 @@ public class MetadataRepositoryService {
 
 					if (dynamicDataTypesConfiguration)
 						configureDyanamicDataType(entity);
-					// boolean removedEntityFlag = false;
 					if (latestMetaDBDetails.getEntitees().size() > 0)
 						for (EntiteeDTO repoEntity : latestMetaDBDetails
 								.getEntitees())
@@ -113,16 +111,31 @@ public class MetadataRepositoryService {
 								entity.setId(repoEntity.getId());
 								latestMetaDBDetails.getEntitees().remove(
 										repoEntity);
-								// removedEntityFlag = true;
 								break;
 							}
 
 					latestMetaDBDetails.getEntitees().add(entity);
 					latestMetaDBDetails.setUpdatedAt(new Date());
+					
+					if (metasegment.getDatabaseName() != null)
+						latestMetaDBDetails.setDatabaseName(metasegment.getDatabaseName());
+					if (metasegment.getIsDataSource() != null)
+						latestMetaDBDetails.setIsDataSource(metasegment.getIsDataSource());
+					if (metasegment.getDatabaseLocation() != null)
+						latestMetaDBDetails.setDatabaseLocation(metasegment.getDatabaseLocation());
+					if (metasegment.getDescription() != null)
+						latestMetaDBDetails.setDescription(metasegment.getDescription());
+					if (metasegment.getCreatedBy() != null)
+						latestMetaDBDetails.setCreatedBy(metasegment.getCreatedBy());
+					if (metasegment.getUpdatedBy() != null)
+						latestMetaDBDetails.setUpdatedBy(metasegment.getUpdatedBy());
+					if (metasegment.getRepositoryType() != null)
+						latestMetaDBDetails.setRepositoryType(metasegment.getRepositoryType());
+					
 					repository.save(latestMetaDBDetails);
 				}
 			}
-			
+
 		} else {
 			if (metasegment.getEntitees() != null)
 				for (EntiteeDTO entity : metasegment.getEntitees()) {
@@ -396,6 +409,7 @@ public class MetadataRepositoryService {
 			for (EntiteeDTO entity : repoSegment.getEntitees())
 				repositoryEntity = entityRepository.findByIdAndEntityName(
 						entity.getId(), entityName);
+//				repositoryEntity = entityRepository.findByAdaptorNameAndEntityName(adaptorName, entityName);
 			if (repositoryEntity == null) {
 
 				logger.debug(SOURCENAME, "Get schema ",

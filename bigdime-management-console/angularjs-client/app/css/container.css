@@ -1,0 +1,291 @@
+/**
+ * Copyright (C) 2015 Stubhub.
+ */
+/**
+ * @author Sandeep Reddy,Murthy
+ * @description # Provides Custom CSS requirements for application
+ */
+*
+{
+    margin:0px;padding:0px;
+    font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+}
+html,body,.container
+{
+    height:100%;
+    width:100%;
+    display:block;
+    background-color: #f5f5f5 !important;
+    margin:0;
+    padding:0;
+    overflow-x: hidden;
+}
+
+::-webkit-scrollbar { 
+    display: none; 
+}
+.container
+{
+    padding-right:0px !important;
+    padding-left:0px !important;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    height:100%;
+    display:table;
+}
+.tablecontainer{
+	height:100%;
+	width:100%;
+    display:table;
+    overflow:scroll;
+}
+
+/** Login Page css*/
+
+.col-xs-4.col-xs-offset-4{
+    top: 25vh;	
+}
+
+/**Application Headers**/
+header
+{
+   background-color: #53A6B2 !important; 
+    height:100px;
+}
+
+.welcome {
+	color: #FFFFFF !important;
+	font-size: 14px !important;
+	margin-top: 1em;
+	margin-right: 1em;
+	float: right;
+	margin-bottom:1em;
+}
+
+.rowone {
+/*     margin-right: 15px; */
+    margin-left: 0px; 
+    padding-right: 15px;
+    height:5vh;
+    position:realtive;
+}
+.rowtwo {	
+	background-color: #E99237 !important;
+	color: #FFFFFF !important;
+	height:55px;
+}
+.page-header {
+	color: #FFFFFF !important;
+    font-size: 24px;
+    height:10vh;
+	border-bottom: none !important;
+}
+.dropdown-menu {
+  width: 70vmin !important;
+}
+
+.row4
+{
+	height:calc(100vh - 155px);
+}
+.col-md-3.no-float, .col-md-9.no-float {
+    float: none; 
+    vertical-align: top;
+}
+.col-md-3
+{
+    background: #FED59D !important;
+    height:inherit;
+    padding-bottom:0px;
+}
+.col-md-9
+{
+    background:#f5f5f5 !important;
+    height:inherit;
+}
+
+.textarea.form-control{
+	height:inherit;
+	background:#f5f5f5 !important;
+}
+
+/*form css*/
+
+.form-group {
+    margin-right: 15px !important;
+    margin-left: 15px !important;
+}
+.form-actions {
+    margin-right: 15px !important;
+    margin-left: 15px !important;
+}
+
+.plus{
+ padding-top: 1.5vh;
+ color:green;	
+ padding-left:0px;	
+}
+.minus{
+ padding-top: 1.5vh;	
+ color:red;	
+ padding-left:0px;	
+}
+.cog{
+ padding-top: 1.5vh;	
+ color:black;
+ padding-left:0px;	
+}
+.scrollable{
+ height: inherit; 
+ overflow: scroll;
+}
+
+/**search box css*/
+.vssearch {
+	border: 2px solid #dedede !important;
+	padding: 5px 15px 40px;
+}
+
+/*Footer css*/
+footer
+{
+
+}
+footer >div
+{
+   margin-bottom: 0px;
+   height:inherit;
+} 
+
+.f1 {
+	text-align: center;
+	color: white;
+	padding-top: 10px;
+	padding-bottom: 18px;
+	background: #53A6B2 none repeat scroll 0% 0% !important;
+}
+
+.breadcrumbtext{
+   height: inherit;
+    margin: 0px;
+    padding: 0.5em;
+    min-height: inherit;
+    color: #FFFFFF !important;
+}
+
+.highlight {
+    font-weight: bold;
+}
+
+.required:after {
+  content:" *";
+  color:red;
+ }
+
+.bottom-align-next {
+    bottom: 1vh;
+    right: 1vh;
+  }
+  
+.boxtopborder {
+	border: 1px solid grey;
+    display:table-row;
+}
+.boxtopborder >div{
+	position: relative;
+    border: 1px solid grey;
+    padding-top: 2vh;
+}
+
+.boxbottomborder {
+    display: table-row;
+    height:100%;
+}
+
+.boxbottomborder >div{
+	border: 1px solid grey;
+    height:100%;
+}
+.defaulttopboxborder {
+	border: 1px solid grey;
+    padding-top: 10px;
+    overflow:scroll;
+    height: 20%; 
+} 
+.defaultbottomboxborder {
+	border: 1px solid grey;
+    padding-top: 10px;
+    overflow:scroll;
+    height: 80%; 
+}
+.selectedadaptor{
+	padding-top: 1vh;
+}
+
+.padding-top{
+	padding-top:10px;
+}
+.dropdown-padding-top{
+	padding-top: 2vh;
+}
+
+.ok{
+
+}
+
+/*Login page*/
+.invalid {
+	color:#a94442;
+}
+
+/*search page*/
+.searchtable{
+	 max-width: none;
+     table-layout: fixed;
+     word-wrap: break-word;
+}
+
+/*Home page*/
+/*rowtwo*/
+.datasource{
+	height:inherit;
+    padding: 10px 0px 10px 20px;
+}
+.dropdown{
+	padding: 10px;
+    padding-right: 20px
+}
+
+.applicationtree{
+     background: #FED59D !important;
+     height:inherit;
+     padding: 10px 0 0 20px;
+     width:250px;
+}
+.applicationnames{
+	color:black;
+}
+.thirdBox {
+	padding: 1em;
+	padding-right: 1.5em;
+    height: calc(100% - 50px);
+    width: calc(100% - 250px);
+    overflow: scroll;
+}
+
+.waitimagealign{
+	position: absolute;
+    top: 50%;
+    left: 50%;
+}
+
+.adptform{
+	height:100%;
+	display: table-row;
+}
+.adptheader{ 
+    height: 100%;
+    display: table;
+    width: 100%;
+}
+

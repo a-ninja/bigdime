@@ -111,7 +111,7 @@ public class DataValidationHandlerTest {
 		validators.add(validator);
 		ValidationResponse validationResponse = new ValidationResponse();
 		validationResponse.setValidationResult(ValidationResult.NOT_READY);
-		Mockito.when(validator.validate(Mockito.any(ActionEvent.class))).thenReturn(validationResponse);
+		Mockito.when(validator.validate(Mockito.any(ActionEvent.class))).thenReturn(validationResponse).thenReturn(validationResponse);
 		ReflectionTestUtils.setField(dataValidationHandler, "validators", validators);
 		HandlerContext.get().createSingleItemEventList(Mockito.mock(ActionEvent.class));
 		dataValidationHandler.process();

@@ -1,0 +1,47 @@
+<header>
+	<div class="row rowone"
+		ng-include="'views/home/applicationheader.html'"></div>
+</header>
+<div class="row rowtwo">
+	<div class="col-xs-2 no-float datasource">
+		<p class="text-left datasourcetext">DataSources
+		<p>
+	</div>
+	<div class="col-xs-8 nopadding no-float text-right datasource">
+		<ol class="text-right breadcrumb"
+			style="background-color: #E99237 !important;">
+			<li><a ui-sref=".jsonhome" href="" class="breadcrumbtext">Adaptor</a></li>
+			<li ng-if="$parent.breadcrumbs.source=='true'"><a
+				ui-sref=".sourcehandlers" href="" class="breadcrumbtext">Source</a></li>
+			<li ng-if="$parent.breadcrumbs.sink=='true'"><a
+				ui-sref=".sinkhandlers" href="" class="breadcrumbtext">Sink</a></li>
+			<li ng-if="$parent.breadcrumbs.channel=='true'"><a
+				ui-sref=".channelselector" href="" class="breadcrumbtext">Channel</a></li>
+			<li ng-if="$parent.breadcrumbs.mapper=='true'"><a
+				ui-sref=".sourcechannelsinkmapper" href="" class="breadcrumbtext">Mapping</a></li>
+			<li ng-if="$parent.breadcrumbs.result=='true'"><a
+				ui-sref=".viewjson" href="" class="breadcrumbtext">Result</a></li>
+		</ol>
+	</div>
+	<div class="col-xs-2 dropdown">
+		<select style="width: auto;" ui-sref=".search"
+			class="form-control pull-right" ng-model="environment.selected"
+			ng-options="option as option for option in environmentoptions"
+			ng-change="getjqxTree()" ng-init="init()">
+		</select>
+	</div>
+</div>
+<div class="row row4">
+	<div ui-view="applicationtree"
+		class="col-xs-3 no-float applicationtree">
+		<div ui-view="applicationtree" class="col-xs-2 noleftpadding"></div>
+	</div>
+	<div id="thirdBox" class="col-xs-9 no-float nopadding thirdBox">
+		<div ui-view style="height: 100%;"></div>
+	</div>
+</div>
+ <footer>
+	<nav class="navbar  navbar-default navbar-fixed-bottom">
+		<div class="f1">Powered by BigDime@copyrights-2015</div>
+	</nav>
+</footer> 

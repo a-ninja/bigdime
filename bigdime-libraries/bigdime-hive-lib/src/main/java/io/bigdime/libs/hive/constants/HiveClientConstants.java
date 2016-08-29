@@ -17,6 +17,7 @@ public final class HiveClientConstants {
 	public static final String DFS_NAME_NODE_RPC_ADDRESS_NODE1 = "dfs.namenode.rpc-address.haservicename.nn1";
 	public static final String DFS_NAME_NODE_RPC_ADDRESS_NODE2 = "dfs.namenode.rpc-address.haservicename.nn2";
 	public static final String HA_SERVICE_NAME = "haservicename";
+	public static final String HA_ENABLED = "ha.enable";
 	
 	public static final String TYPE_STRING = "STRING";
 	public static final String TYPE_NUMBER = "NUMBER";
@@ -26,4 +27,9 @@ public final class HiveClientConstants {
 	public static final String TYPE_INT = "INT";
 	public static final String TYPE_BOOLEAN = "BOOLEAN";
 	public static final String TYPE_RAW = "RAW";
+
+	public static final String HIVE_METASTORE_URI = "hive.metastore.uris";
+	public static final String HIVE_SCHEME = "hive.uri.hdfs.scheme";
+	public static final String HIVE_DEFAULT_SCHEME = "hdfs://";	
+	public static final String DFS_HOST = "dfs.host";
 }

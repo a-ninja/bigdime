@@ -55,7 +55,7 @@ public class RuntimeInfoDTO {
 	/**
 	 * Maps Adaptor to Runtime properties.
 	 */
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER,orphanRemoval=true)
 	@JoinColumn(name = "RUNTIME_INFO_ID")
 	private Set<RuntimePropertyDTO> runtimePropertiesDTO = new HashSet<RuntimePropertyDTO>();
 

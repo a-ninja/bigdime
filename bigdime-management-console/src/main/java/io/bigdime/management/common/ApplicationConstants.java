@@ -5,9 +5,10 @@ package io.bigdime.management.common;
 
 /**
  * 
- * @author vchevendra
+ * @author  Sandeep Reddy,Murthy,vchevendra
  *
  */
+
 public class ApplicationConstants {
 
 	public static final String DISPLAY_NAME = "displayName";
@@ -33,4 +34,7 @@ public class ApplicationConstants {
 	public static final String SUCCESS="success";
 	public static final String HOME="home";
 	public static final String ERROR="error";
+	public static final String JSONBUILDERROOT="/jsonbuilder";
+	public static final String JSONBUILDER="jsonbuilder";
+	public static final String UTF_FORMAT = "UTF-8";
 }

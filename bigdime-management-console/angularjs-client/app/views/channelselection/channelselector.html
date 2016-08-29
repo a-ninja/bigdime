@@ -1,0 +1,62 @@
+<div style="height: inherit; overflow: scroll;">
+	<div class="tablecontainer">
+		<form class="boxbottomborder">
+			<div>
+			<div class="adptheader">
+			    <div class="adptform">
+				<div class="form-group row" style="padding-top: 2vh;">
+					<label class="col-xs-4">Choose channels</label>
+				</div>
+				<div class="form-group row"
+					ng-repeat="channel in channels track by $index"
+					id="channel{{$index}}">
+					<div class="col-xs-4 norightpadding">
+						<input ng-if="channels.indexOf(channel)==0" type="text"
+							class="form-control" placeholder="name" ng-model="channel.name">
+						<input ng-if="channels.indexOf(channel)>0" type="text"
+							class="form-control" placeholder=" name" ng-model="channel.name">
+					</div>
+					<div class="col-xs-4 nopadding">
+						<a type="button" class="col-xs-2 glyphicon glyphicon-cog cog"
+							data-toggle="dropdown" aria-haspopup="true"
+							ng-click="stopPropagation();updateRequiredTag()"></a> <a
+							ng-if="channels.indexOf(channel)>0" type="button"
+							class="col-xs-2 glyphicon glyphicon-minus minus"
+							ng-click="removechannel($index)"></a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<div ng-if="$parent.adaptor.selected=='Kafka'"
+									class="dropdown-padding-top"
+									ng-include="'views/channelselection/kafkachanneldropdown.html'"></div>
+							</li>
+							<li>
+								<div ng-if="$parent.adaptor.selected=='Sql'" class="dropdown-padding-top"
+									ng-include="'views/channelselection/sqlchanneldropdown.html'"></div>
+							</li>
+							<li>
+								<div ng-if="$parent.adaptor.selected=='File'"
+									class="dropdown-padding-top"
+									ng-include="'views/channelselection/filechanneldropdown.html'"></div>
+							</li>
+						</ul>
+					</div>
+				</div>
+				<div class="form-group row col-xs-4">
+					<select class="form-control" id="choosechannel"
+						ng-model="channel.selected"
+						ng-options="option as option for option in channellist"
+						ng-change="addchannel(channel.selected)">   
+						<option value="" disabled selected style="display: none;">Choose
+							channel</option>
+					</select>
+				</div>
+	           </div>
+	           <div class="form-group row text-right bottom-align-next" ng-if="isFilled">
+	                <div class="col-xs-12">
+					   <a ui-sref="homepage.sourcechannelsinkmapper" href="" class="btn btn-success" type="button" ng-click="updateAdaptor()">Next</a>
+	                </div>
+	           </div>
+			</div>
+		</form>
+	</div>
+</div>

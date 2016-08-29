@@ -1,6 +1,11 @@
 /**
  * Copyright (C) 2015 Stubhub.
  */
+/**
+ * 
+ * @author  Sandeep Reddy,Murthy,vchevendra
+ *
+ */
 package io.bigdime.management.common;
 
 import org.springframework.stereotype.Component;
@@ -61,12 +66,5 @@ public class AuthenticateUser {
 	public void setErrorCode(String errorCode) {
 		this.errorCode = errorCode;
 	}
-
-//	@Override
-//	public String toString() {
-//		return "AuthenticateUser [loginStatus =" + loginStatus
-//				+ ", displayName =" + displayName + ", userId =" + userId
-//				+ ", errorCode =" + errorCode + "]";
-//	}
 
 }

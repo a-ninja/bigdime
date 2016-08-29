@@ -12,6 +12,8 @@ import java.util.Set;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hive.hcatalog.common.HCatException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
@@ -39,7 +41,8 @@ import io.bigdime.libs.hive.table.HiveTableManger;
 import io.bigdime.validation.common.AbstractValidator;
 
 @Factory(id = "column_type", type = ColumnTypeValidator.class)
-
+@Component
+@Scope("prototype")
 /**
  * Performs validation by comparing hive column type and source column type
  * 
@@ -73,52 +76,31 @@ public class ColumnTypeValidator implements Validator {
 	public ValidationResponse validate(ActionEvent actionEvent)
 			throws DataValidationException {
 		TableMetaData table = null;
-		int port = 0;
 		AbstractValidator commonCheckValidator = new AbstractValidator();
 		ValidationResponse validationPassed = new ValidationResponse();
 		validationPassed.setValidationResult(ValidationResult.FAILED);
-		String hiveHost = actionEvent.getHeaders().get(
-				ActionEventHeaderConstants.HIVE_HOST_NAME);
-		String hivePort = actionEvent.getHeaders().get(
-				ActionEventHeaderConstants.HIVE_PORT);
+		String hiveMetaStoreURL = actionEvent.getHeaders().get(ActionEventHeaderConstants.HIVE_METASTORE_URI);
 		String hiveDBName = actionEvent.getHeaders().get(
 				ActionEventHeaderConstants.HIVE_DB_NAME);
 		String hiveTableName = actionEvent.getHeaders().get(
 				ActionEventHeaderConstants.HIVE_TABLE_NAME);
 
-		commonCheckValidator.checkNullStrings(ActionEventHeaderConstants.HIVE_HOST_NAME, hiveHost);
-		commonCheckValidator.checkNullStrings(ActionEventHeaderConstants.PORT, hivePort);
-		try {
-			port = Integer.parseInt(hivePort);
-
-		} catch (NumberFormatException e) {
-			logger.warn(
-					AdaptorConfig.getInstance().getAdaptorContext()
-							.getAdaptorName(),
-					"NumberFormatException",
-					"Illegal port number input({}) while parsing string to integer",
-					hivePort);
-			throw new NumberFormatException();
-		}
-
+		commonCheckValidator.checkNullStrings(ActionEventHeaderConstants.HIVE_METASTORE_URI, hiveMetaStoreURL);
 		commonCheckValidator.checkNullStrings(ActionEventHeaderConstants.HIVE_DB_NAME, hiveDBName);
 		commonCheckValidator.checkNullStrings(ActionEventHeaderConstants.HIVE_TABLE_NAME,
 				hiveTableName);
 
 		// connect to hive
 		Properties props = new Properties();
-		props.put(HiveConf.ConfVars.METASTOREURIS, "thrift://" + hiveHost
-				+ DataConstants.COLON + port);
+		props.put(HiveConf.ConfVars.METASTOREURIS, hiveMetaStoreURL);
 
 		HiveTableManger hiveTableManager = HiveTableManger.getInstance(props);
-
+		long startTime = System.currentTimeMillis();
 		try {
 			if (hiveTableManager.isTableCreated(hiveDBName, hiveTableName)) {
 				table = hiveTableManager.getTableMetaData(hiveDBName,
 						hiveTableName);
-				List<Column> partitionColumnList = table.getPartitionColumns();
 				List<Column> hiveColumnList = table.getColumns();
-				hiveColumnList.addAll(partitionColumnList);
 				Set<Attribute> metadataColumns = null;
 				Metasegment metasegment = metadataStore.getAdaptorMetasegment(AdaptorConfig
 						.getInstance().getAdaptorContext().getAdaptorName(),
@@ -273,7 +255,9 @@ public class ColumnTypeValidator implements Validator {
 			throw new DataValidationException(
 					"Exception during getting column type from metastore");
 		}
-
+		long endTime = System.currentTimeMillis();
+		logger.info(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), 
+				"Column type validation for table = " +hiveTableName, " finished in {} milliseconds", (endTime-startTime));
 		return validationPassed;
 
 	}

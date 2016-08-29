@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -45,14 +46,15 @@ public class WebHdfs {
 	private static Logger logger = LoggerFactory.getLogger(WebHdfs.class);
 	private String host = null;
 	private int port = 0;
-	private HttpClient httpClient = null;
-	private URI uri = null;
-	private HttpRequestBase httpRequest = null;
+	protected HttpClient httpClient = null;
+	protected URI uri = null;
+	protected HttpRequestBase httpRequest = null;
 	private ObjectNode jsonParameters = null;
 	// private final String SANDBOX = "sandbox";
 	// private final String SANDBOX_HDP = "sandbox.hortonworks.com";
 	private RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
 	private List<Header> headers;
+	private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
 
 	public WebHdfs setParameters(ObjectNode jsonParameters) {
 		Iterator<String> keys = jsonParameters.getFieldNames();
@@ -101,15 +103,23 @@ public class WebHdfs {
 		return this;
 	}
 
+	protected WebHdfs() {
+
+	}
+
+	protected void initConnection() {
+		this.httpClient = HttpClientBuilder.create().build();// new
+//		ObjectMapper mapper = new ObjectMapper();
+//		this.jsonParameters = mapper.createObjectNode();
+		roundRobinStrategy.setHosts(host);
+	}
+
 	protected WebHdfs(String host, int port) {
 		this.host = host;
 		this.port = port;
-		this.httpClient = HttpClientBuilder.create().build();// new
-		// DefaultHttpClient();
-		// httpClient.clearResponseInterceptors();
 		ObjectMapper mapper = new ObjectMapper();
 		this.jsonParameters = mapper.createObjectNode();
-		roundRobinStrategy.setHosts(host);
+		initConnection();
 	}
 
 	public static WebHdfs getInstance(String host, int port) {
@@ -134,7 +144,7 @@ public class WebHdfs {
 				uriBuilder.addParameter(key, valueStr);
 			}
 		}
-		//jsonParameters.removeAll();
+		// jsonParameters.removeAll();
 		try {
 			this.uri = uriBuilder.build();
 		} catch (URISyntaxException e) {
@@ -256,10 +266,11 @@ public class WebHdfs {
 	}
 
 	// LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
-	private HttpResponse get() throws ClientProtocolException, IOException {
+	protected HttpResponse get() throws ClientProtocolException, IOException {
 		httpRequest = new HttpGet(uri);
 		logger.debug("File status request: {}", httpRequest.getURI());
 		uri = null;
+
 		return httpClient.execute(httpRequest);
 	}
 
@@ -389,7 +400,74 @@ public class WebHdfs {
 		HttpResponse response = buildURI("SETPERMISSION", hdfsPath).put();
 		return response;
 	}
-	public URI getURI(){
+
+	public URI getURI() {
 		return uri;
+	}
+
+	protected HttpClient getHttpClient() {
+		return httpClient;
+	}
+
+	protected void setHttpClient(HttpClient httpClient) {
+		this.httpClient = httpClient;
+	}
+
+	private static final long SLEEP_TIME = 3000;
+
+	protected HttpResponse invokeWithRetry(Method method, int maxAttempts, String... args) throws WebHdfsException {
+
+		boolean isSuccess = false;
+		int statusCode = 0;
+		String exceptionReason = null;
+		int attempts = 0;
+		try {
+			do {
+				attempts++;
+				logger.debug("_message=\"invoking {}\" attempt={} args={}", method.getName(), attempts, args);
+				try {
+					if (httpRequest == null)
+						initConnection();
+					HttpResponse response = (HttpResponse) method.invoke(this, args);
+					statusCode = response.getStatusLine().getStatusCode();
+					if (statusCode == 200 || statusCode == 201) {
+						isSuccess = true;
+						return response;
+					} else if (statusCode == 404) {
+						logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
+						exceptionReason = response.getStatusLine().getReasonPhrase();
+						releaseConnection();
+					} else {
+						logResponse(response, method.getName(), attempts, args);
+						releaseConnection();
+					}
+				} catch (Exception e) {
+					exceptionReason = e.getMessage();
+					releaseConnection();
+				}
+			} while (!isSuccess && attempts < maxAttempts);
+		} catch (SecurityException e1) {
+			logger.error("_message=\"{} failed:\"", method.getName(), e1);
+		}
+		if (!isSuccess) {
+			logger.error("_message=\"{} failed After {} retries :\", args={}", method.getName(), maxAttempts, args);
+			throw new WebHdfsException(statusCode, exceptionReason);
+		} else {
+			if (attempts > 1) {
+				logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
+			}
+		}
+		return null;
+	}
+
+	private void logResponse(HttpResponse response, String message, int attempts, String... args) {
+		int statusCode = response.getStatusLine().getStatusCode();
+		logger.warn("_message=\"{} failed\" responseCode={} responseMessage={} attempts={} args={}", message,
+				statusCode, response.getStatusLine().getReasonPhrase(), attempts, args);
+		try {
+			Thread.sleep(SLEEP_TIME * (attempts + 1));
+		} catch (InterruptedException e) {
+			logger.warn("sleep interrupted", e);
+		}
 	}
 }

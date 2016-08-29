@@ -1,0 +1,69 @@
+<form class="dropdown" ng-click="stopPropagation()">
+  <div ng-if="datahandler.hasOwnProperty('name')" class="form-group row">
+    <label class="col-xs-3" id="name{{$index}}">Name</label>
+    <div class="col-xs-8" ng-switch on="datahandler">
+      <input ng-if="datahandlers.indexOf(datahandler)==0"  type="text" class="form-control"  placeholder="name" ng-model="datahandler.name" >
+      <input ng-if="datahandlers.indexOf(datahandler)>0"  type="text" class="form-control" placeholder="name" ng-model="datahandler.name">
+    </div>
+  </div>
+  <div ng-if="datahandler.hasOwnProperty('description')" class="form-group row">
+    <label for="sourcehandlerdescription{{$index}}" id='description' class="col-xs-3">Description</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerdescription{{$index}}" placeholder="description" ng-model="datahandler.description" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.hasOwnProperty('handler-class')" class="form-group row">
+    <label for="sourcehandlerhandlerclass{{$index}}" class="col-xs-3" id="handler-class">Handler class</label>
+    <div ng-if="datahandlers.indexOf(datahandler)<defaulthandlercount" class="col-xs-8">
+        <input type="text" class="form-control" id="sourcehandlerhandlerclass{{$index}}" placeholder="handler class" ng-model="datahandler['handler-class']" ng-change="shownext()" 
+       disabled>
+    </div>
+        <div ng-if="datahandlers.indexOf(datahandler)>=defaulthandlercount" class="col-xs-8">
+          <select class="form-control" id="sourcehandlerhandlerclass{{$index}}" ng-model="datahandler['handler-class']" ng-options="option as option for option in handlerclassnames">
+           <option value="" disabled selected style="display: none;">Select your option</option>
+   </select>
+    </div>
+  </div>
+  
+  <div ng-if="datahandler.properties.hasOwnProperty('brokers')"  class="form-group row">
+    <label for="sourcehandlerbroker{{$index}}" class="col-xs-3" id="brokers">Brokers</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerbroker{{$index}}" placeholder="brokers" ng-model="datahandler.properties.brokers" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.properties.hasOwnProperty('offset-data-dir')" class="form-group row">
+    <label for="sourcehandleroffsetdatadir{{$index}}" class="col-xs-3 " id="offset-data-dir">Offset Data Dir</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandleroffsetdatadir{{$index}}" placeholder="Offset data dir" ng-model="datahandler.properties['offset-data-dir']" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.properties.hasOwnProperty('messageSize')" class="form-group row">
+    <label for="messagesize" class="col-xs-3 " id="messageSize" >Message Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="messagesize" placeholder="Message Size" ng-model="datahandler.properties['messageSize']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="datahandler.properties.hasOwnProperty('buffer-size')" class="form-group row">
+    <label for="buffersize" class="col-xs-3 " id="buffer-size">Buffer Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="buffersize" placeholder="Buffer Size" ng-model="datahandler.properties['buffer-size']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="datahandler.properties.hasOwnProperty('schemaFileName')" class="form-group row">
+    <label for="schemafilename" class="col-xs-3 " id="schemaFileName">Schema Filename</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="schemafilename" placeholder="Schema Filename " ng-model="datahandler.properties['schemaFileName']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="datahandler.properties.hasOwnProperty('entityName')" class="form-group row">
+    <label for="entityname" class="col-xs-3" id="entityName">Entity Name</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="entityname" placeholder="Entity Name" ng-model="datahandler.properties['entityName']" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row pull-right">
+    <button type="button" class="btn btn-default reset" ng-click="reset($index)">reset</button>
+    <button type="button" class="btn btn-danger dropdown-toggle cancel" ng-click="cancel($index)">cancel</button>
+    <button type="button" class="btn btn-success dropdown-toggle ok" ng-click="ok()">ok</button>
+  </div>
+</form>

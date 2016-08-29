@@ -1,7 +1,15 @@
 /**
  * Copyright (C) 2015 Stubhub.
  */
+/**
+ * Provides user authentication services
+ * @author Sandeep Reddy,Murthy
+ *
+ */
 package io.bigdime.management.common;
+
+import io.bigdime.alert.Logger;
+import io.bigdime.alert.LoggerFactory;
 
 import java.util.Hashtable;
 
@@ -25,6 +33,8 @@ import org.springframework.web.servlet.ModelAndView;
 @Component
 public class AuthenticationService {
 	static final long serialVersionUID = 1L;
+	
+	private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
 
 	@Value("${ldap.platform.accountName}")
 	private String serviceAccount;
@@ -78,12 +88,15 @@ public class AuthenticationService {
 					authenticateUser.setLoginStatus(true);
 
 				} catch (javax.naming.NamingException e) {
+					logger.warn("BIGDIME-MANAGEMENT-CONSOLE",
+							"Error occured calling LDAP", e.getMessage());
 					ctx.close();
 				}
 			}
 			ctx.close();
-		} catch (NamingException e1) {
-			e1.printStackTrace();
+		} catch (NamingException e) {
+			logger.warn("BIGDIME-MANAGEMENT-CONSOLE",
+					"Error occured calling LDAP", e.getMessage());
 		}
 		return authenticateUser;
 	}

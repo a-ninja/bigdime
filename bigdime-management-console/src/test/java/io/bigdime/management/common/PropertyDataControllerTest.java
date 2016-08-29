@@ -32,6 +32,7 @@ public class PropertyDataControllerTest {
 		ReflectionTestUtils.setField(propertyDataController, "devPort", "devPort");
 		ReflectionTestUtils.setField(propertyDataController, "qaPort", "qaPort");
 		ReflectionTestUtils.setField(propertyDataController, "prodPort", "prodPort");	
+		ReflectionTestUtils.setField(propertyDataController, "rowsPerPage", "rowsPerPage");
 		ApplicationProperties applicationProperties =propertyDataController.getApplicationProperties();
 		Assert.assertTrue(applicationProperties.getDevHost().equals("devHost"));
 		Assert.assertTrue(applicationProperties.getQaHost().equals("qaHost"));
@@ -39,5 +40,6 @@ public class PropertyDataControllerTest {
 		Assert.assertTrue(applicationProperties.getDevPort().equals("devPort"));
 		Assert.assertTrue(applicationProperties.getQaPort().equals("qaPort"));
 		Assert.assertTrue(applicationProperties.getProdPort().equals("prodPort"));
+		Assert.assertTrue(applicationProperties.getRowsPerPage().equals("rowsPerPage"));
 	}
 }

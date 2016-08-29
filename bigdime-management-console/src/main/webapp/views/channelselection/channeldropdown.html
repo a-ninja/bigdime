@@ -1,0 +1,38 @@
+<form>
+  <div class="form-group row">
+    <label class="col-xs-3 ">Name</label>
+    <div class="col-xs-8" ng-switch on="channel">
+      <input ng-if="channels.indexOf(channel)==0"  type="text" class="form-control"  placeholder="name" ng-model="channel.name" >
+      <input ng-if="channels.indexOf(channel)>0"  type="text" class="form-control" placeholder="name" ng-model="channel.name">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="channeldescription{{$index}}" class="col-xs-3 ">Description</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channeldescription{{$index}}" placeholder="description" ng-model="channel.description" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="channelclass{{$index}}" class="col-xs-3 "> Channel class</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelclass{{$index}}" placeholder=" Channel class" ng-model="channel.channelclass" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="channelprintstats{{$index}}" class="col-xs-3 ">printstats</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelprintstats{{$index}}" placeholder="Print Stats" ng-model="channel.properties.printstats" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="channelbatchsize" class="col-xs-3 ">Channel Batch Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="channelbatchsize" placeholder="Channel Batch Size " ng-model="channel.properties.batchsize" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row pull-right">
+    <button type="button" class="btn btn-default reset" ng-click="reset($index)">reset</button>
+    <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" ng-click="cancel($index)">cancel</button>
+    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" >ok</button>
+  </div>
+</form>

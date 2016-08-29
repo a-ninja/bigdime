@@ -29,4 +29,11 @@ public final class WebHDFSWriterHandlerConstants {
 	public static final String HDFS_PERMISSIONS = "hdfsPermissions";
 	public static final String HIVE_PARTITION_NAMES = "hive_partition_names";
 	public static final String HIVE_PARTITION_VALUES = "hive_partition_values";
+	/**
+	 * Allow user to specify whether to convert the whole hdfs path to lower or
+	 * upper case by specifying "lower" or "upper". If this field is not
+	 * specified, the path and partitions are left unchanged.
+	 */
+	public static final String HDFS_PATH_LOWER_UPPER_CASE = "hdfs-path-lower-upper-case";
+
 }

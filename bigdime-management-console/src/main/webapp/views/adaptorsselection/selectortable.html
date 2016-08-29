@@ -1,0 +1,91 @@
+<div class="scrollable">
+	<div class="tablecontainer">
+		<div class="boxtopborder">
+			<div>
+				<div class="form-group row">
+					<label class="col-xs-4">Choose an Adaptor</label>
+					<div class="col-xs-4">
+						<select class="form-control" id="chooseadaptor"
+							ng-model="adaptor.selected"
+							ng-options="option as option for option in adaptornames"
+							ng-change="uponChange()">    
+							<option value="" disabled selected style="display: none;">Select
+								your option</option>
+						</select>
+					</div>
+				</div>
+				<form>
+					<div class="form-group row">
+						<label class="col-xs-4" id="name">Name</label>
+						<div class="col-xs-4" ng-switch on="datahandler">
+							<input type="text" class="form-control"
+								placeholder="Name of the adaptor"
+								ng-model="applicationmetaproperties.name" ng-change="showNext()">
+						</div>
+					</div>
+					<div class="form-group row">
+						<label class="col-xs-4" id="type">Type</label>
+						<div class="col-xs-4">
+							<input type="text" class="form-control"
+								placeholder="streaming/batch"
+								ng-model="applicationmetaproperties.type" ng-change="showNext()"
+								disabled>
+						</div>
+					</div>
+					<div class="form-group row">
+						<label class="col-xs-4" id="cron-expression">cronexpression</label>
+						<div class="col-xs-4">
+							<input type="text" class="form-control"
+								placeholder="eg: '0/15 * * * * ? *' for 15 every 15 minutes"
+								ng-model="applicationmetaproperties['cron-expression']"
+								ng-change="showNext()">
+						</div>
+					</div>
+					<div class="form-group row">
+						<label class="col-xs-4" id="auto-start">Autostart</label>
+						<div class="col-xs-4">
+							<!--       <input type="text" class="form-control"  placeholder="false/true" ng-model="applicationmetaproperties.autostart" ng-change="showNext()"> -->
+							<label class="radio-inline"> <input type="radio"
+								name="optradio" value="true"
+								ng-model="applicationmetaproperties['auto-start']"
+								ng-change="showNext()">true
+							</label> <label class="radio-inline"> <input type="radio"
+								name="optradio" value="false"
+								ng-model="applicationmetaproperties['auto-start']"
+								ng-change="showNext()">false
+							</label>
+						</div>
+
+					</div>
+					<div class="form-group row">
+						<label class="col-xs-4" id="namespace">Namespace</label>
+						<div class="col-xs-4">
+							<input type="text" class="form-control" placeholder="namespace"
+								ng-model="applicationmetaproperties.namespace"
+								ng-change="showNext()">
+						</div>
+					</div>
+					<div class="form-group row">
+						<label for="messagesize" class="col-xs-4" id="description">Description</label>
+						<div class="col-xs-4">
+							<input type="text" class="form-control" placeholder="Description of the adaptor"
+								ng-model="applicationmetaproperties.description"
+								ng-change="showNext()">
+						</div>
+					</div>
+
+				</form>
+			</div>
+		</div>
+		<div class="boxbottomborder">
+			<div>
+				<div ng-if="adaptor.selected=='Kafka'" class="adptheader"
+					ng-include="'views/adaptorsselection/kafkaadaptorselection.html'"></div>
+				<div ng-if="adaptor.selected=='File'" class="adptheader"
+					ng-include="'views/adaptorsselection/fileadaptorselection.html'"></div>
+				<div ng-if="adaptor.selected=='Sql'" class="adptheader"
+					ng-include="'views/adaptorsselection/sqladaptorselection.html'"></div>
+			</div>
+		</div>
+	</div>
+</div>

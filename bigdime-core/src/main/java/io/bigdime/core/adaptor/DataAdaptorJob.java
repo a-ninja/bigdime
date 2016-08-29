@@ -68,6 +68,7 @@ public class DataAdaptorJob implements Job {
 	public void execute(JobExecutionContext context) throws JobExecutionException {
 		try {
 			logger.info("starting adaptor", "executing scheduled job");
+			Thread.currentThread().setName("DataAdaptorJob_execute");
 			Adaptor dataAdaptor = (Adaptor) context.getJobDetail().getJobDataMap().get("dataAdaptor");
 			dataAdaptor.start();
 		} catch (DataAdaptorException ex) {

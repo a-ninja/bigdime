@@ -25,7 +25,7 @@ import org.testng.annotations.Test;
 
 public class RawChecksumValidatorIntegrationTest {
 	
-	private static final Logger logger = LoggerFactory.getLogger(RecordCountValidatorIntegrationTest.class);
+	private static final Logger logger = LoggerFactory.getLogger(RawChecksumValidatorIntegrationTest.class);
 	private String remoteFile1 = "/webhdfs/v1/test1/20120218/0900/checksum-20120218-0900.txt";
 	private String remoteFile2 = "/webhdfs/v1/test1/checksum-no-partition.txt";
 	private String source_no_partition = (new File("src/test/resources/checksum-no-partition.txt")).getAbsolutePath();

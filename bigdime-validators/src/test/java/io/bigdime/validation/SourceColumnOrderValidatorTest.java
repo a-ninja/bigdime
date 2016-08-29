@@ -39,7 +39,7 @@ import org.testng.annotations.Test;
 public class SourceColumnOrderValidatorTest extends PowerMockTestCase {
 	
 	@Test(expectedExceptions = IllegalArgumentException.class)
-	public void validateNullHiveHostTest() throws DataValidationException {
+	public void validateNullHiveUriTest() throws DataValidationException {
 		ColumnOrderValidator columnOrderValidator = new ColumnOrderValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
 		@SuppressWarnings("unchecked")
@@ -48,36 +48,13 @@ public class SourceColumnOrderValidatorTest extends PowerMockTestCase {
 		when(mockMap.get(anyString())).thenReturn("");
 		columnOrderValidator.validate(mockActionEvent);
 	}
-
-	@Test(expectedExceptions = IllegalArgumentException.class)
-	public void validateNullHivePortNumberTest() throws DataValidationException {
-		ColumnOrderValidator columnOrderValidator = new ColumnOrderValidator();
-		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
-		@SuppressWarnings("unchecked")
-		Map<String, String> mockMap = Mockito.mock(Map.class);
-		when(mockActionEvent.getHeaders()).thenReturn(mockMap);
-		when(mockMap.get(anyString())).thenReturn("hiveHost").thenReturn(null);
-		columnOrderValidator.validate(mockActionEvent);
-	}
-	
-	@Test(expectedExceptions = NumberFormatException.class)
-	public void validatePortNumberFormatTest() throws DataValidationException {
-		ColumnOrderValidator columnOrderValidator = new ColumnOrderValidator();
-		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
-		Map<String, String> headers = new HashMap<>();
-		headers.put(ActionEventHeaderConstants.HIVE_HOST_NAME, "host");
-		headers.put(ActionEventHeaderConstants.HIVE_PORT, "port");
-		when(mockActionEvent.getHeaders()).thenReturn(headers);
-		columnOrderValidator.validate(mockActionEvent);
-	}
 	
 	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void validateNullDBNameTest() throws DataValidationException {
 		ColumnOrderValidator columnOrderValidator = new ColumnOrderValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
 		Map<String, String> headers = new HashMap<>();
-		headers.put(ActionEventHeaderConstants.HIVE_HOST_NAME, "host");
-		headers.put(ActionEventHeaderConstants.HIVE_PORT, "1234");
+		headers.put(ActionEventHeaderConstants.HIVE_METASTORE_URI, "hiveUri");
 		headers.put(ActionEventHeaderConstants.HIVE_DB_NAME, null);
 		when(mockActionEvent.getHeaders()).thenReturn(headers);
 		columnOrderValidator.validate(mockActionEvent);
@@ -88,8 +65,7 @@ public class SourceColumnOrderValidatorTest extends PowerMockTestCase {
 		ColumnOrderValidator columnOrderValidator = new ColumnOrderValidator();
 		ActionEvent mockActionEvent = Mockito.mock(ActionEvent.class);
 		Map<String, String> headers = new HashMap<>();
-		headers.put(ActionEventHeaderConstants.HIVE_HOST_NAME, "host");
-		headers.put(ActionEventHeaderConstants.HIVE_PORT, "1234");
+		headers.put(ActionEventHeaderConstants.HIVE_METASTORE_URI, "hiveUri");
 		headers.put(ActionEventHeaderConstants.HIVE_DB_NAME, "mockDB");
 		headers.put(ActionEventHeaderConstants.HIVE_TABLE_NAME, "");
 		when(mockActionEvent.getHeaders()).thenReturn(headers);
@@ -188,8 +164,7 @@ public class SourceColumnOrderValidatorTest extends PowerMockTestCase {
 	
 	private Map<String, String> setCommonParameters(ActionEvent actionEvent){
 		Map<String, String> headers = new HashMap<>();
-		headers.put(ActionEventHeaderConstants.HIVE_HOST_NAME, "host");
-		headers.put(ActionEventHeaderConstants.HIVE_PORT, "1234");
+		headers.put(ActionEventHeaderConstants.HIVE_METASTORE_URI, "hiveUri");
 		headers.put(ActionEventHeaderConstants.HIVE_DB_NAME, "mockDB");
 		headers.put(ActionEventHeaderConstants.HIVE_TABLE_NAME, "mockTable");
 		return headers;

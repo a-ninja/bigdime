@@ -1,0 +1,44 @@
+<form>
+  <div class="form-group row">
+    <label class="col-xs-3">Name</label>
+    <div class="col-xs-8" ng-switch on="datahandler">
+      <input ng-if="datahandlers.indexOf(datahandler)==0"  type="text" class="form-control"  placeholder="name" ng-model="datahandler.name" >
+      <input ng-if="datahandlers.indexOf(datahandler)>0"  type="text" class="form-control" placeholder="name" ng-model="datahandler.name">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="sourcehandlerdescription{{$index}}" class="col-xs-3">Description</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerdescription{{$index}}" placeholder="description" ng-model="datahandler.description" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="sourcehandlerhandlerclass{{$index}}" class="col-xs-3">Handler class</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerhandlerclass{{$index}}" placeholder="handler class" ng-model="datahandler.handlerclass" ng-change="shownext()" disabled>
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="sourcehandlerbroker{{$index}}" class="col-xs-3">Brokers</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerbroker{{$index}}" placeholder="brokers" ng-model="datahandler.properties.brokers" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="sourcehandleroffsetdatadir{{$index}}" class="col-xs-3">Offset Data Dir</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandleroffsetdatadir{{$index}}" placeholder="Offset data dir" ng-model="datahandler.properties.offsetdatadir" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row">
+    <label for="messagesize" class="col-xs-3">Message Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="messagesize" placeholder="Message Size" ng-model="datahandler.properties.messagesize" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row pull-right">
+    <button type="button" class="btn btn-default reset" ng-click="reset($index)">reset</button>
+    <button type="button" class="btn btn-danger dropdown-toggle cancel" ng-click="cancel($index)">cancel</button>
+    <button type="button" class="btn btn-success dropdown-toggle" >ok</button>
+  </div>
+</form>

@@ -1,0 +1,50 @@
+<form class="adptform">
+	<div class="form-group row" style="padding-top: 2vh;">
+	    <label class="col-xs-2">Input</label> 
+		<label class="col-xs-2">Topic</label> 
+		<label class="col-xs-2">Partition</label>
+		<label class="col-xs-2">Entity name</label>
+		<label class="col-xs-2">Schema File Name</label>
+	</div>
+
+	<div class="form-group row"
+		ng-repeat="selected in selectedAdaptorObjectArray track by $index"
+		id="kafkaselection{{$index}}">
+	 <div class="col-xs-2">
+			 <input type="text" class="form-control" id="kafkainput{{$index}}"
+				placeholder="input here" ng-change="showNext()"
+				ng-model="selected.name"> 
+	    <!--  <label id="kafkainput{{$index}}">{{selected.name}}</label> -->
+		</div>
+		<div class="col-xs-2">
+			<input type="text" class="form-control" id="kafkainput{{$index}}"
+				placeholder="Topic here" ng-change="showNext()"
+				ng-model="selected.topic">
+		</div>
+		<div class="col-xs-2">
+			<input type="text" class="form-control" id="kafkapartition{{$index}}"
+				placeholder="partition here" ng-change="showNext()"
+				ng-model="selected.partition">
+		</div>
+		<div class="col-xs-2">
+			<input type="text" class="form-control" id="kafkainput{{$index}}"
+				placeholder="Entity name here" ng-change="showNext()"
+				ng-model="selected['entity-name']">
+		</div>
+		<div class="col-xs-2">
+			<input type="text" class="form-control" id="kafkainput{{$index}}"
+				placeholder="Schema file name here" ng-change="showNext()"
+				ng-model="selected.schemaFileName">
+		</div>
+		<div class="col-xs-2 nopadding">
+			<a type="button" class="col-xs-2 glyphicon glyphicon-plus plus" ng-click="addMore()"></a>
+			<a ng-if="selectedAdaptorObjectArray.indexOf(selected)>0" type="button" class="col-xs-2 glyphicon glyphicon-minus minus" style="color:red" ng-click="remove($index)"></a>
+        </div>
+	</div>
+</form>
+<div class="form-group row text-right bottom-align-next" ng-if="isFilled">
+	   <div class="col-xs-12">
+					<a ui-sref="homepage.sourcehandlers" href=""
+						class="btn btn-success" type="button" ng-click="updateAdaptor();">Next</a>
+	  </div>
+	</div>

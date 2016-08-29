@@ -38,6 +38,7 @@ public class HandlerManager {
 	 * Count of errors for this handler chain.
 	 */
 	private int errorCount;
+	private int thresholdErrorCount = 10;
 
 	private int handlerChainExecutionCount;
 
@@ -62,6 +63,7 @@ public class HandlerManager {
 			}
 		}
 	}
+
 	/**
 	 * List of handlers that this handler will manage.
 	 */
@@ -159,6 +161,7 @@ public class HandlerManager {
 
 				iteration++;
 				HandlerNode tempHandlerNode = callbackHandlerIndexStack.pop();
+				boolean backoff = false;
 				do {
 					Handler handler = tempHandlerNode.getHandler();
 					logger.debug("handler chain executing",
@@ -166,12 +169,16 @@ public class HandlerManager {
 							handlerChainName, handler.getId(), handler.getName(), iteration);
 					currentHandlerName = handler.getName();
 					status = handler.process();
+					// TODO: handle the null status
 					switch (status) {
 					case BACKOFF:
+					case BACKOFF_NOW:
 						logger.debug("handler chain executing",
-								"_message=\"handler will backoff\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\"",
-								handlerChainName, handler.getId(), handler.getName(), iteration);
-						return status;
+								"_message=\"handler will backoff\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\" status=\"\"",
+								handlerChainName, handler.getId(), handler.getName(), iteration, status);
+						backoff = true;
+						break;
+					// return status;
 					case CALLBACK:
 						logger.debug("handler chain executing",
 								"_message=\"pushing handler node stack\" handler_chain=\"{}\" handler_id=\"{}\" handler_name=\"{}\" total_iterations=\"{}\"",
@@ -187,31 +194,24 @@ public class HandlerManager {
 						// do nothing
 					}
 					tempHandlerNode = tempHandlerNode.getNext();
-				} while (tempHandlerNode != null);
-			}
-
-			catch (final HandlerException ex) {
-				errorCount++;
-				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
-						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an exception, this loop of handlers will be stopped\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
-						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
-				logger.info("handler chain handling exception", "invoking handleException");
-				executeHandleException();
-				stopOnError();
-				logger.info("handler chain handling exception", "invoked handleException");
-				throw ex;
+				} while (tempHandlerNode != null && !backoff);
 			} catch (Exception ex) {
 				errorCount++;
+				status = Status.CALLBACK;
 				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
 						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
-						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount);
+						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped after {} errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
+						currentHandlerName, thresholdErrorCount, ex.getMessage(), errorCount,
+						handlerChainExecutionCount, ex);
 				logger.info("handler chain handling exception", "invoking handleException");
 				executeHandleException();
-				stopOnError();
-				logger.info("handler chain handling exception", "invoked handleException");
-				throw new HandlerException(ex.getMessage(), ex);
+				if (errorCount > thresholdErrorCount) {
+					stopOnError();
+					if (ex instanceof HandlerException)
+						throw ex;
+					else
+						throw new HandlerException(ex.getMessage(), ex);
+				}
 			}
 		}
 		// while (true);

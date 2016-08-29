@@ -123,6 +123,8 @@ public class MemoryChannel extends AbstractChannel {
 			eventList.add(arg0);
 			notifyAll();
 		}
+		logger.debug("put event on memory channel", "channel_name=\"{}\" channelSizeInBytes=\"{}\"", getName(),
+				channelSizeInBytes);
 		putCount++;
 	}
 
@@ -270,6 +272,7 @@ public class MemoryChannel extends AbstractChannel {
 		consumerToTakenIndexMap.put(consumerName, (takenIndex + fetchSize) - 1);
 
 		// start:update the taken count for this index
+		int toBeRemovedCount = 0;
 		for (int i = 0; i < fetchSize; i++) {
 			Integer takenCount = indexToTakenCountMap.get(takenIndex + i);
 			if (takenCount == null) {
@@ -278,15 +281,17 @@ public class MemoryChannel extends AbstractChannel {
 			takenCount++;
 			if (takenCount == consumerNames.size()) { // newTakenIndex must
 														// always be zero
-				Event removedEvent = eventList.remove(0);
+				Event removedEvent = eventList.get(i);
+				toBeRemovedCount++;
 				channelSizeInBytes = channelSizeInBytes - removedEvent.getBody().length;
 				indexToTakenCountMap.remove(takenIndex + i);
 				removedCount++;
 			} else {
 				indexToTakenCountMap.put(takenIndex + i, takenCount);
 			}
-
 		}
+		eventList.subList(0, toBeRemovedCount).clear();
+
 		takeCount++;
 		notifyAll();
 		return takenEvent;

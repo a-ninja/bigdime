@@ -1,0 +1,112 @@
+<form>
+  <div ng-if="datahandler.hasOwnProperty('name')" class="form-group row">
+    <label class="col-xs-3" id="name">Name</label>
+    <div class="col-xs-8" ng-switch on="datahandler">
+      <input ng-if="datahandlers.indexOf(datahandler)==0"  type="text" class="form-control"  placeholder="name" ng-model="datahandler.name" >
+      <input ng-if="datahandlers.indexOf(datahandler)>0"  type="text" class="form-control" placeholder="name" ng-model="datahandler.name">
+    </div>
+  </div>
+  <div ng-if="datahandler.hasOwnProperty('description')" class="form-group row">
+    <label for="sourcehandlerdescription{{$index}}" class="col-xs-3" id="description">Description</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerdescription{{$index}}" placeholder="description" ng-model="datahandler.description" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.hasOwnProperty('handler-class')" class="form-group row">
+    <label for="sourcehandlerhandlerclass{{$index}}" class="col-xs-3" id="handler-class">Handler class</label>
+    <div ng-if="datahandlers.indexOf(datahandler)<defaulthandlercount" class="col-xs-8">
+        <input type="text" class="form-control" id="sourcehandlerhandlerclass{{$index}}" placeholder="handler class" ng-model="datahandler['handler-class']" ng-change="shownext()" 
+       disabled>
+    </div>
+        <div ng-if="datahandlers.indexOf(datahandler)>=defaulthandlercount" class="col-xs-8">
+          <select class="form-control" id="sourcehandlerhandlerclass{{$index}}" ng-model="datahandler['handler-class']" ng-options="option as option for option in handlerclassnames">
+           <option value="" disabled selected style="display: none;">Select your option</option>
+   </select>
+    </div>
+  </div>
+      <div ng-if="datahandler.properties.hasOwnProperty('buffer-size')" class="form-group row">
+    <label for="buffersize" class="col-xs-3" id="buffer-size">Buffer Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="buffersize" placeholder="Buffer Size" ng-model="datahandler.properties['buffer-size']" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.properties.hasOwnProperty('base-path')" class="form-group row">
+    <label for="sourcehandlerbroker{{$index}}" class="col-xs-3" id="base-path">BasePath</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerbroker{{$index}}" placeholder="BasePath" ng-model="datahandler.properties['base-path']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="datahandler.properties.hasOwnProperty('batchSize')" class="form-group row">
+    <label for="sourcehandlerbatchSize{{$index}}" class="col-xs-3" id="batchSize">Batch Size</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="sourcehandlerbatchSize{{$index}}" placeholder="Batch Size" ng-model="datahandler.properties['batchSize']" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.properties.hasOwnProperty('preserve-base-path')" class="form-group row">
+    <label for="preservebasepath{{$index}}" class="col-xs-3" id="preserve-base-path">Preserve Base Path</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="preservebasepath{{$index}}" placeholder="Base Path" ng-model="datahandler.properties['preserve-base-path']" ng-change="shownext()">
+    </div>
+  </div>
+  <div ng-if="datahandler.properties.hasOwnProperty('preserve-relative-path')" class="form-group row">
+    <label for="preserverelativepath{{$index}}" class="col-xs-3" id="preserve-relative-path">Preserve Relative Path</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="preserverelativepath{{$index}}" placeholder="Relative Path" ng-model="datahandler.properties['preserve-relative-path']" ng-change="shownext()">
+    </div>
+  </div>
+  
+    <div ng-if="datahandler.properties.hasOwnProperty('date-partition-name')" class="form-group row">
+    <label for="datepartitionname{{$index}}" class="col-xs-3" id="date-partition-name">Date Partition Name</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="datepartitionname{{$index}}" placeholder="Date Partition Name" ng-model="datahandler.properties['date-partition-name']" ng-change="shownext()">
+    </div>
+  </div>
+   <div ng-if="datahandler.properties.hasOwnProperty('partition-names')" class="form-group row">
+    <label for="partitionnames{{$index}}" class="col-xs-3" id="partition-names">Partition Names</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="partitionnames{{$index}}" placeholder="Partition Names " ng-model="datahandler.properties['partition-names']" ng-change="shownext()">
+    </div>
+  </div>
+   <div ng-if="datahandler.properties.hasOwnProperty('date-partition-input-format')" class="form-group row">
+    <label for="datepartitioninputformat{{$index}}" class="col-xs-3" id="date-partition-input-format">Date Partition Input Format</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="datepartitioninputformat{{$index}}" placeholder="Date Partition Input Format" ng-model="datahandler.properties['date-partition-input-format']" ng-change="shownext()">
+    </div>
+  </div>
+
+   <div ng-if="datahandler.properties.hasOwnProperty('date-partition-output-format')" class="form-group row">
+    <label for="datepartitionoutputformat{{$index}}" class="col-xs-3" id="date-partition-output-format">Date Partition Output Format</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="datepartitionoutputformat{{$index}}" placeholder="Date Partition Output Format" ng-model="datahandler.properties['date-partition-output-format']" ng-change="shownext()">
+    </div>
+  </div>
+   <div ng-if="datahandler.properties.hasOwnProperty('partition-names-output-order')" class="form-group row">
+    <label for="partitionnamesoutputorder{{$index}}" class="col-xs-3" id="partition-names-output-order">Partition Names Output Order</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="partitionnamesoutputorder{{$index}}" placeholder="Partition Names Output Order" ng-model="datahandler.properties['partition-names-output-order']" ng-change="shownext()">
+    </div>
+  </div>
+   <div ng-if="datahandler.properties.hasOwnProperty('hdfs-path-lower-upper-case')" class="form-group row">
+    <label for="hdfspathloweruppercase{{$index}}" class="col-xs-3" id="hdfs-path-lower-upper-case">Hdfs Path Lower Uppercase</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="hdfspathloweruppercase{{$index}}" placeholder="hdfs path lower uppercase" ng-model="datahandler.properties['hdfs-path-lower-upper-case']" ng-change="shownext()">
+    </div>
+  </div>
+    <div ng-if="datahandler.properties.hasOwnProperty('regex')" class="form-group row">
+    <label for="regex{{$index}}" class="col-xs-3" id="regex">regex</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="regex{{$index}}" placeholder="Enter regex here" ng-model="datahandler.properties['regex']" ng-change="shownext()">
+    </div>
+  </div>
+     <div ng-if="datahandler.properties.hasOwnProperty('header-name')" class="form-group row">
+    <label for="headername{{$index}}" class="col-xs-3" id="header-name">Header Name</label>
+    <div class="col-xs-8">
+      <input type="text" class="form-control" id="headername{{$index}}" placeholder="Enter header name here" ng-model="datahandler.properties['header-name']" ng-change="shownext()">
+    </div>
+  </div>
+  <div class="form-group row pull-right">
+    <button type="button" class="btn btn-default reset" ng-click="reset($index)">reset</button>
+    <button type="button" class="btn btn-danger dropdown-toggle cancel" ng-click="cancel($index)">cancel</button>
+    <button type="button" class="btn btn-success dropdown-toggle" >ok</button>
+  </div>
+</form>

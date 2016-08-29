@@ -12,7 +12,7 @@
 	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime</artifactId>
-		<version>0.0.10-SNAPSHOT</version>
+		<version>0.9.2-SNAPSHOT</version>
 	</parent>
 	
 	<properties>
@@ -130,6 +130,10 @@
 		<dependency>
 			<artifactId>jackson-core-asl</artifactId>
 			<groupId>org.codehaus.jackson</groupId>
+		</dependency>
+		<dependency>
+			<groupId>org.javaswift</groupId>
+			<artifactId>joss</artifactId>
 		</dependency>
 	</dependencies>
 </project>

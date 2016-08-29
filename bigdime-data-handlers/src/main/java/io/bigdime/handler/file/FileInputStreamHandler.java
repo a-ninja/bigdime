@@ -30,7 +30,7 @@ import io.bigdime.core.commons.FileHelper;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
@@ -65,7 +65,7 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
  */
 @Component
 @Scope("prototype")
-public class FileInputStreamHandler extends AbstractHandler {
+public class FileInputStreamHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(FileInputStreamHandler.class));
 	public static final String FILE_LOCATION = "fileLocation";
@@ -172,10 +172,6 @@ public class FileInputStreamHandler extends AbstractHandler {
 		}
 	}
 
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-
 	/*
 	 * @formatter:off
 	 * if (firstRun) {
@@ -201,7 +197,8 @@ public class FileInputStreamHandler extends AbstractHandler {
 	List<RuntimeInfo> dirtyRecords;
 	private boolean processingDirty = false;
 
-	private Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
+	@Override
+	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
 		if (isFirstRun()) {
 			dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, entityName);
 			if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
@@ -233,7 +230,8 @@ public class FileInputStreamHandler extends AbstractHandler {
 		return Status.READY;
 	}
 
-	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
+	@Override
+	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 
 		long nextIndexToRead = getTotalReadFromJournal();
 		logger.debug(handlerPhase, "handler_id={} next_index_to_read={} buffer_size={}", getId(), nextIndexToRead,
@@ -336,7 +334,7 @@ public class FileInputStreamHandler extends AbstractHandler {
 		}
 	}
 
-	private boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
+	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
 		List<String> availableFiles = getAvailableFiles();
 		if (availableFiles == null || availableFiles.isEmpty()) {
 			return false;

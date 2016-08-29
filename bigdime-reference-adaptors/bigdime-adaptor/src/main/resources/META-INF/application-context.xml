@@ -9,19 +9,48 @@
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
 	<context:annotation-config />
-	<context:component-scan base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo" />
-	<context:property-placeholder
-		location="classpath:${env.properties}"
-		ignore-resource-not-found="false" ignore-unresolvable="true" />
+	<context:component-scan
+		base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo, io.bigdime.ext" />
+	<context:property-placeholder location="classpath:${env.properties}"
+		 ignore-resource-not-found="false" ignore-unresolvable="true" />
+		
 
-	<bean id="datasource"
-		class="org.apache.commons.dbcp.BasicDataSource">
+
+	<!-- <bean name="columnCountValidator" class="io.bigdime.validation.ColumnCountValidator" />
+	<bean name="columnOrderValidator" class="io.bigdime.validation.ColumnOrderValidator" />
+	<bean name="columnTypeValidator" class="io.bigdime.validation.ColumnTypeValidator" /> -->
+
+	<bean id="sqlDataSource"
+		class="org.apache.commons.dbcp.BasicDataSource" lazy-init = "true" destroy-method="close">
+
+		<property name="driverClassName" value="${database.driverClassName:${metastore.database.driverClassName}}" />
+		<property name="url" value="${database.url:${metastore.database.url}}" />
+		<property name="username" value="${database.username:${metastore.database.username}}" />
+		<property name="password" value="${database.password:${metastore.database.password}}" />
+		<property name="initialSize" value="20" />
+		<property name="maxActive" value="10" />
+		<property name="testOnBorrow" value="true"/>
+		<property name="minEvictableIdleTimeMillis" value="120000"/>
+		<property name="timeBetweenEvictionRunsMillis" value="120000"/>
+		<property name="minIdle" value="10"/>
+	</bean>
+	
+	<bean name="lazyConnectionDataSourceProxy" class="org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy">
+    <property name="targetDataSource" ref="sqlDataSource" />
+</bean>
+
+
+	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource">
 		<property name="driverClassName" value="${metastore.database.driverClassName}" />
 		<property name="url" value="${metastore.database.url}" />
 		<property name="username" value="${metastore.database.username}" />
 		<property name="password" value="${metastore.database.password}" />
-		<property name="initialSize" value="2"/>
-		<property name="maxActive" value = "5"/>
+		<property name="initialSize" value="20" />
+		<property name="maxActive" value="10" />
+		<property name="testOnBorrow" value="true"/>
+		<property name="minEvictableIdleTimeMillis" value="120000"/>
+		<property name="timeBetweenEvictionRunsMillis" value="120000"/>
+		<property name="minIdle" value="10"/>
 	</bean>
 
 	<bean id="entityManagerFactory"
@@ -36,5 +65,6 @@
 	</bean>
 
 	<!-- Jpa Repositories -->
-	<jpa:repositories base-package="io.bigdime.adaptor.metadata.repositories, io.bigdime.runtimeinfo.repositories"></jpa:repositories>
+	<jpa:repositories
+		base-package="io.bigdime.adaptor.metadata.repositories, io.bigdime.runtimeinfo.repositories"></jpa:repositories>
 </beans>

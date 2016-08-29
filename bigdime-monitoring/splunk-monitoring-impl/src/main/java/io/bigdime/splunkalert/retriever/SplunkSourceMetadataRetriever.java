@@ -18,6 +18,7 @@ import io.bigdime.splunkalert.util.HttpClientProvider;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.http.client.ClientProtocolException;
@@ -170,5 +171,22 @@ public class SplunkSourceMetadataRetriever {
 		}
 
 	}
+	
+	/**
+	 * 
+	 * @param alertServiceRequest
+	 * @return list of dates in long format representing the offsets for the given alertServiceRequest criteria
+	 * @throws AlertException
+	 */
+	
+	public List<Long> getDates(AlertServiceRequest alertServiceRequest) throws AlertException{
+		try {
+			return managedAlertService.getDates(alertServiceRequest);
+		} catch (AlertException e) {
+			logger.info("HBASE", "FETCH Dates from HBASE",
+					"Unable to fetch Dates from HBASE :" + e.getMessage());
+			throw e;
+		}
+	} 
 
 }

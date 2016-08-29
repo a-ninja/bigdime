@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.mockito.Mockito;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
@@ -94,11 +95,11 @@ public class ValidatorFactoryTest extends AbstractTestNGSpringContextTests {
 	 * an exception.
 	 * 
 	 * @throws IllegalAccessException
-	 * @throws InstantiationException
+	 * @throws NoSuchBeanDefinitionException
 	 * @throws AdaptorConfigurationException
 	 */
 	@Test
-	public void testGetValidatorWithInstantiationException() throws AdaptorConfigurationException {
+	public void testGetValidatorWithNoSuchBeanDefinitionException() throws AdaptorConfigurationException {
 		try {
 
 			@Factory(id = "mock_validator_instantiation_exception", type = MockValidatorIllegalAccess.class)
@@ -117,7 +118,7 @@ public class ValidatorFactoryTest extends AbstractTestNGSpringContextTests {
 			Assert.fail("must throw an AdaptorConfigurationException");
 		} catch (Exception e) {
 			e.printStackTrace();
-			Assert.assertTrue(e.getCause() instanceof InstantiationException);
+			Assert.assertTrue(e.getCause() instanceof NoSuchBeanDefinitionException);
 		}
 	}
 }

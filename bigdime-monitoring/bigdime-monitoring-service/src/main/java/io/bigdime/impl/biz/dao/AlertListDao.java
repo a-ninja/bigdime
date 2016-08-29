@@ -24,6 +24,7 @@ import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.alert.ManagedAlert;
 import io.bigdime.impl.biz.exception.AuthorizationException;
+import io.bigdime.impl.biz.service.HbaseJsonDataService;
 import io.bigdime.splunkalert.response.AlertBuilder;
 import io.bigdime.splunkalert.retriever.SplunkSourceMetadataRetriever;
 
@@ -56,6 +57,8 @@ public class AlertListDao {
 	private SplunkSourceMetadataRetriever splunkSourceMetadataRetriever;
 	@Autowired
 	private MetadataStore metadataStore;
+	@Autowired
+	private HbaseJsonDataService hbaseJsonDataService;
 
 	/**
 	 * getAlerts method is used to make calls for alert data from the
@@ -78,20 +81,21 @@ public class AlertListDao {
 		return splunkAlertData;
 	}
 
-	public AlertData getAlerts(String alertName) throws AlertException {
-		if (alertName != null) {
-			AlertData alertData = new AlertData();
-			AlertServiceRequest alertServiceRequest = new AlertServiceRequest();
+	public AlertData getAlerts(String alertName,long start, int limit,String search) throws AlertException {
+		AlertData alertData = new AlertData();
+		AlertServiceRequest alertServiceRequest = new AlertServiceRequest();
+		if (alertName != null && start !=WRONGDATEFORMAT && limit !=0) {		
 			alertServiceRequest.setAlertId(alertName);
 			Date currentTime = new Date();
-			alertServiceRequest.setFromDate(new Date(currentTime.getTime()
-					- Long.parseLong(numberOfDays)));
-			alertServiceRequest.setToDate(currentTime);
+			alertServiceRequest.setFromDate(new Date(start));
+			alertServiceRequest.setLimit(limit);
+			alertServiceRequest.setSearch(search);
 			AlertServiceResponse<ManagedAlert> alertServiceResponse = splunkSourceMetadataRetriever
 					.getAlerts(alertServiceRequest);
 			alertData.setRaisedAlerts(alertServiceResponse.getAlerts());
 			return alertData;
-		} else {
+		}else
+		{
 			throw new AuthorizationException(
 					"The parameters provided in the call are  invalid,insufficient or not properly parsed");
 		}
@@ -132,6 +136,36 @@ public class AlertListDao {
 			throw new AuthorizationException(
 					"No applications found for monitoring");
 		}
+	}
+	
+	 public List<Long> getDates(String alertName,long start) throws AlertException{
+	   AlertServiceRequest alertServiceRequest= new AlertServiceRequest();
+	   alertServiceRequest.setAlertId(alertName);
+	   alertServiceRequest.setFromDate(new Date(start));
+	   List<Long> list=splunkSourceMetadataRetriever.getDates(alertServiceRequest);
+	   return list;
+   }
+	
+	public JsonData getJSON(String templateId){
+		if(templateId !=null){		
+		   return hbaseJsonDataService.getJSON(templateId);
+		}else {
+			throw new AuthorizationException(
+					"The parameters provided in the call are invalid, insufficient or not properly parsed");
+		}
+	}
+	
+	public Datahandler getHandler(String handlerId){
+		if(handlerId !=null){		
+		   return hbaseJsonDataService.getHandler(handlerId);
+		}else {
+			throw new AuthorizationException(
+					"The parameters provided in the call are invalid, insufficient or not properly parsed");
+		}
+	}
+	
+	public  List<AdaptorConstants> getAdaptorConstants(){
+		return hbaseJsonDataService.getAdaptorConstants();
 	}
 
 }

@@ -17,7 +17,6 @@ import io.bigdime.libs.kafka.exceptions.KafkaReaderException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -248,7 +247,7 @@ public class KafkaSimpleConsumer {
 
 			logger.error(
 					"Error reading Offset from the Broker :\" clientId={} topicId={} partitionId={} "
-							+ "currentOffset={} leadBroker={} fetchResponseCode={}", clientId, topicId ,partitionId,leadBroker,Errors.forCode(code).name());
+							+ "leadBroker={} fetchResponseCode={}", clientId, topicId ,partitionId,leadBroker,Errors.forCode(code).name());
 			throw new KafkaReaderException("Error reading Offset from the Broker : leadBroker "+leadBroker+ "error = "+Errors.forCode(code).name());
 		}
 		long[] offsets = response.offsets(topicId, partitionId);

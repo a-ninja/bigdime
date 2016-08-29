@@ -1,6 +1,12 @@
 /**
  * Copyright (C) 2015 Stubhub.
  */
+
+/**
+ * 
+ * @author  Sandeep Reddy,Murthy
+ *
+ */
 package io.bigdime.management.common;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -26,10 +32,12 @@ public class PropertyDataController {
 	private String qaPort;
 	@Value("${monitoring.prodport}")
 	private String prodPort;
-//	 @CrossOrigin(origins = "http://localhost:8081")
+	@Value("${monitoring.application}")
+	private String application;
+	@Value("${management.numberofrowsperpage}")
+	private String rowsPerPage;
 	@RequestMapping(method = RequestMethod.GET, produces = "application/json")
 	public @ResponseBody ApplicationProperties getApplicationProperties() {
-
 		ApplicationProperties applicationProperties = new ApplicationProperties();
 		applicationProperties.setDevHost(devHost);
 		applicationProperties.setQaHost(qaHost);
@@ -37,6 +45,8 @@ public class PropertyDataController {
 		applicationProperties.setDevPort(devPort);
 		applicationProperties.setQaPort(qaPort);
 		applicationProperties.setProdPort(prodPort);
+		applicationProperties.setApplication(application);
+		applicationProperties.setRowsPerPage(rowsPerPage);
 		return applicationProperties;
 
 	}

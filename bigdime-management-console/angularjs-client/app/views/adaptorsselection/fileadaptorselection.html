@@ -1,0 +1,42 @@
+<form class="adptform">
+	<div class="form-group row" style="padding-top: 2vh;">
+		<label class="col-xs-3">Source Input</label> 
+		<label class="col-xs-3">Entity Name</label>
+		<label class="col-xs-3">File Name</label>
+	</div>
+
+	<div class="form-group row"
+		ng-repeat="selected in selectedAdaptorObjectArray track by $index"
+		id="fileselection{{$index}}">
+		<div class="col-xs-3">
+			<input type="text" class="form-control" id="fileinput{{$index}}"
+				placeholder="source input here" ng-change="showNext()"
+				ng-model="selected.name">
+		</div>
+		<div class="col-xs-3">
+			<input type="text" class="form-control" id="filevalue{{$index}}"
+				placeholder="Hive table name here" ng-change="showNext()"
+				ng-model="selected.value">
+		</div>
+		<div class="col-xs-3">
+			<input type="text" class="form-control" id="filevalue{{$index}}"
+				placeholder="Eg:fi.* for all files starting with fi" ng-change="showNext()"
+				ng-model="selected.value2">
+		</div>
+		<div class="col-xs-3 nopadding">
+			<!-- 	<button type="button" class="col-xs-2 btn btn-primary" ng-click="addMore()">Add</button>
+            <button ng-if="selectedAdaptorObjectArray.indexOf(selected)>0" type="button" class="col-xs-2 btn btn-danger" ng-click="remove($index)">Remove</button>
+             -->
+			<a type="button" class="col-xs-2 glyphicon glyphicon-plus plus"
+				ng-click="addMore()"></a> 
+			<a type="button" class="col-xs-2 glyphicon glyphicon-minus minus" ng-if="selectedAdaptorObjectArray.indexOf(selected)>0"
+			style="color: red" ng-click="remove($index)"></a>
+		</div>
+	</div>
+</form>
+<div class="form-group row text-right bottom-align-next" ng-if="isFilled">
+	   <div class="col-xs-12">
+					<a ui-sref="homepage.sourcehandlers" href=""
+						class="btn btn-success" type="button" ng-click="updateAdaptor();">Next</a>
+	  </div>
+</div>

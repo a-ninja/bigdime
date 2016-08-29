@@ -22,5 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 public interface EntitiesRepository extends JpaRepository<EntiteeDTO, Integer> {
 
 	EntiteeDTO findByIdAndEntityName(int id, String entityName);
+//	EntiteeDTO findByAdaptorNameAndEntityName(String adaptorName, String entityName);
 
 }

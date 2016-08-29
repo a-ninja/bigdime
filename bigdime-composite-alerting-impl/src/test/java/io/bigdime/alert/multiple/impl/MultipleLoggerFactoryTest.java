@@ -25,8 +25,8 @@ public class MultipleLoggerFactoryTest {
 		Logger logger = LoggerFactory.getLogger("test");
 		Assert.assertNotNull(logger);
 		System.out.println(logger.getClass().toString());
-		Assert.assertEquals("class io.bigdime.alert.multiple.impl.MultipleLoggerFactory$MultipleLogger",
-				logger.getClass().toString());
+		Assert.assertEquals(logger.getClass().toString(),
+				"class io.bigdime.alert.impl.AlertLoggerFactoryImpl$MultipleLogger");
 
 		Logger loggerDup = LoggerFactory.getLogger("test");
 		Assert.assertNotNull(loggerDup);
@@ -38,8 +38,8 @@ public class MultipleLoggerFactoryTest {
 	public void testGetLogger2() {
 		Logger logger = LoggerFactory.getLogger("test-unit");
 		Assert.assertNotNull(logger);
-		Assert.assertEquals("class io.bigdime.alert.multiple.impl.MultipleLoggerFactory$MultipleLogger",
-				logger.getClass().toString());
+		Assert.assertEquals(logger.getClass().toString(),
+				"class io.bigdime.alert.impl.AlertLoggerFactoryImpl$MultipleLogger");
 
 		Logger loggerDup = LoggerFactory.getLogger("test-unit1");
 		Assert.assertNotNull(loggerDup);
@@ -186,7 +186,7 @@ public class MultipleLoggerFactoryTest {
 			Thread.sleep(100);
 		} catch (Exception e) {
 			Assert.fail(e.getMessage());
-		} 
+		}
 	}
 
 	@Test

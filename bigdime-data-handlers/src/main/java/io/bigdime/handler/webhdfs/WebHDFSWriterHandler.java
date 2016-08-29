@@ -32,9 +32,11 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidDataException;
+import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.SinkHandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.commons.StringCase;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.SinkConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
@@ -68,6 +70,16 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 	private String hdfsOverwrite;
 	private String hdfsPermission;
 	private WebHdfs webHdfs;
+
+	/**
+	 * Allow user to specify whether to convert the whole hdfs path to lower or
+	 * upper case by specifying "lower" or "upper". If this field is not
+	 * specified, the path and partitions are left unchanged.
+	 */
+
+	private String hdfsPathCase = null;
+	private StringCase hdfsPathCaseEnum = StringCase.DEFAULT;
+
 	@Autowired
 	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 
@@ -106,6 +118,23 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 
 			logger.info(handlerPhase, "hdfsFileNamePrefix={} hdfsFileNameExtension={} channelDesc={} hdfsFileName={}",
 					hdfsFileNamePrefix, hdfsFileNameExtension, channelDesc, hdfsFileName);
+
+			hdfsPathCase = PropertyHelper.getStringProperty(getPropertyMap(),
+					WebHDFSWriterHandlerConstants.HDFS_PATH_LOWER_UPPER_CASE, "");
+
+			if (StringUtils.isNotBlank(hdfsPathCase)) {
+				if (StringUtils.equalsIgnoreCase(hdfsPathCase, "lower")) {
+					hdfsPathCaseEnum = StringCase.LOWER;
+					// hdfsPathLowerCase = true;
+				} else if (StringUtils.equalsIgnoreCase(hdfsPathCase, "upper")) {
+					hdfsPathCaseEnum = StringCase.UPPER;
+					// hdfsPathUpperCase = true;
+				} else {
+					throw new InvalidValueConfigurationException(
+							"invalid value for hdfsPathCase, only \"lower\" or \"upper\" is allowed");
+				}
+			}
+
 			hdfsPath = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSWriterHandlerConstants.HDFS_PATH);
 			hdfsUser = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSWriterHandlerConstants.HDFS_USER);
 			logger.info(handlerPhase, "hdfsUser={}", hdfsUser);
@@ -127,8 +156,9 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 			}
 
 			logger.info("building WebHDFSWriterHandler",
-					"hostNames={} port={} hdfsFileName={} hdfsPath={} hdfsUser={} hdfsPermission={} hdfsOverwrite={}",
-					hostNames, port, hdfsFileName, hdfsPath, hdfsUser, hdfsPermission, hdfsOverwrite);
+					"hostNames={} port={} hdfsFileName={} hdfsPath={} hdfsUser={} hdfsPermission={} hdfsOverwrite={} hdfsPathCase={} hdfsPathCaseEnum={}",
+					hostNames, port, hdfsFileName, hdfsPath, hdfsUser, hdfsPermission, hdfsOverwrite, hdfsPathCase,
+					hdfsPathCaseEnum);
 		} catch (final Exception ex) {
 			throw new AdaptorConfigurationException(ex);
 		}
@@ -211,6 +241,7 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 		logger.debug(handlerPhase, "previousHdfsPath={}", getPreviousHdfsPath(journal));
 		ByteArrayOutputStream payload = new ByteArrayOutputStream();
 		Status statusToReturn = Status.READY;
+		long startTime = System.currentTimeMillis();
 		try {
 			Iterator<ActionEvent> actionEventIter = actionEvents.iterator();
 			boolean payloadEmpty = true;
@@ -225,8 +256,8 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 				buildFileName(actionEvent);
 				hdfsFilePathBuilder = new HdfsFilePathBuilder();
 				detokenizedHdfsPath = hdfsFilePathBuilder.withActionEvent(actionEvent).withHdfsPath(hdfsPath)
-						.withTokenHeaderMap(tokenToHeaderNameMap).build();
-
+						.withTokenHeaderMap(tokenToHeaderNameMap).withCase(hdfsPathCaseEnum).build();
+				
 				actionEvent.getHeaders().put(ActionEventHeaderConstants.HDFS_PATH,
 						hdfsFilePathBuilder.getBaseHdfsPath());// needed
 				boolean cleanupRequired = actionEvent.getHeaders()
@@ -277,7 +308,9 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 					logger.debug(handlerPhase, "new hdfspath, payloadEmpty={} hdfsFileName={} previousHdfsFileName={}",
 							payloadEmpty, hdfsFileName, getPreviousHdfsFileName(journal));
 					if (!payloadEmpty) {
-						logger.info(handlerPhase, "writing to hdfs, validation should be performed");
+						logger.info(handlerPhase, 
+								"writing to hdfs, validation should be performed hdfsFile={} recordCount={}",
+								detokenizedHdfsPathWithName, journal.getRecordCount());
 						ActionEvent returnEvent = writeToHdfs(getPreviousHdfsPath(journal), payload.toByteArray(),
 								getPreviousHdfsFileName(journal), hdfsFilePathBuilder, prevActionEvent);
 						payloadEmpty = true;
@@ -303,9 +336,9 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 			if (actionEvent != null && actionEvents.isEmpty()) {
 				if (!payloadEmpty) {
 					logger.info(handlerPhase,
-							"writing to hdfs. previousHdfsPath={} detokenizedHdfsPath={} previousHdfsPathWithName={} detokenizedHdfsPathWithName={}",
+							"writing to hdfs. previousHdfsPath={} detokenizedHdfsPath={} previousHdfsPathWithName={} detokenizedHdfsPathWithName={} hdfsFile={} recordCount={}",
 							getPreviousHdfsPath(journal), detokenizedHdfsPath, getPreviousHdfsPathWithName(journal),
-							detokenizedHdfsPathWithName);
+							detokenizedHdfsPathWithName, hdfsFileName, journal.getRecordCount());
 					ActionEvent returnEvent = writeToHdfs(detokenizedHdfsPath, payload.toByteArray(), hdfsFileName,
 							hdfsFilePathBuilder, actionEvent);
 					getHandlerContext().createSingleItemEventList(returnEvent);
@@ -321,17 +354,19 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 		} catch (Exception e) {
 			throw new HandlerException(e.getMessage(), e);
 		}
+		long endTime = System.currentTimeMillis();
 		logger.debug(handlerPhase, "statusToReturn={}", statusToReturn);
+		logger.info("Webhdfs wrote to HDFS for hdfsFile =" +journal.getCurrentHdfsPathWithName(), "finished in {} milliseconds",(endTime-startTime));
 		return statusToReturn;
 	}
 
 	private ActionEvent writeToHdfs(String hdfsPath12, byte[] payload, String hdfsFileName,
 			HdfsFilePathBuilder hdfsFilePathBuilder1, ActionEvent inputEvent)
-					throws IOException, RuntimeInfoStoreException, HandlerException {
+			throws IOException, RuntimeInfoStoreException, HandlerException {
 		final WebHdfsWriter writer = new WebHdfsWriter();
 		HdfsFilePathBuilder hdfsFilePathBuilder = new HdfsFilePathBuilder();
 		String detokenizedHdfsPath = hdfsFilePathBuilder.withActionEvent(inputEvent).withHdfsPath(hdfsPath)
-				.withTokenHeaderMap(tokenToHeaderNameMap).build();
+				.withTokenHeaderMap(tokenToHeaderNameMap).withCase(hdfsPathCaseEnum).build();
 		WebHDFSWriterHandlerJournal journal = getJournal(WebHDFSWriterHandlerJournal.class);
 		logger.debug(handlerPhase, "journal={}", journal);
 		logger.debug(handlerPhase, "_message=\"writing to hdfs\" hdfsPath={} hdfsFileName={} hdfsUser={}",
@@ -347,12 +382,14 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 		String partitionNames = null;
 		String partitionValues = null;
 		for (Entry<String, String> hivePartitionNameValue : hdfsFilePathBuilder.getPartitionNameValueMap().entrySet()) {
-			if (partitionValues == null) {
-				partitionValues = hivePartitionNameValue.getValue();
-				partitionNames = hivePartitionNameValue.getKey();
-			} else {
-				partitionValues += "," + hivePartitionNameValue.getValue();
-				partitionNames += "," + hivePartitionNameValue.getKey();
+			if(!isNonPartitionKey(inputEvent,hivePartitionNameValue.getKey())){
+				if (partitionValues == null) {
+					partitionValues = hivePartitionNameValue.getValue();
+					partitionNames = hivePartitionNameValue.getKey();
+				} else {
+					partitionValues += "," + hivePartitionNameValue.getValue();
+					partitionNames += "," + hivePartitionNameValue.getKey();
+				}
 			}
 		}
 		logger.debug(handlerPhase, "partitionNames={} partitionValues={} hdfsFileName={}", partitionNames,
@@ -371,11 +408,28 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 		headers.put(ActionEventHeaderConstants.HOST_NAMES, hostNames);
 		headers.put(ActionEventHeaderConstants.PORT, String.valueOf(port));
 		headers.put(ActionEventHeaderConstants.USER_NAME, hdfsUser);
-		logger.debug(handlerPhase, "headers_from_hdfswriter={}", headers);
 		return actionEvent;
 
 	}
 	
+	private boolean isNonPartitionKey(ActionEvent inputEvent, String hivePartitionName){
+		
+		boolean isNonPartition = false;
+		String hiveNonPartitionNames = inputEvent.getHeaders().get(ActionEventHeaderConstants.HIVE_NON_PARTITION_NAMES);
+		if(hiveNonPartitionNames == null)
+			return isNonPartition;
+		
+		if(hiveNonPartitionNames != null){
+			String[] hiveNonPartitionStNames = hiveNonPartitionNames.split(",");
+			for(String hiveNonPartitionName: hiveNonPartitionStNames)
+				if(hivePartitionName.equalsIgnoreCase(hiveNonPartitionName))
+					isNonPartition = true;
+			
+		}	
+		return isNonPartition;
+		
+	}
+
 	private void initializeRecordCountInJournal(final ActionEvent actionEvent,
 			final WebHDFSWriterHandlerJournal journal) throws RuntimeInfoStoreException {
 		if (journal.getRecordCount() < 0) {
@@ -420,43 +474,34 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 	public void handleExceptionCondition(final ActionEvent actionEvent) {
 
 		logger.info(handlerPhase,
-				"\"cleaning up file from previous run\" hdfsFileNamePrefix={} hdfsFileNameExtension={} channelDesc={} hdfsFileName={}",
-				hdfsFileNamePrefix, hdfsFileNameExtension, channelDesc, hdfsFileName);
+				"\"cleaning up file from previous run\" hdfsPath={} hdfsFileNamePrefix={} hdfsFileNameExtension={} channelDesc={} hdfsFileName={}",
+				hdfsPath, hdfsFileNamePrefix, hdfsFileNameExtension, channelDesc, hdfsFileName);
 		String fromPath = "";
-		String toPath = "";
 		String toPathDir = "";
 		try {
-
 			{
-				String hdfsBasePath = actionEvent.getHeaders().get(ActionEventHeaderConstants.HDFS_PATH);
+				HdfsFilePathBuilder hdfsFilePathBuilder = new HdfsFilePathBuilder();
+				logger.debug(handlerPhase, "\"cleaning up file from previous run\" tokenToHeaderNameMap={}",
+						tokenToHeaderNameMap);
+				String fromPathDir = hdfsFilePathBuilder.withActionEvent(actionEvent).withHdfsPath(hdfsPath)
+						.withTokenHeaderMap(tokenToHeaderNameMap).withCase(hdfsPathCaseEnum).build();
 
-				String hivePartitionValues = actionEvent.getHeaders()
-						.get(ActionEventHeaderConstants.HIVE_PARTITION_VALUES);
+				if (!fromPathDir.endsWith(File.separator))
+					fromPathDir = fromPathDir + File.separator;
+				fromPath = fromPathDir + hdfsFileName;
 
-				logger.info(handlerPhase,
-						"\"cleaning up file from previous run\" hdfsBasePath={} hivePartitionValues={}", hdfsBasePath,
-						hivePartitionValues);
+				logger.info(handlerPhase, "\"cleaning up file. \" detokenizedFromHdfsPath={}", fromPath);
 
-				String partitionPath = "";
-				if (StringUtils.isNotBlank(hivePartitionValues)) {
-					String[] partitionList = hivePartitionValues.split(",");
-					StringBuilder stringBuilder = new StringBuilder();
-					for (int i = 0; i < partitionList.length; i++) {
-						stringBuilder.append(partitionList[i].trim() + "/");
-					}
-					partitionPath = stringBuilder.toString();
-					fromPath = hdfsBasePath + partitionPath + hdfsFileName;
-				} else {
-					fromPath = hdfsBasePath + hdfsFileName;
+				hdfsFilePathBuilder = new HdfsFilePathBuilder();
+
+				toPathDir = hdfsFilePathBuilder.withActionEvent(actionEvent).withHdfsPath(hdfsPath)
+						.withBackupPath("backup/" + AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName())
+						.withTokenHeaderMap(tokenToHeaderNameMap).withCase(hdfsPathCaseEnum).build();
+				if (!toPathDir.endsWith(File.separator)) {
+					toPathDir = toPathDir + File.separator;
 				}
 
-				String destinationFilePath = "backup/"
-						+ AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName() + "/" + partitionPath + "/";
-
-				// Take out /webhdfs/v1 from hdfsBasePath
-				String hdfsDir = hdfsBasePath.substring(11);
-				toPath = hdfsDir + destinationFilePath;
-				toPathDir = hdfsBasePath + destinationFilePath;
+				logger.info(handlerPhase, "\"cleaning up file.\" detokenizedToHdfsPath={}", toPathDir);
 			}
 			if (webHdfs == null) {
 				webHdfs = WebHdfs.getInstance(hostNames, port)
@@ -464,14 +509,19 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 						.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
 			}
 			WebHdfsWriter webHdfsWriter = new WebHdfsWriter();
-			logger.info(handlerPhase, "\"creating directory\" toPath={}", toPath);
+			logger.info(handlerPhase, "\"creating directory\" toPathDir={}", toPathDir);
 			webHdfsWriter.createDirectory(webHdfs, toPathDir);
 
-			logger.info(handlerPhase, "\"moving file\" fromPath={} toPath={}", fromPath, toPath);
-			moveErrorRecordCountFile(fromPath, toPath + hdfsFileName + "-" + System.currentTimeMillis());
+			if (toPathDir.startsWith("/webhdfs/v"))
+				toPathDir = toPathDir.substring(11);
+
+			logger.info(handlerPhase, "\"moving file\" fromPath={} toPath={}", fromPath, toPathDir);
+			moveErrorRecordCountFile(fromPath, toPathDir + hdfsFileName + "-" + System.currentTimeMillis());
 			webHdfs = null;
+		} catch (HandlerException e) {
+			logger.warn(handlerPhase, "Exception occurs, Failed to move to provided location: toPath={}", toPathDir, e);
 		} catch (IOException e) {
-			logger.warn(handlerPhase, "Exception occurs, Failed to move to provided location: toPath={}", toPath, e);
+			logger.warn(handlerPhase, "Exception occurs, Failed to move to provided location: toPath={}", toPathDir, e);
 		}
 	}
 

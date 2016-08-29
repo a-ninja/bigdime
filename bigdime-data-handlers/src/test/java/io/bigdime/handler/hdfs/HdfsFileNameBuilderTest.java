@@ -35,6 +35,30 @@ public class HdfsFileNameBuilderTest {
 		Assert.assertEquals(path, "unitprefixunitchannel.unitext");
 	}
 
+	@Test
+	public void testBuildWithCamelCase() {
+		HdfsFileNameBuilder hdfsFileNameBuilder = new HdfsFileNameBuilder();
+		String channelDesc = "unitChannel";
+		String extension = ".uniText";
+		String prefix = "unitPrefix";
+
+		String path = hdfsFileNameBuilder.withChannelDesc(channelDesc).withExtension(extension).withPrefix(prefix)
+				.build();
+		Assert.assertEquals(path, "unitPrefixunitChannel.uniText");
+	}
+
+	@Test
+	public void testBuildWithAllUpperCase() {
+		HdfsFileNameBuilder hdfsFileNameBuilder = new HdfsFileNameBuilder();
+		String channelDesc = "UNITCHANNEL";
+		String extension = ".UNITTEXT";
+		String prefix = "UNITPREFIX";
+
+		String path = hdfsFileNameBuilder.withChannelDesc(channelDesc).withExtension(extension).withPrefix(prefix)
+				.build();
+		Assert.assertEquals(path, "UNITPREFIXUNITCHANNEL.UNITTEXT");
+	}
+
 	@Test(expectedExceptions = NullPointerException.class)
 	public void testBuildWithNullChannel() {
 		HdfsFileNameBuilder hdfsFileNameBuilder = new HdfsFileNameBuilder();

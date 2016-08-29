@@ -14,17 +14,9 @@
 	http://www.springframework.org/schema/context/spring-context-4.0.xsd">
    <context:annotation-config />
 	<context:component-scan base-package="io.bigdime" />
-	<!-- <context:property-placeholder location="classpath:application-${env}.properties" 
-		ignore-resource-not-found="false" />  -->
-     <context:property-placeholder
+    <context:property-placeholder
 		location="file:///${ext.properties}/application.properties"
 		ignore-resource-not-found="false" ignore-unresolvable="true" />
-	<bean
-		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
-		<property name="prefix" value="/WEB-INF/jsp/" />
-		<property name="suffix" value=".jsp" />
-	</bean>
-	<mvc:resources mapping="/resources/**" location="/resources/mytheme/" />
 	<mvc:annotation-driven />
 </beans>
 

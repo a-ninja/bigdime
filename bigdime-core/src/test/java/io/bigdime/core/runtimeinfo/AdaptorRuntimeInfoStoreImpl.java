@@ -44,4 +44,13 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 		throw new NotImplementedException();
 	}
 
+	@Override
+	public boolean delete(RuntimeInfo runtimeInfo) throws RuntimeInfoStoreException {
+		throw new NotImplementedException();
+	}
+
+	@Override
+	public RuntimeInfo getById(int runtimeInfoId) throws RuntimeInfoStoreException {
+		throw new NotImplementedException();
+	}
 }
