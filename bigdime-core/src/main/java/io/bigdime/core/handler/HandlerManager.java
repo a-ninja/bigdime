@@ -38,6 +38,7 @@ public class HandlerManager {
 	 * Count of errors for this handler chain.
 	 */
 	private int errorCount;
+	private int thresholdErrorCount = 10;
 
 	private int handlerChainExecutionCount;
 
@@ -194,17 +195,17 @@ public class HandlerManager {
 					}
 					tempHandlerNode = tempHandlerNode.getNext();
 				} while (tempHandlerNode != null && !backoff);
-			}
-
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				errorCount++;
+				status = Status.CALLBACK;
 				logger.alert(ALERT_TYPE.INGESTION_STOPPED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
 						ALERT_SEVERITY.BLOCKER,
-						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped after 10 errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
-						currentHandlerName, ex.getMessage(), errorCount, handlerChainExecutionCount, ex);
+						"_message=\"one of the handlers({}) in the chain threw an unknown exception, this loop of handlers will be stopped after {} errors\" exception=\"{}\" error_count=\"{}\" handlerChainExecutionCount=\"{}\"",
+						currentHandlerName, thresholdErrorCount, ex.getMessage(), errorCount,
+						handlerChainExecutionCount, ex);
 				logger.info("handler chain handling exception", "invoking handleException");
 				executeHandleException();
-				if (errorCount > 10) {
+				if (errorCount > thresholdErrorCount) {
 					stopOnError();
 					if (ex instanceof HandlerException)
 						throw ex;
