@@ -3,18 +3,21 @@
  */
 package io.bigdime.alert.impl;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import io.bigdime.alert.AlertMessage;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.spi.AlertLoggerFactory;
+import io.bigdime.core.commons.PropertyLoader;
+import io.bigdime.core.commons.StringHelper;
 
 /**
  * Default implementation of the alerting system, uses slf4j-log4j to log.
@@ -33,7 +36,9 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
 		return MultipleLogger.getLogger(clazz.getName());
 	}
 
-	private static final String APPLICATION_CONTEXT_PATH = "META-INF/application-context-monitoring.xml";
+	// private static final String APPLICATION_CONTEXT_PATH =
+	// "META-INF/application-context-monitoring.xml";
+	private static final String ENV_PROPERTIES = "env.properties";
 
 	private static final class MultipleLogger implements Logger {
 
@@ -49,12 +54,17 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
 				logger = new MultipleLogger();
 				loggerMap.put(loggerName, logger);
 
-				try (final ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
-						APPLICATION_CONTEXT_PATH)) {
-					logger.loggers.add(getDefaultLogger(loggerName));
-					final String loggersProp = context.getBeanFactory().resolveEmbeddedValue("${loggers}");
-					if (loggersProp.equalsIgnoreCase("${loggers}")) {
+				try {
+					Properties props = new PropertyLoader().loadEnvProperties(ENV_PROPERTIES);
+					// logger.loggers.add(getDefaultLogger(loggerName));
+					final String loggersProp = props.getProperty("loggers");
+					Enumeration<?> en = props.propertyNames();
+					while (en.hasMoreElements()) {
+						System.out.println(en.nextElement().toString());
+					}
+					if (StringHelper.isBlank(loggersProp)) {
 						System.out.println("no loggers configured, using default logger");
+						logger.loggers.add(getDefaultLogger(loggerName));
 					} else {
 						final String[] loggerArray = loggersProp.split(",");
 						for (final String loggerClassName : loggerArray) {
@@ -69,7 +79,9 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
 							}
 						}
 					}
-					context.close();
+				} catch (IOException e1) {
+					e1.printStackTrace(System.err);
+					throw new IllegalStateException("unable to read properties file :" + ENV_PROPERTIES + ":");
 				}
 			}
 			return logger;

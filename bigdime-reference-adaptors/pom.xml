@@ -60,5 +60,15 @@
 			<artifactId>bigdime-data-handlers</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-api</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-impl</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
 	</dependencies>
 </project>

@@ -25,11 +25,11 @@
 		<tag>bigdime-0.0.9</tag>
 	</scm>
 	<modules>
+		<module>bigdime-commons</module>
 		<module>bigdime-alerting-api</module>
 		<module>bigdime-alerting-impl</module>
 		<module>bigdime-swift-alerting-impl</module>
 		<module>bigdime-composite-alerting-impl</module>
-		<module>bigdime-commons</module>
 		<module>bigdime-common-test-utils</module>
 		<module>bigdime-libraries</module>
 		<module>bigdime-metadata-management</module>
@@ -96,7 +96,6 @@
 		<avro.org.apache.avro>1.7.7</avro.org.apache.avro>
 		<com.google.guava-guava.version>18.0</com.google.guava-guava.version>
 		<org.javaswift.joss.version>0.9.12</org.javaswift.joss.version>
-
 		<org.apache.hadoop.version>2.4.1</org.apache.hadoop.version>
 		<org.apache.hadoop.hdp2.4.version>2.4.1</org.apache.hadoop.hdp2.4.version>
 		<org.apache.hive.hive-jdbc.version>1.1.1</org.apache.hive.hive-jdbc.version>

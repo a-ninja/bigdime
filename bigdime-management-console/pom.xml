@@ -1,17 +1,14 @@
-<!--
+<!-- Copyright (C) 2015 Stubhub. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    Copyright (C) 2015 Stubhub.
-
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-   	<artifactId>bigdime-management-console</artifactId>
+	<artifactId>bigdime-management-console</artifactId>
 	<packaging>war</packaging>
 	<name>bigdime management console</name>
 	<url>http://www.bigdime.io</url>
 
-     <parent>
+	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime</artifactId>
 		<version>0.9.2-SNAPSHOT</version>
@@ -61,7 +58,7 @@
 			<artifactId>spring-webmvc</artifactId>
 			<version>4.2.2.RELEASE</version>
 		</dependency>
-    	<dependency>
+		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>servlet-api</artifactId>
 			<scope>provided</scope>
@@ -102,82 +99,92 @@
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-api</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-impl</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
 	</dependencies>
 
 
-    <build>
-    <!-- To define the plugin version in your parent POM -->
-    <pluginManagement>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.tomcat.maven</groupId>
-                <artifactId>tomcat7-maven-plugin</artifactId>
-                <version>2.0</version>
-            </plugin>
-        </plugins>
-    </pluginManagement>
-    <!-- To use the plugin goals in your POM or parent POM -->
-    <plugins>
-        <plugin>
-            <groupId>org.apache.tomcat.maven</groupId>
-            <artifactId>tomcat7-maven-plugin</artifactId>
-            <version>2.0</version>
-        </plugin>
-    </plugins>
-    </build>
+	<build>
+		<!-- To define the plugin version in your parent POM -->
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.tomcat.maven</groupId>
+					<artifactId>tomcat7-maven-plugin</artifactId>
+					<version>2.0</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<!-- To use the plugin goals in your POM or parent POM -->
+		<plugins>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>
+		</plugins>
+	</build>
 
-		<profiles>
-        <profile>
-            <id>rpm</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-						<properties>
-							<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-							<com.app.user>gaia</com.app.user>
-							<service.group>stub_bigdata</service.group>
-							<deploy.directory>/opt/tomcat/webapps</deploy.directory>
-							<timestamp>${maven.build.timestamp}</timestamp>
-   						<maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
-						</properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>rpm-maven-plugin</artifactId>
-                        <version>2.1.5</version>
-                        <extensions>true</extensions>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>attached-rpm</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <copyright>${timestamp}, StubHub</copyright>
-                            <group>StubHub/Servers</group>
-                            <needarch>x86_64</needarch>
+	<profiles>
+		<profile>
+			<id>rpm</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+				<com.app.user>gaia</com.app.user>
+				<service.group>stub_bigdata</service.group>
+				<deploy.directory>/opt/tomcat/webapps</deploy.directory>
+				<timestamp>${maven.build.timestamp}</timestamp>
+				<maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>rpm-maven-plugin</artifactId>
+						<version>2.1.5</version>
+						<extensions>true</extensions>
+						<executions>
+							<execution>
+								<goals>
+									<goal>attached-rpm</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<copyright>${timestamp}, StubHub</copyright>
+							<group>StubHub/Servers</group>
+							<needarch>x86_64</needarch>
 
-                            <mappings>
-                                <mapping>
-                                    <directory>${deploy.directory}</directory>
-                                    <filemode>755</filemode>
-                                    <username>${com.app.user}</username>
-                                    <groupname>${service.group}</groupname>
-                                    <sources>
-                                        <source>
-                                            <location>target/${project.artifactId}-${project.version}.war</location>
-                                        </source>
-                                    </sources>
-                                </mapping>
-                            </mappings>
+							<mappings>
+								<mapping>
+									<directory>${deploy.directory}</directory>
+									<filemode>755</filemode>
+									<username>${com.app.user}</username>
+									<groupname>${service.group}</groupname>
+									<sources>
+										<source>
+											<location>target/${project.artifactId}-${project.version}.war</location>
+										</source>
+									</sources>
+								</mapping>
+							</mappings>
 
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>

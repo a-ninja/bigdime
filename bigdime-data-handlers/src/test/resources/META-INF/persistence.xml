@@ -1,0 +1,18 @@
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+	version="1.0">
+
+	<persistence-unit name="embedded-persistence" transaction-type="RESOURCE_LOCAL">
+		<class>io.bigdime.adaptor.metadata.dto.AttributeDTO</class>
+	    <class>io.bigdime.adaptor.metadata.dto.MetasegmentDTO</class>
+	    <class>io.bigdime.adaptor.metadata.dto.EntiteeDTO</class>
+	    <class>io.bigdime.adaptor.metadata.dto.DataTypeDTO</class>
+		<provider>org.hibernate.ejb.HibernatePersistence</provider>
+		<properties>
+			<property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect" />
+			<property name="hibernate.hbm2ddl.auto" value="create-drop" />
+			<property name="hibernate.show_sql" value="${metastore.hibernate.show_sql}" />
+		</properties>
+	</persistence-unit>
+	
+   
+</persistence>

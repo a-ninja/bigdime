@@ -11,7 +11,7 @@
 	<context:annotation-config />
 	<context:component-scan base-package="io.bigdime" />
 	<context:property-placeholder
-		location="classpath*:application-localhost.properties"
+		location="classpath*:application.properties"
 		ignore-resource-not-found="false" ignore-unresolvable="true" />
 
 
