@@ -19,10 +19,11 @@ import org.springframework.stereotype.Component;
 
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.handler.JobStatusFetcher;
 
-@Component
+@Component("hiveJobStatusFether")
 @Scope("prototype")
-public class HiveJobStatusFetcher {
+public class HiveJobStatusFetcher implements JobStatusFetcher<String, HiveJobStatus> {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJobStatusFetcher.class));
 
 	@Value("${hive.job.status.sleep.seconds:60}")

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,21 +55,18 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
 
 				try {
 					Properties props = new PropertyLoader().loadEnvProperties(ENV_PROPERTIES);
-					// logger.loggers.add(getDefaultLogger(loggerName));
+					logger.loggers.add(getDefaultLogger(loggerName));
 					final String loggersProp = props.getProperty("loggers");
-					Enumeration<?> en = props.propertyNames();
-					while (en.hasMoreElements()) {
-						System.out.println(en.nextElement().toString());
-					}
 					if (StringHelper.isBlank(loggersProp)) {
 						System.out.println("no loggers configured, using default logger");
-						logger.loggers.add(getDefaultLogger(loggerName));
 					} else {
 						final String[] loggerArray = loggersProp.split(",");
 						for (final String loggerClassName : loggerArray) {
 							try {
 								System.out.println("adding:" + loggerClassName);
-								logger.loggers.add(getLoggerInstance(loggerClassName, loggerName));
+								if (!loggerClassName.equals("io.bigdime.alert.impl.Slf4jLogger")) {
+									logger.loggers.add(getLoggerInstance(loggerClassName, loggerName));
+								}
 							} catch (ClassNotFoundException | NoSuchMethodException | SecurityException
 									| IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 								System.err.println("unable to get the instance of Logger for:" + loggerClassName

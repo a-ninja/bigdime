@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.apache.hadoop.mapred.JobStatus;
 
-public class HiveJobStatus {
+public class HiveJobStatus implements io.bigdime.handler.JobStatus {
 
 	private JobStatus overallStatus;
 	private JobStatus newestJobStatus;

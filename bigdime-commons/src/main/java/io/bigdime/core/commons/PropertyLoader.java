@@ -8,7 +8,7 @@ public class PropertyLoader {
 
 	public Properties loadEnvProperties(String envPropertyName) throws IOException {
 		String envProperties = System.getProperty(envPropertyName);
-		System.out.println("envProperties=" + envProperties);
+		System.out.println("envProperties=:" + envProperties + ":");
 		if (envProperties == null) {
 			envProperties = "application.properties";
 		}

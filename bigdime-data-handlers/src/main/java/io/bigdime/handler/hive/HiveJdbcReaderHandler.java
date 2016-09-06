@@ -20,6 +20,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -42,10 +43,11 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractSourceHandler;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
+import io.bigdime.handler.JobStatusException;
+import io.bigdime.handler.JobStatusFetcher;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
-//import io.bigdime.libs.hdfs.job.YarnJobHelper;
 
 /**
  * 
@@ -87,9 +89,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	@Autowired
 	private WebHdfsReader webHdfsReader;
-	
+
 	@Autowired
-	private HiveJobStatusFetcher hiveJobStatusFetcher;
+	@Qualifier("hiveJobStatusFether")
+	private JobStatusFetcher<String, HiveJobStatus> hiveJobStatusFetcher;
 
 	private HiveNextRunChecker hiveNextRunDateTime;
 	private HiveReaderDescriptor inputDescriptor;
@@ -284,13 +287,16 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 					for (Entry<String, String> entry : yarnConfs.entrySet()) {
 						conf.set(entry.getKey(), entry.getValue());
 					}
-//					final String yarnSiteXmlPath = PropertyHelper.getStringProperty(getPropertyMap(),
-//							HiveJdbcReaderHandlerConstants.YARN_SITE_XML_PATH);
-//					logger.info(getHandlerPhase(), "yarnSiteXmlPath={}", yarnSiteXmlPath);
-//					if (yarnSiteXmlPath != null) {
-//						InputStream yarnSiteXmlInputStream = new FileInputStream(yarnSiteXmlPath);
-//						conf.addResource(yarnSiteXmlInputStream);
-//					}
+					// final String yarnSiteXmlPath =
+					// PropertyHelper.getStringProperty(getPropertyMap(),
+					// HiveJdbcReaderHandlerConstants.YARN_SITE_XML_PATH);
+					// logger.info(getHandlerPhase(), "yarnSiteXmlPath={}",
+					// yarnSiteXmlPath);
+					// if (yarnSiteXmlPath != null) {
+					// InputStream yarnSiteXmlInputStream = new
+					// FileInputStream(yarnSiteXmlPath);
+					// conf.addResource(yarnSiteXmlInputStream);
+					// }
 					UserGroupInformation.setConfiguration(conf);
 					UserGroupInformation.loginUserFromKeytab(handlerConfig.getUserName(), handlerConfig.getPassword());
 					logger.info(getHandlerPhase(), "initialized yarn JobClient instance");
@@ -629,7 +635,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		JobStatus.State state = null;
 		Status returnStatus = null;
 		try {
-//			HiveJobStatusFetcher hiveJobStatusFetcher = new HiveJobStatusFetcher(conf);
 			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
 			if (hiveJobStatus != null) {
 				state = hiveJobStatus.getOverallStatus().getState();
@@ -681,7 +686,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	private void runWithRetries(ActionEvent outputEvent, String jobName)
-			throws SQLException, IOException, RuntimeInfoStoreException {
+			throws SQLException, IOException, RuntimeInfoStoreException, JobStatusException {
 
 		String newJobName = computeJobName();
 		boolean jobRanSuccessfully = false;
@@ -739,7 +744,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private JobStatus updateStatusForNewJob(ActionEvent outputEvent, String jobName) throws RuntimeInfoStoreException {
 		JobStatus newJobStatus = null;
 		try {
-//			HiveJobStatusFetcher hiveJobStatusFetcher = new HiveJobStatusFetcher(conf);
 			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
 			if (hiveJobStatus != null) {
 				newJobStatus = hiveJobStatus.getOverallStatus();
@@ -756,37 +760,29 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		return newJobStatus;
 	}
 
-	private boolean jobSucceeded(String jobName, ActionEvent outputEvent) throws RuntimeInfoStoreException {
-//		try {
-
-//			HiveJobStatusFetcher hiveJobStatusFetcher = new HiveJobStatusFetcher(conf);
-			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
-			JobStatus completedJobStatus = null;
-			boolean updatedRuntime = false;
-			if (hiveJobStatus != null) {
-				completedJobStatus = hiveJobStatus.getOverallStatus();
-				JobStatus.State completeJobState = hiveJobStatus.getOverallStatus().getState();
-				if (completeJobState == JobStatus.State.SUCCEEDED) {
-					updatedRuntime = recordSuccessfulStatus(outputEvent, completedJobStatus);
-				} else {
-					updatedRuntime = recordFailedStatus(outputEvent, completedJobStatus);
-				}
-				logger.info(getHandlerPhase(),
-						"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
-						updatedRuntime, completedJobStatus.getJobID().toString(), jobName,
-						completedJobStatus.getRunState(), JobStatus.getJobRunState(completedJobStatus.getRunState()));
-				return completedJobStatus.getRunState() == JobStatus.SUCCEEDED;
+	private boolean jobSucceeded(String jobName, ActionEvent outputEvent)
+			throws RuntimeInfoStoreException, JobStatusException {
+		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
+		JobStatus completedJobStatus = null;
+		boolean updatedRuntime = false;
+		if (hiveJobStatus != null) {
+			completedJobStatus = hiveJobStatus.getOverallStatus();
+			JobStatus.State completeJobState = hiveJobStatus.getOverallStatus().getState();
+			if (completeJobState == JobStatus.State.SUCCEEDED) {
+				updatedRuntime = recordSuccessfulStatus(outputEvent, completedJobStatus);
 			} else {
-				logger.info(getHandlerPhase(),
-						"_message=\"after job completion, could not find job status\" jobName={}", jobName);
-				return false;
+				updatedRuntime = recordFailedStatus(outputEvent, completedJobStatus);
 			}
-
-//		} catch (final IOException ex) {
-//			logger.warn(getHandlerPhase(), "_message=\"jobSucceeded:unable to get the job status\" jobName={}", jobName,
-//					ex);
-//			return false;
-//		}
+			logger.info(getHandlerPhase(),
+					"_message=\"after job completion\" updatedRuntime={} jobID={} jobName={} runState={} runState={}",
+					updatedRuntime, completedJobStatus.getJobID().toString(), jobName, completedJobStatus.getRunState(),
+					JobStatus.getJobRunState(completedJobStatus.getRunState()));
+			return completedJobStatus.getRunState() == JobStatus.SUCCEEDED;
+		} else {
+			logger.info(getHandlerPhase(), "_message=\"after job completion, could not find job status\" jobName={}",
+					jobName);
+			return false;
+		}
 	}
 
 	private boolean recordRunningStatus(ActionEvent event, JobStatus jobStatus) throws RuntimeInfoStoreException {
@@ -834,13 +830,12 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	}
 
 	protected boolean jobStartedSuccessfully(String jobName, ActionEvent outputEvent)
-			throws RuntimeInfoStoreException, IOException {
+			throws RuntimeInfoStoreException, IOException, JobStatusException {
 		return jobStartedSuccessfully(jobName, outputEvent, null);
 	}
 
 	protected boolean jobStartedSuccessfully(String jobName, ActionEvent outputEvent, Exception ex)
-			throws RuntimeInfoStoreException, IOException {
-//		HiveJobStatusFetcher hiveJobStatusFetcher = new HiveJobStatusFetcher(conf);
+			throws RuntimeInfoStoreException, IOException, JobStatusException {
 		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
 		JobStatus.State runState = hiveJobStatus.getOverallStatus().getState();
 		String exMessage = "";
