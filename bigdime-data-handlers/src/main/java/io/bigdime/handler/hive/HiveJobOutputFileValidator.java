@@ -11,17 +11,13 @@ import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.libs.hdfs.WebHdfsException;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 
-@Component("hiveJobOutputFileValidator")
+@Component
 @Scope("prototype")
 public class HiveJobOutputFileValidator {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(HiveJobOutputFileValidator.class));
 	@Autowired
 	private WebHdfsReader webHdfsReader;
-
-	// public HiveJobOutputFileValidator(final WebHdfsReader _webHdfsReader) {
-	// this.webHdfsReader = _webHdfsReader;
-	// }
 
 	/**
 	 * Check if the file/directory specified by filePath exists in HDFS.
@@ -37,8 +33,10 @@ public class HiveJobOutputFileValidator {
 	public boolean validateOutputFile(String filePath) throws IOException, WebHdfsException {
 		try {
 			return (webHdfsReader.getFileStatus(filePath) != null);
-		} catch (IOException | WebHdfsException ex) {
-			if (ex.getCause().getMessage().equals("Not Found")) {
+		} catch (WebHdfsException ex) {
+			logger.warn("validateOutputFile", "_message=\"unable to get file status\" filePath={} error={}", filePath,
+					ex.getMessage(), ex);
+			if (ex.getStatusCode() == 404) {
 				logger.info("validateOutputFile",
 						"_message=\"file not found in hdfs, returning false\" filePath={} error={}", filePath,
 						ex.getMessage());

@@ -92,7 +92,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	@Autowired
 	@Qualifier("hiveJobStatusFether")
-	private JobStatusFetcher<String, HiveJobStatus> hiveJobStatusFetcher;
+	private JobStatusFetcher<HiveJobSpec, HiveJobStatus> hiveJobStatusFetcher;
+
 
 	private HiveNextRunChecker hiveNextRunDateTime;
 	private HiveReaderDescriptor inputDescriptor;
@@ -635,7 +636,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		JobStatus.State state = null;
 		Status returnStatus = null;
 		try {
-			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
+			HiveJobSpec hiveJobSpec = new HiveJobSpec();
+			hiveJobSpec.setJobName(jobName);
+			hiveJobSpec.setOutputDirectoryPath(inputDescriptor.getHiveConfDirectory());
+			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(hiveJobSpec);
 			if (hiveJobStatus != null) {
 				state = hiveJobStatus.getOverallStatus().getState();
 				jobStatus = hiveJobStatus.getOverallStatus();
@@ -744,7 +748,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private JobStatus updateStatusForNewJob(ActionEvent outputEvent, String jobName) throws RuntimeInfoStoreException {
 		JobStatus newJobStatus = null;
 		try {
-			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
+			HiveJobSpec hiveJobSpec = new HiveJobSpec();
+			hiveJobSpec.setJobName(jobName);
+			hiveJobSpec.setOutputDirectoryPath(inputDescriptor.getHiveConfDirectory());
+			HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJobWithRetry(hiveJobSpec);
 			if (hiveJobStatus != null) {
 				newJobStatus = hiveJobStatus.getOverallStatus();
 				boolean updatedRuntime = recordRunningStatus(outputEvent, newJobStatus);
@@ -762,7 +769,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	private boolean jobSucceeded(String jobName, ActionEvent outputEvent)
 			throws RuntimeInfoStoreException, JobStatusException {
-		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
+		HiveJobSpec hiveJobSpec = new HiveJobSpec();
+		hiveJobSpec.setJobName(jobName);
+		hiveJobSpec.setOutputDirectoryPath(inputDescriptor.getHiveConfDirectory());
+		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJobWithRetry(hiveJobSpec);
 		JobStatus completedJobStatus = null;
 		boolean updatedRuntime = false;
 		if (hiveJobStatus != null) {
@@ -836,32 +846,40 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 	protected boolean jobStartedSuccessfully(String jobName, ActionEvent outputEvent, Exception ex)
 			throws RuntimeInfoStoreException, IOException, JobStatusException {
-		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJob(jobName);
-		JobStatus.State runState = hiveJobStatus.getOverallStatus().getState();
-		String exMessage = "";
-		if (ex != null)
-			exMessage = ex.getMessage();
+		HiveJobSpec hiveJobSpec = new HiveJobSpec();
+		hiveJobSpec.setJobName(jobName);
+		hiveJobSpec.setOutputDirectoryPath(inputDescriptor.getHiveConfDirectory());
+		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJobWithRetry(hiveJobSpec);
+		if (hiveJobStatus!=null) {
+			JobStatus.State runState = hiveJobStatus.getOverallStatus().getState();
+			String exMessage = "";
+			if (ex != null)
+				exMessage = ex.getMessage();
 
-		// refactor below code to another method
-		if (runState == JobStatus.State.RUNNING || runState == JobStatus.State.PREP) {
-			boolean updatedRuntime = recordRunningStatus(outputEvent, hiveJobStatus.getOverallStatus());
-			logger.warn(getHandlerPhase(),
-					"_message=\"exception in running the job, but job was created successfully\" updatedRuntime={} jobName={} runState={} errorMessage={}",
-					updatedRuntime, jobName, runState, exMessage, ex);
-			return true;
+			// refactor below code to another method
+			if (runState == JobStatus.State.RUNNING || runState == JobStatus.State.PREP) {
+				boolean updatedRuntime = recordRunningStatus(outputEvent, hiveJobStatus.getOverallStatus());
+				logger.warn(getHandlerPhase(),
+						"_message=\"exception in running the job, but job was created successfully\" updatedRuntime={} jobName={} runState={} errorMessage={}",
+						updatedRuntime, jobName, runState, exMessage, ex);
+				return true;
 
-		} else if (runState == JobStatus.State.SUCCEEDED) {
-			boolean updatedRuntime = recordSuccessfulStatus(outputEvent, hiveJobStatus.getOverallStatus());
-			logger.warn(getHandlerPhase(),
-					"_message=\"exception in running the job, but job was completed successfully\" updatedRuntime={} jobName={} runState={}",
-					updatedRuntime, jobName, runState, exMessage, ex);
-			return true;
+			} else if (runState == JobStatus.State.SUCCEEDED) {
+				boolean updatedRuntime = recordSuccessfulStatus(outputEvent, hiveJobStatus.getOverallStatus());
+				logger.warn(getHandlerPhase(),
+						"_message=\"exception in running the job, but job was completed successfully\" updatedRuntime={} jobName={} runState={}",
+						updatedRuntime, jobName, runState, exMessage, ex);
+				return true;
+			} else {
+				boolean updatedRuntime = recordFailedStatus(outputEvent, hiveJobStatus.getOverallStatus());
+				logger.warn(getHandlerPhase(),
+						"_message=\"error in running the job\" updatedRuntime={} jobName={} runState={} error={}",
+						updatedRuntime, jobName, runState, exMessage, ex);
+				return false;
+			}
 		} else {
-			boolean updatedRuntime = recordFailedStatus(outputEvent, hiveJobStatus.getOverallStatus());
-			logger.warn(getHandlerPhase(),
-					"_message=\"error in running the job\" updatedRuntime={} jobName={} runState={} error={}",
-					updatedRuntime, jobName, runState, exMessage, ex);
 			return false;
 		}
+
 	}
 }

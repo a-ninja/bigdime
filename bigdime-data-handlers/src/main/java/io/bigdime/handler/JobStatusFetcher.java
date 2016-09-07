@@ -21,10 +21,19 @@ public interface JobStatusFetcher<I, O extends JobStatus> {
 	 * 
 	 * @param jobId
 	 *            job identifier, can be a jobName, jobId etc.
-	 * @return JobStatus representing the status of the job
+	 * @return JobStatus representing the status of the job, or null if the job
+	 *         was not found
 	 * @throws JobStatusException
 	 *             if the fetcher was not able to fetch the status of the job
 	 */
 	public O getStatusForJob(I jobId) throws JobStatusException;
+
+	/**
+	 * 
+	 * @param jobId
+	 * @return
+	 * @throws JobStatusException
+	 */
+	public O getStatusForJobWithRetry(I jobId) throws JobStatusException;
 
 }

@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
+import io.bigdime.libs.hdfs.WebHdfsReader;
+
 @Configuration
 public class HiveJobStatusFetcherTestConfig {
 	@Bean
@@ -18,6 +20,11 @@ public class HiveJobStatusFetcherTestConfig {
 		properties.setProperty("yarn.site.xml.path", "yarn-site.xml");
 		properties.setProperty("hive.jdbc.user.name", "unit-username");
 		properties.setProperty("hive.jdbc.secret", "unit-secret");
+		properties.setProperty("hdfs_hosts", "unit-hdfs_hosts");
+		properties.setProperty("hdfs_port", "0");
+		properties.setProperty("hdfs_user", "unit-hdfs_user");
+		properties.setProperty("mapreduce.framework.name", "unit");
+		properties.setProperty("hadoop.security.authentication", "simple");
 
 		pspc.setProperties(properties);
 		return pspc;
@@ -32,4 +39,20 @@ public class HiveJobStatusFetcherTestConfig {
 	public JobClient getJobClient() {
 		return Mockito.mock(JobClient.class);
 	}
+
+	@Bean
+	public HiveJobOutputFileValidator getHiveJobOutputFileValidator() {
+		return Mockito.mock(HiveJobOutputFileValidator.class);
+	}
+
+	@Bean
+	public WebHdfsReader getWebHdfsReader() {
+		return Mockito.mock(WebHdfsReader.class);
+	}
+
+	@Bean
+	public JobClientFactory getJobClientFactory() {
+		return Mockito.mock(JobClientFactory.class);
+	}
+
 }

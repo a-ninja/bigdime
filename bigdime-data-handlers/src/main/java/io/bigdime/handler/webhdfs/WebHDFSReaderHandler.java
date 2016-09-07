@@ -357,7 +357,8 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		} catch (HandlerException ex) {
 			logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"",
 					ex.getMessage(), ex.getCause().getMessage());
-			if (ex.getCause().getMessage().equals("Not Found")) {
+			if (ex.getCause() != null && ex.getCause().getMessage() != null
+					&& ex.getCause().getMessage().equals("Not Found")) {
 				logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs, returning backoff\" error={}",
 						ex.getMessage());
 				return Status.BACKOFF_NOW;

@@ -109,8 +109,8 @@ public class WebHdfs {
 
 	protected void initConnection() {
 		this.httpClient = HttpClientBuilder.create().build();// new
-//		ObjectMapper mapper = new ObjectMapper();
-//		this.jsonParameters = mapper.createObjectNode();
+		// ObjectMapper mapper = new ObjectMapper();
+		// this.jsonParameters = mapper.createObjectNode();
 		roundRobinStrategy.setHosts(host);
 	}
 
@@ -443,6 +443,7 @@ public class WebHdfs {
 					}
 				} catch (Exception e) {
 					exceptionReason = e.getMessage();
+					logger.warn("_message=\"{} failed with exception:\"", method.getName(), e);
 					releaseConnection();
 				}
 			} while (!isSuccess && attempts < maxAttempts);

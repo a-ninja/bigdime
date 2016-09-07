@@ -43,17 +43,28 @@ public class HiveJobOutputFileValidatorTest {
 		Assert.assertTrue(validated);
 	}
 
-	@Test
-	public void testValidateOutputFileNotFound() throws IOException, WebHdfsException {
-		// WebHdfsReader webHdfsReader = Mockito.mock(WebHdfsReader.class);
+	@Test(expectedExceptions = Exception.class)
+	public void testValidateOutputFileWithException() throws IOException, WebHdfsException {
 		Exception ex = new Exception("Not Found");
 		IOException ioEx = new IOException(ex);
 
 		Mockito.when(webHdfsReader.getFileStatus(Mockito.anyString())).thenThrow(ioEx);
-		// HiveJobOutputFileValidator fileValidator = new
-		// HiveJobOutputFileValidator(webHdfsReader);
+		try {
+			fileValidator.validateOutputFile("");
+		} catch (Exception ex1) {
+			Mockito.verify(webHdfsReader, Mockito.times(1)).getFileStatus(Mockito.anyString());
+			throw ex1;
+		}
+	}
+
+	@Test
+	public void testValidateOutputFileNotFound() throws IOException, WebHdfsException {
+		WebHdfsException ex = new WebHdfsException(404, "Not Found");
+
+		Mockito.when(webHdfsReader.getFileStatus(Mockito.anyString())).thenThrow(ex);
 		boolean validated = fileValidator.validateOutputFile("");
 		Assert.assertFalse(validated);
+		Mockito.verify(webHdfsReader, Mockito.times(1)).getFileStatus(Mockito.anyString());
 	}
 
 	@Test(expectedExceptions = WebHdfsException.class)

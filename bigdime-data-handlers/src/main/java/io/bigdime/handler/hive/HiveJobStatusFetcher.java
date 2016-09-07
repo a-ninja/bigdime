@@ -10,20 +10,24 @@ import javax.annotation.PostConstruct;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.handler.JobStatusException;
 import io.bigdime.handler.JobStatusFetcher;
+import io.bigdime.libs.hdfs.WebHdfsException;
 
 @Component("hiveJobStatusFether")
 @Scope("prototype")
-public class HiveJobStatusFetcher implements JobStatusFetcher<String, HiveJobStatus> {
+public class HiveJobStatusFetcher implements JobStatusFetcher<HiveJobSpec, HiveJobStatus> {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(HiveJobStatusFetcher.class));
 
 	@Value("${hive.job.status.sleep.seconds:60}")
@@ -33,9 +37,18 @@ public class HiveJobStatusFetcher implements JobStatusFetcher<String, HiveJobSta
 	@Value("${hive.job.status.max.wait.seconds:3600}")
 	private long maxWaitSeconds;
 
+	@Value("${mapreduce.framework.name:yarn}")
+	private String mapreduceFrameworkName;
+
+	@Value("${hadoop.security.authentication:kerberos}")
+	private String hadoopSecurityAuthentication;
+
 	private long maxWait;
 
 	private JobClient jobClient;
+
+	@Autowired
+	private JobClientFactory jobClientFactory;
 
 	@Value("${yarn.site.xml.path}")
 	private String yarnSiteXml;
@@ -46,142 +59,200 @@ public class HiveJobStatusFetcher implements JobStatusFetcher<String, HiveJobSta
 	@Value("${hive.jdbc.secret}")
 	private String password;
 
+	@Autowired
+	private HiveJobOutputFileValidator hiveJobOutputFileValidator;
+
+	private Configuration conf;
+
 	@PostConstruct
 	public void init() throws Exception {
-		logger.info("HiveJobStatusFetcher.PostConstruct", "yarnSiteXml={}, this={}", yarnSiteXml, this);
+		logger.info("HiveJobStatusFetcher.PostConstruct",
+				"yarnSiteXml={} mapreduceFrameworkName={} hadoopSecurityAuthentication={} userName={} secret={}, this={}",
+				yarnSiteXml, mapreduceFrameworkName, hadoopSecurityAuthentication, userName, password, this);
 		sleepTimeBetweenStatusCall = TimeUnit.SECONDS.toMillis(sleepTimeBetweenStatusCallSeconds);
 		maxWait = TimeUnit.SECONDS.toMillis(maxWaitSeconds);
 
-		Configuration conf = new Configuration();
+		conf = new Configuration();
+		conf.set("mapreduce.framework.name", mapreduceFrameworkName);
+		conf.set("hadoop.security.authentication", hadoopSecurityAuthentication);
 		if (yarnSiteXml != null) {
 			InputStream yarnSiteXmlInputStream = HiveJobStatusFetcher.class.getClassLoader()
 					.getResourceAsStream(yarnSiteXml);
 			conf.addResource(yarnSiteXmlInputStream);
 			UserGroupInformation.setConfiguration(conf);
 			UserGroupInformation.loginUserFromKeytab(userName, password);
-			jobClient = new JobClient(conf);
+			jobClient = jobClientFactory.createJobClient(conf);
+		}
+		logger.info("HiveJobStatusFetcher.PostConstruct done", "yarnSiteXml={}, this={}", yarnSiteXml, this);
+	}
+
+	public JobStatus[] getStatusForAllJobs() throws JobStatusException {
+		logger.info("getStatusForAllJobs",
+				"yarnSiteXml={}, this={} mapreduceFrameworkName={} hadoopSecurityAuthentication={}", yarnSiteXml, this,
+				mapreduceFrameworkName, hadoopSecurityAuthentication);
+		try {
+			jobClient.init(new JobConf(conf));
+			Configuration conf = new Configuration();
+			conf.set("mapreduce.framework.name", mapreduceFrameworkName);
+			conf.set("hadoop.security.authentication", hadoopSecurityAuthentication);
+			if (yarnSiteXml != null) {
+				InputStream yarnSiteXmlInputStream = HiveJobStatusFetcher.class.getClassLoader()
+						.getResourceAsStream(yarnSiteXml);
+				conf.addResource(yarnSiteXmlInputStream);
+
+				UserGroupInformation.setConfiguration(conf);
+				UserGroupInformation.loginUserFromKeytab(userName, password);
+			}
+			JobStatus[] jobStatus = jobClient.getAllJobs();
+			logger.debug("getStatusForAllJobs", "status={} length={}", jobStatus.toString(), jobStatus.length);
+
+			return jobStatus;
+		} catch (IOException ex) {
+			logger.warn("getStatusForAllJobs", "_message=\"unable to get the job status\"", ex);
+			throw new JobStatusException("unable to get the job status:", ex);
+		} finally {
+			try {
+				jobClient.close();
+			} catch (final IOException ex) {
+				logger.warn("getStatusForAllJobs", "_message=\"exception while trying to close the jobClient\"", ex);
+			}
 		}
 	}
 
-	public JobStatus[] getStatusForAllJobs() throws IOException {
-		JobStatus[] jobStatus = jobClient.getAllJobs();
-		logger.debug("getStatusForAllJobs", "status={} length={}", jobStatus.toString(), jobStatus.length);
-		jobClient.close();
-		return jobStatus;
-	}
-
-	public JobStatus[] getAllStatusesForJob(final String jobName) throws IOException {
-		JobStatus[] jobStatus = getStatusForAllJobs();
-		logger.debug("getStatusForJob", "status={} length={} jobName={}", jobStatus.toString(), jobStatus.length,
-				jobName);
+	public JobStatus[] getAllStatusesForJob(final String jobName) throws JobStatusException {
 		final List<JobStatus> statuses = new ArrayList<>();
-		for (JobStatus js : jobStatus) {
-			if (js.getJobName().contains(jobName)) {
-				statuses.add(js);
+		try {
+			JobStatus[] jobStatus = getStatusForAllJobs();
+			logger.debug("getAllStatusesForJob", "status={} length={} jobName={}", jobStatus.toString(),
+					jobStatus.length, jobName);
+			for (JobStatus js : jobStatus) {
+				if (js.getJobName().contains(jobName)) {
+					statuses.add(js);
+				}
 			}
+		} catch (JobStatusException ex) {
+			logger.warn("getAllStatusesForJob", "_message=\"unable to get the job status\" jobName={} attempt={}",
+					jobName, ex);
+			throw ex;
 		}
 		return statuses.toArray(new JobStatus[statuses.size()]);
 	}
 
-	/**
-	 * Check the status of the job and return the status of all the jobs.
-	 * 
-	 * @param jobName
-	 * @return
-	 * @throws IOException
-	 */
-	public HiveJobStatus getStatusForJob(String jobName) {
+	public HiveJobStatus getStatusForJobWithRetry(final HiveJobSpec jobSpec) throws JobStatusException {
+		String jobName = jobSpec.getJobName();
 		final long startTime = System.currentTimeMillis();
 		long endTime = startTime;
-		JobStatus overallJobStatus = null;
-		JobStatus newestJob = null;
-		State state = null;
-		final List<JobStatus> jobStatusList = new ArrayList<>();
 		HiveJobStatus hiveJobStatus = null;
+		int attempt = 0;
+		JobStatusException jobEx = null;
 		do {
+			attempt++;
 			try {
-				JobStatus[] jobStatuses = getAllStatusesForJob(jobName);
-				for (JobStatus js : jobStatuses) {
-					logger.info("getJobStatus", "jobId={} jobName={} runState={}", js.getJobID(), js.getJobName(),
-							js.getRunState());
-					jobStatusList.add(js);
-					State stageState = js.getState();
-					if (newestJob == null) {
-						newestJob = js;
-						state = stageState;
-						overallJobStatus = js;
-					} else if (newestJob.getStartTime() < js.getStartTime()) {
-						newestJob = js;
-					}
-					/*-
-					 * 
-					 * if the earlier stage failed or killed, 
-					 * 	runState should be left alone as failed or killed
-					 * else if earlier stage was successful
-					 * 	runState = new state
-					 * else if new state is PREP or RUNNING
-					 * 	runState = new state
-					 * 
-					 * if the overall state is killed or failed
-					 * 	leave it alone
-					 * else if the overall state is PREP
-					 * 	leave it alone
-					 * else if the overall state is running and the stage state is not SUCCEEDED
-					 * 	set the overall state = stage state
-					 * else if the overall state is succeeded
-					 * 	set the overall state = stage state
-					 * 
-					 */
-
-					switch (state) {
-					case RUNNING:
-						if (stageState != State.SUCCEEDED) {
-							state = stageState;
-							overallJobStatus = js;
-						}
-						break;
-					case SUCCEEDED:
-						state = stageState;
-						overallJobStatus = js;
-						break;
-					case FAILED:
-						break;
-					case PREP:
-						if (stageState == State.KILLED || stageState == State.FAILED) {
-							state = stageState;
-							overallJobStatus = js;
-						}
-						break;
-					case KILLED:
-						break;
-					}
-				}
-
-				if (newestJob != null) {
-					logger.info("getJobStatus", "found a not null jobStatus. state={}", state);
-					hiveJobStatus = new HiveJobStatus();
-					hiveJobStatus.setNewestJobStatus(newestJob);
-					hiveJobStatus.setOverallStatus(overallJobStatus);
-					hiveJobStatus.setStageStatuses(jobStatusList);
-				} else {
-					logger.info("getJobStatus", "found a null jobStatus");
-				}
-			} catch (Exception ex) {
-				logger.warn("getJobStatus", "_message=\"getJobStatus: unable to get the job status\" jobName={}",
-						jobName, ex);
+				jobEx = null;
+				hiveJobStatus = getStatusForJob(jobSpec);
+			} catch (JobStatusException ex) {
+				logger.warn("getStatusForJobWithRetry",
+						"_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt, ex);
+				jobEx = ex;
 			}
 			if (hiveJobStatus == null) {
 				try {
-					logger.info("getJobStatus", "sleeping before retry");
+					logger.info("getStatusForJobWithRetry", "_message=\"sleeping before retry.\"  attempt={}", attempt);
 					Thread.sleep(sleepTimeBetweenStatusCall);
 				} catch (Exception ex) {
-					logger.info("getJobStatus", "Thread interrupted", ex);
+					logger.info("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt,
+							ex);
+
 				}
 			} else {
 				break;
 			}
 			endTime = System.currentTimeMillis();
 		} while ((endTime - startTime) < maxWait);
+
+		if (jobEx != null)
+			throw jobEx;
 		return hiveJobStatus;
 	}
+
+	public HiveJobStatus getStatusForJob(final HiveJobSpec jobSpec) throws JobStatusException {
+		String jobName = jobSpec.getJobName();
+		JobStatus overallJobStatus = null;
+		JobStatus newestJob = null;
+		State state = null;
+		final List<JobStatus> jobStatusList = new ArrayList<>();
+		HiveJobStatus hiveJobStatus = null;
+		JobStatus[] jobStatuses;
+		jobStatuses = getAllStatusesForJob(jobName);
+		for (JobStatus js : jobStatuses) {
+			logger.info("getStatusForJob", "jobId={} jobName={} runState={}", js.getJobID(), js.getJobName(),
+					js.getRunState());
+			jobStatusList.add(js);
+			State stageState = js.getState();
+			if (newestJob == null) {
+				newestJob = js;
+				state = stageState;
+				overallJobStatus = js;
+			} else if (newestJob.getStartTime() < js.getStartTime()) {
+				newestJob = js;
+			}
+
+			switch (state) {
+			case RUNNING:
+				if (stageState != State.SUCCEEDED) {
+					state = stageState;
+					overallJobStatus = js;
+				}
+				break;
+			case SUCCEEDED:
+				state = stageState;
+				overallJobStatus = js;
+				break;
+			case FAILED:
+				break;
+			case PREP:
+				if (stageState == State.KILLED || stageState == State.FAILED) {
+					state = stageState;
+					overallJobStatus = js;
+				}
+				break;
+			case KILLED:
+				break;
+			}
+		}
+
+		if (newestJob != null) {
+			logger.info("getStatusForJob", "found a not null jobStatus. state={}", state);
+			hiveJobStatus = new HiveJobStatus();
+			hiveJobStatus.setNewestJobStatus(newestJob);
+			hiveJobStatus.setOverallStatus(overallJobStatus);
+			hiveJobStatus.setStageStatuses(jobStatusList);
+
+			if (hiveJobStatus.getOverallStatus().getState() == State.SUCCEEDED) {
+				try {
+					boolean validated = hiveJobOutputFileValidator.validateOutputFile(jobSpec.getOutputDirectoryPath());
+					if (validated) {
+						logger.info("getStatusForJob",
+								"_message=\"found a SUCCEEDED jobStatus and validated outputDirectory.\" jobName={} outputDirectoryPath={}",
+								jobName, jobSpec.getOutputDirectoryPath());
+					} else {
+						logger.warn("getStatusForJob",
+								"_message=\"found a SUCCEEDED jobStatus, but outputDirectory not found\" jobName={} outputDirectoryPath={}",
+								jobName, jobSpec.getOutputDirectoryPath());
+						hiveJobStatus = null;
+					}
+				} catch (IOException | WebHdfsException ex) {
+					logger.warn("getStatusForJob",
+							"_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}",
+							jobName, jobSpec.getOutputDirectoryPath(), ex);
+					throw new JobStatusException(
+							"unable to validate outputDirectory in hdfs:" + jobSpec.getOutputDirectoryPath() + ":", ex);
+				}
+			}
+		} else {
+			logger.info("getStatusForJob", "found a null jobStatus");
+		}
+		return hiveJobStatus;
+	}
+
 }
