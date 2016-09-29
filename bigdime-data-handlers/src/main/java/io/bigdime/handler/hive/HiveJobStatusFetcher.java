@@ -1,5 +1,6 @@
 package io.bigdime.handler.hive;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -76,8 +77,7 @@ public class HiveJobStatusFetcher implements JobStatusFetcher<HiveJobSpec, HiveJ
 		conf.set("mapreduce.framework.name", mapreduceFrameworkName);
 		conf.set("hadoop.security.authentication", hadoopSecurityAuthentication);
 		if (yarnSiteXml != null) {
-			InputStream yarnSiteXmlInputStream = HiveJobStatusFetcher.class.getClassLoader()
-					.getResourceAsStream(yarnSiteXml);
+			InputStream yarnSiteXmlInputStream = new FileInputStream(yarnSiteXml);
 			conf.addResource(yarnSiteXmlInputStream);
 			UserGroupInformation.setConfiguration(conf);
 			UserGroupInformation.loginUserFromKeytab(userName, password);
@@ -96,8 +96,7 @@ public class HiveJobStatusFetcher implements JobStatusFetcher<HiveJobSpec, HiveJ
 			conf.set("mapreduce.framework.name", mapreduceFrameworkName);
 			conf.set("hadoop.security.authentication", hadoopSecurityAuthentication);
 			if (yarnSiteXml != null) {
-				InputStream yarnSiteXmlInputStream = HiveJobStatusFetcher.class.getClassLoader()
-						.getResourceAsStream(yarnSiteXml);
+				InputStream yarnSiteXmlInputStream = new FileInputStream(yarnSiteXml);
 				conf.addResource(yarnSiteXmlInputStream);
 
 				UserGroupInformation.setConfiguration(conf);

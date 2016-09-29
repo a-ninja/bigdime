@@ -338,40 +338,56 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		}
 	}
 
+	public io.bigdime.core.ActionEvent.Status processWithRetry() throws HandlerException {
+		boolean success = false;
+		int attempt = 0;
+		int maxAttempts = 5;
+		Throwable cause = null;
+		do {
+			setHandlerPhase("processing " + getName());
+			incrementInvocationCount();
+			logger.debug(getHandlerPhase(), "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
+			try {
+				attempt++;
+				init(); // initialize cleanup records etc
+				initDescriptor();
+				if (isInputDescriptorNull()) {
+					logger.debug(getHandlerPhase(), "returning BACKOFF");
+					return io.bigdime.core.ActionEvent.Status.BACKOFF;
+				}
+				io.bigdime.core.ActionEvent.Status status = doProcess();
+				success = true;
+				return status;
+			} catch (HandlerException ex) {
+				logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"",
+						ex.getMessage(), ex.getCause().getMessage());
+				if (ex.getCause() != null && ex.getCause().getMessage() != null
+						&& ex.getCause().getMessage().equals("Not Found")) {
+					logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs, returning backoff\" error={}",
+							ex.getMessage());
+					return Status.BACKOFF_NOW;
+				} else {
+					throw ex;
+				}
+			} catch (IOException e) {
+				logger.warn(getHandlerPhase(), "_message=\"IOException received\" error={} attempt={} maxAttempts={}",
+						e.getMessage(), attempt, maxAttempts);
+				cause = e;
+				// let it retry
+			} catch (RuntimeInfoStoreException e) {
+				throw new HandlerException("Unable to process", e);
+			} catch (Exception e) {
+				throw new HandlerException("Unable to process", e);
+			}
+		} while (!success && attempt < maxAttempts);
+
+		// If here, that means there was an IOException
+		throw new HandlerException("Unable to process", cause);
+	}
+
 	@Override
 	public io.bigdime.core.ActionEvent.Status process() throws HandlerException {
-
-		setHandlerPhase("processing " + getName());
-		incrementInvocationCount();
-		logger.debug(getHandlerPhase(), "_messagge=\"entering process\" invocation_count={}", getInvocationCount());
-		try {
-			init(); // initialize cleanup records etc
-			// if (readAll()) {
-			initDescriptor();
-			// }
-			if (isInputDescriptorNull()) {
-				logger.debug(getHandlerPhase(), "returning BACKOFF");
-				return io.bigdime.core.ActionEvent.Status.BACKOFF;
-			}
-			return doProcess();
-		} catch (HandlerException ex) {
-			logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"",
-					ex.getMessage(), ex.getCause().getMessage());
-			if (ex.getCause() != null && ex.getCause().getMessage() != null
-					&& ex.getCause().getMessage().equals("Not Found")) {
-				logger.warn(getHandlerPhase(), "_message=\"file not found in hdfs, returning backoff\" error={}",
-						ex.getMessage());
-				return Status.BACKOFF_NOW;
-			} else {
-				throw ex;
-			}
-		} catch (IOException e) {
-			logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
-					"error during process", e);
-			throw new HandlerException("Unable to process", e);
-		} catch (RuntimeInfoStoreException e) {
-			throw new HandlerException("Unable to process", e);
-		}
+		return processWithRetry();
 	}
 
 	protected void initDescriptor() throws HandlerException, RuntimeInfoStoreException {

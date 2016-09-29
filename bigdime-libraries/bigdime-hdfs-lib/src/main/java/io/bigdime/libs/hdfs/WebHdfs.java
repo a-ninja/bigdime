@@ -11,9 +11,19 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -26,10 +36,20 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.entity.FileEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.ssl.SSLContexts;
+import org.apache.http.ssl.TrustStrategy;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
@@ -108,10 +128,37 @@ public class WebHdfs {
 	}
 
 	protected void initConnection() {
-		this.httpClient = HttpClientBuilder.create().build();// new
+		// this.httpClient = HttpClientBuilder.create().build();// new
+
+		SSLContext sslContext;
+		try {
+			sslContext = SSLContexts.custom().loadTrustMaterial(new TrustStrategy() {
+
+				@Override
+				public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+					return true;
+				}
+			}).build();
+			SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
+
+			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
+					.register("https", sslsf).build();
+
+			PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+			this.httpClient = HttpClients.custom().setConnectionManager(cm).build();
+		} catch (Exception e) {
+			logger.warn("_message=\"{} failed to create httpClient\" ", e);
+		}
 		// ObjectMapper mapper = new ObjectMapper();
 		// this.jsonParameters = mapper.createObjectNode();
 		roundRobinStrategy.setHosts(host);
+	}
+
+	public static void main(String[] args) {
+		String s = "apollo-phx-nn-2.vip.ebay.com";
+		String[] sh = s.split("://");
+		System.out.println(sh[0]);
+		System.out.println(sh[1]);
 	}
 
 	protected WebHdfs(String host, int port) {
@@ -132,9 +179,11 @@ public class WebHdfs {
 
 	// field checking?
 	public WebHdfs buildURI(String op, String HdfsPath) {
+
 		URIBuilder uriBuilder = new URIBuilder();
-		uriBuilder.setScheme("http").setHost(roundRobinStrategy.getNextServiceHost()).setPort(this.port)
-				.setPath(HdfsPath).addParameter("op", op);
+		String[] schemeHost = roundRobinStrategy.getNextServiceHost().split("://");
+		uriBuilder.setScheme(schemeHost[0]).setHost(schemeHost[1]).setPort(this.port).setPath(HdfsPath)
+				.addParameter("op", op);
 		Iterator<String> keys = jsonParameters.getFieldNames();
 		while (keys.hasNext()) {
 			String key = keys.next();
@@ -451,7 +500,8 @@ public class WebHdfs {
 			logger.error("_message=\"{} failed:\"", method.getName(), e1);
 		}
 		if (!isSuccess) {
-			logger.error("_message=\"{} failed After {} retries :\", args={}", method.getName(), maxAttempts, args);
+			logger.error("_message=\"{} failed After {} retries :\", statusCode={} exceptionReason={} args={}",
+					method.getName(), maxAttempts, statusCode, exceptionReason, args);
 			throw new WebHdfsException(statusCode, exceptionReason);
 		} else {
 			if (attempts > 1) {

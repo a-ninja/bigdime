@@ -6,6 +6,10 @@ package io.bigdime.libs.hdfs;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.SSLContext;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
@@ -16,10 +20,17 @@ import org.apache.http.client.config.AuthSchemes;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Lookup;
+import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.ssl.SSLContexts;
+import org.apache.http.ssl.TrustStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +64,28 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
 				.register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
 
-		setHttpClient(HttpClientBuilder.create().setDefaultAuthSchemeRegistry(authSchemeRegistry).build());// new
+		
+		try {
+			SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(new TrustStrategy() {
+
+				@Override
+				public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+					return true;
+				}
+			}).build();
+			SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
+
+			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
+					.register("https", sslsf).build();
+
+			PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+//			this.httpClient = HttpClients.custom().setConnectionManager(cm).build();
+			setHttpClient(HttpClientBuilder.create().setConnectionManager(cm).setDefaultAuthSchemeRegistry(authSchemeRegistry).build());// new
+		} catch (Exception e) {
+			logger.warn("_message=\"{} failed to create httpClient\" ", e);
+		}
+		
+		
 
 		// this.addParameter("anonymous", "true");
 	}
