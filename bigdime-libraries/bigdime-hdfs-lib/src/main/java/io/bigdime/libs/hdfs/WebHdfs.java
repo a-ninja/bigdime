@@ -21,9 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -38,12 +35,11 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.entity.FileEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -70,11 +66,8 @@ public class WebHdfs {
 	protected URI uri = null;
 	protected HttpRequestBase httpRequest = null;
 	private ObjectNode jsonParameters = null;
-	// private final String SANDBOX = "sandbox";
-	// private final String SANDBOX_HDP = "sandbox.hortonworks.com";
 	private RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
 	private List<Header> headers;
-	private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
 
 	public WebHdfs setParameters(ObjectNode jsonParameters) {
 		Iterator<String> keys = jsonParameters.getFieldNames();
@@ -128,37 +121,19 @@ public class WebHdfs {
 	}
 
 	protected void initConnection() {
-		// this.httpClient = HttpClientBuilder.create().build();// new
 
-		SSLContext sslContext;
 		try {
-			sslContext = SSLContexts.custom().loadTrustMaterial(new TrustStrategy() {
-
-				@Override
-				public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-					return true;
-				}
-			}).build();
-			SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
-
-			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
-					.register("https", sslsf).build();
-
-			PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-			this.httpClient = HttpClients.custom().setConnectionManager(cm).build();
+			final URI uri = new URI(host);
+			if (uri.getScheme().equalsIgnoreCase("https")) {
+				this.httpClient = HttpClients.custom().setConnectionManager(getConnectionManagerWithDefaultSSL())
+						.build();
+			} else {
+				this.httpClient = HttpClientBuilder.create().build();
+			}
 		} catch (Exception e) {
 			logger.warn("_message=\"{} failed to create httpClient\" ", e);
 		}
-		// ObjectMapper mapper = new ObjectMapper();
-		// this.jsonParameters = mapper.createObjectNode();
 		roundRobinStrategy.setHosts(host);
-	}
-
-	public static void main(String[] args) {
-		String s = "apollo-phx-nn-2.vip.ebay.com";
-		String[] sh = s.split("://");
-		System.out.println(sh[0]);
-		System.out.println(sh[1]);
 	}
 
 	protected WebHdfs(String host, int port) {
@@ -179,22 +154,22 @@ public class WebHdfs {
 
 	// field checking?
 	public WebHdfs buildURI(String op, String HdfsPath) {
-
-		URIBuilder uriBuilder = new URIBuilder();
-		String[] schemeHost = roundRobinStrategy.getNextServiceHost().split("://");
-		uriBuilder.setScheme(schemeHost[0]).setHost(schemeHost[1]).setPort(this.port).setPath(HdfsPath)
-				.addParameter("op", op);
-		Iterator<String> keys = jsonParameters.getFieldNames();
-		while (keys.hasNext()) {
-			String key = keys.next();
-			JsonNode value = jsonParameters.get(key);
-			String valueStr = value.getTextValue();
-			if (valueStr != null) {
-				uriBuilder.addParameter(key, valueStr);
-			}
-		}
-		// jsonParameters.removeAll();
 		try {
+			URIBuilder uriBuilder = new URIBuilder();
+			final URI uri = new URI(roundRobinStrategy.getNextServiceHost());
+			uriBuilder.setScheme(uri.getScheme()).setHost(uri.getHost()).setPort(this.port).setPath(HdfsPath)
+					.addParameter("op", op);
+			Iterator<String> keys = jsonParameters.getFieldNames();
+			while (keys.hasNext()) {
+				String key = keys.next();
+				JsonNode value = jsonParameters.get(key);
+				String valueStr = value.getTextValue();
+				if (valueStr != null) {
+					uriBuilder.addParameter(key, valueStr);
+				}
+			}
+			// jsonParameters.removeAll();
+
 			this.uri = uriBuilder.build();
 		} catch (URISyntaxException e) {
 			/* this shouldn't occur */
@@ -520,5 +495,21 @@ public class WebHdfs {
 		} catch (InterruptedException e) {
 			logger.warn("sleep interrupted", e);
 		}
+	}
+
+	protected HttpClientConnectionManager getConnectionManagerWithDefaultSSL()
+			throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
+		SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(new TrustStrategy() {
+			@Override
+			public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				return true;
+			}
+		}).build();
+		SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
+
+		Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
+				.register("https", sslsf).build();
+
+		return new PoolingHttpClientConnectionManager(socketFactoryRegistry);
 	}
 }
