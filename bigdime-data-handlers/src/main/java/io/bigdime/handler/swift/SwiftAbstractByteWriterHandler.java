@@ -64,11 +64,22 @@ public abstract class SwiftAbstractByteWriterHandler extends SwiftWriterHandler 
 	protected StoredObject uploadBytes(final Container container, final String objectName, final byte[] data) {
 		StoredObject object = container.getObject(objectName);
 		object.uploadObject(data);
-		object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
-		logger.debug(getHandlerPhase(),
+		setExpiry(object, objectName);
+		logger.info(getHandlerPhase(),
 				"_message=\"wrote to swift\" swift_object_name={} object_etag={} object_public_url={}", objectName,
 				object.getEtag(), object.getPublicURL());
 		return object;
 	}
 
+	protected void setExpiry(final StoredObject object, final String objectName) {
+		try {
+			object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
+			logger.debug(getHandlerPhase(),
+					"_message=\"set expiry date\" swift_object_name={} object_etag={} object_public_url={}", objectName,
+					object.getEtag(), object.getPublicURL());
+
+		} catch (final Exception ex) {
+			logger.warn(getHandlerPhase(), "exception while trying to set the setDeleteAfter", ex);
+		}
+	}
 }
