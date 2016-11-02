@@ -33,8 +33,8 @@ public class LatencyBasedNextRunChecker extends AbstractNextRunChecker {
 
 			nextRunDateTime = lastRunDateTime + intervalInMillis;
 			logger.info("getDateTimeInMillisForNextRun",
-					"_message=\"time to set hiveConfDateTime.\" now={} hiveConfDateTime={} intervalInMillis={}", now,
-					nextRunDateTime, intervalInMillis);
+					"_message=\"time to set hiveConfDateTime.\" now={} lastRunDateTime={} hiveConfDateTime={} intervalInMillis={}",
+					now, lastRunDateTime, nextRunDateTime, intervalInMillis);
 
 		} else {
 			logger.info("nothing to do", "now={} hiveConfDateTime={} intervalInMillis={} time_until_next_run={}", now,

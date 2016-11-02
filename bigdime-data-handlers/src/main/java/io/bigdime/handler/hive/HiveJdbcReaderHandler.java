@@ -601,7 +601,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				Connection connection = setupConnection();
 				try {
 					final Statement stmt = connection.createStatement();
-					stmt.execute("set mapred.job.name=" + jobName);
+					stmt.execute("set mapreduce.job.name=" + jobName);
 					runHiveConfs(stmt);
 					stmt.execute(getHiveQuery());// no resultset is
 					logger.info(getHandlerPhase(), "sql statement ran");
