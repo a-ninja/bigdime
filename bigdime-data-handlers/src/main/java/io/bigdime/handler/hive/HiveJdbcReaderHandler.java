@@ -94,7 +94,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	@Qualifier("hiveJobStatusFether")
 	private JobStatusFetcher<HiveJobSpec, HiveJobStatus> hiveJobStatusFetcher;
 
-
 	private HiveNextRunChecker hiveNextRunDateTime;
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
@@ -110,7 +109,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private HiveJdbcReaderHandlerConfig handlerConfig = new HiveJdbcReaderHandlerConfig();
 
 	final DateTimeFormatter jobDtf = DateTimeFormat.forPattern("yyyyMMdd-HHmmss.SSS");
-	final DateTimeFormatter hiveQueryDtf = DateTimeFormat.forPattern("yyyy-MM-dd");
+	private DateTimeFormatter hiveQueryDtf;
 	final private DateTimeZone dateTimeZone = DateTimeZone.forID("America/Los_Angeles");
 	private DateTimeFormatter hdfsOutputPathDtf;
 	public static final String FORWARD_SLASH = "/";
@@ -231,6 +230,11 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 				HiveJdbcReaderHandlerConstants.OUTPUT_DIRECTORY_DATE_FORMAT, OUTPUT_DIRECTORY_DATE_FORMAT);
 		hdfsOutputPathDtf = DateTimeFormat.forPattern(outputDirectoryPattern);
 
+		String hiveQueryDateFormat = PropertyHelper.getStringProperty(getPropertyMap(),
+				HiveJdbcReaderHandlerConstants.HIVE_QUERY_DATE_FORMAT, "yyyy-MM-dd");
+
+		hiveQueryDtf = DateTimeFormat.forPattern(hiveQueryDateFormat);
+
 		String touchFile = PropertyHelper.getStringProperty(getPropertyMap(),
 				HiveJdbcReaderHandlerConstants.TOUCH_FILE);
 		if (touchFile == null) {
@@ -239,9 +243,9 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 			hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
 		}
 		logger.info(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={}",
-				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory,
-				outputDirectoryPattern);
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={} hiveQueryDateFormat={}",
+				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
+				hiveQueryDateFormat);
 		handlerConfig.setAuthOption(authOption);
 		handlerConfig.setBaseOutputDirectory(baseOutputDirectory);
 		handlerConfig.setDriverClassName(driverClassName);
@@ -850,7 +854,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		hiveJobSpec.setJobName(jobName);
 		hiveJobSpec.setOutputDirectoryPath(inputDescriptor.getHiveConfDirectory());
 		HiveJobStatus hiveJobStatus = hiveJobStatusFetcher.getStatusForJobWithRetry(hiveJobSpec);
-		if (hiveJobStatus!=null) {
+		if (hiveJobStatus != null) {
 			JobStatus.State runState = hiveJobStatus.getOverallStatus().getState();
 			String exMessage = "";
 			if (ex != null)
