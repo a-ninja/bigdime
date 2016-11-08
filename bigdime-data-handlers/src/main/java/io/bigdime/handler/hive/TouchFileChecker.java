@@ -32,18 +32,53 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 		long now = getAdjustedCurrentTime();
 
 		if (lastRunDateTime == 0) {// this is the first time
-			return getDateTimeInMillisForFirstRun(handlerConfig, now);
+			return getDateTimeInMillisForFirstRun(handlerConfig, now, properties);
 		} else {
 			return getDateTimeInMillisForSubsequentRun(handlerConfig, now, lastRunDateTime, properties);
 		}
 	}
 
+	protected long getDateTimeInMillisForFirstRun(final HiveJdbcReaderHandlerConfig handlerConfig, long now,
+			Map<? extends String, ? extends Object> properties) {
+		long nextRunDateTime = now - handlerConfig.getGoBackDays() * TimeUnit.DAYS.toMillis(1);
+		logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" attempted nextRunDateTime={}",
+				nextRunDateTime);
+		// return getDateTimeInMillis(handlerConfig, now, 0, nextRunDateTime,
+		// properties);
+		long time = nextRunDateTime;
+		long tempNextRunDateTime = nextRunDateTime;
+		do {
+
+			time = getDateTimeInMillis(handlerConfig, now, 0, tempNextRunDateTime, properties);
+			logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" tempNextRunDateTime={} output={}",
+					tempNextRunDateTime, time);
+			if (time == 0) {
+				tempNextRunDateTime = tempNextRunDateTime + intervalInMillis;
+			} else {
+				nextRunDateTime = time;
+			}
+			// break if time is a positive value,or next_time is greater than
+			// now
+		} while (time == 0 && tempNextRunDateTime < now);
+		return nextRunDateTime;
+	}
+
 	private long getDateTimeInMillisForSubsequentRun(final HiveJdbcReaderHandlerConfig handlerConfig, long now,
 			long lastRunDateTime, Map<? extends String, ? extends Object> properties) {
+
 		long nextRunDateTime = lastRunDateTime + intervalInMillis;
-		logger.info("getDateTimeInMillisForFirstRun",
-				"_message=\"time to set hiveConfDateTime.\" now={} lastRunDateTime={} nextRunDateTime={} intervalInMillis={}",
-				now, lastRunDateTime, nextRunDateTime, intervalInMillis);
+		return getDateTimeInMillis(handlerConfig, now, lastRunDateTime, nextRunDateTime, properties);
+	}
+
+	private long getTouchFileDate(long nextRunDateTime) {
+		return nextRunDateTime + intervalInMillis;
+	}
+
+	private long getDateTimeInMillis(final HiveJdbcReaderHandlerConfig handlerConfig, long now, long lastRunDateTime,
+			long nextRunDateTime, Map<? extends String, ? extends Object> properties) {
+		logger.info("getDateTimeInMillis",
+				"_message=\"will check touchfile.\" now={} nextRunDateTime={} intervalInMillis={}", now,
+				nextRunDateTime, intervalInMillis);
 
 		String tokenizedPath = handlerConfig.getTouchFile();
 
@@ -58,9 +93,13 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 
 		Set<String> tokenSet = tokenToTokenName.keySet();
 
-		localProperties.put("yyyy", yearDtf.print(nextRunDateTime));
-		localProperties.put("MM", monthDtf.print(nextRunDateTime));
-		localProperties.put("dd", dateDtf.print(nextRunDateTime));
+		// if we are loading data for update_date>12/20, the touch file has the
+		// date of 12/21.
+		// so, we need to add the interval twice.
+		long touchFileDate = getTouchFileDate(nextRunDateTime);
+		localProperties.put("yyyy", yearDtf.print(touchFileDate));
+		localProperties.put("MM", monthDtf.print(touchFileDate));
+		localProperties.put("dd", dateDtf.print(touchFileDate));
 
 		String detokString = tokenizedPath;
 		for (final String token : tokenSet) {
@@ -71,12 +110,14 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 				detokString = detokString.replace(token, properties.get(tokenName).toString());
 		}
 		try {
-			if (webHdfsReader.getFileStatus(detokString) != null)
+			logger.info("checking touchfile", "file_to_check={}", detokString);
+			if (webHdfsReader.getFileStatus(detokString, 2) != null) {
+				logger.info("found touchfile", "file_to_check={}", detokString);
 				return nextRunDateTime;
-			else {
-				logger.info("nothing to do",
-						"now={} lastRunDateTime={} attempted_nextRunDateTime={} intervalInMillis={}", now,
-						lastRunDateTime, nextRunDateTime, intervalInMillis);
+			} else {
+				logger.info("nothing to do, touchfile not found",
+						"now={} lastRunDateTime={} attempted_nextRunDateTime={} intervalInMillis={} file_to_check={}",
+						now, lastRunDateTime, nextRunDateTime, intervalInMillis, detokString);
 				return 0;
 			}
 		} catch (IOException | WebHdfsException e) {

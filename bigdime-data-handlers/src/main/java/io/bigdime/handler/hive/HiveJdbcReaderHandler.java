@@ -235,17 +235,18 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
 		hiveQueryDtf = DateTimeFormat.forPattern(hiveQueryDateFormat);
 
-		String touchFile = PropertyHelper.getStringProperty(getPropertyMap(),
-				HiveJdbcReaderHandlerConstants.TOUCH_FILE);
+		String touchFile = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(properties, srcDescValueMap,
+				HiveJdbcReaderHandlerConstants.TOUCH_FILE, null);
+
 		if (touchFile == null) {
 			hiveNextRunDateTime = new LatencyBasedNextRunChecker();
 		} else {
 			hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
 		}
 		logger.info(getHandlerPhase(),
-				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={} hiveQueryDateFormat={}",
+				"jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={} hiveQueryDateFormat={} touchFile={}",
 				jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
-				hiveQueryDateFormat);
+				hiveQueryDateFormat, touchFile);
 		handlerConfig.setAuthOption(authOption);
 		handlerConfig.setBaseOutputDirectory(baseOutputDirectory);
 		handlerConfig.setDriverClassName(driverClassName);
