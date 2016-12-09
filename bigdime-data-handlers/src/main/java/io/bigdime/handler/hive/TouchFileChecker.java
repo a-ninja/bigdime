@@ -15,7 +15,7 @@ import io.bigdime.core.commons.StringHelper;
 import io.bigdime.libs.hdfs.WebHdfsException;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 
-public class TouchFileChecker extends AbstractNextRunChecker {
+class TouchFileChecker extends AbstractNextRunChecker {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(TouchFileChecker.class));
 	private long intervalInMillis = TimeUnit.DAYS.toMillis(1);
 
@@ -38,9 +38,13 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 		}
 	}
 
+	/*
+	 * Set the nextRunDateTime to currentTime - goBackDays. Say this time is T1.
+	 * If any folder is found for T1 or after, return the time as T1.
+	 */
 	protected long getDateTimeInMillisForFirstRun(final HiveJdbcReaderHandlerConfig handlerConfig, long now,
 			Map<? extends String, ? extends Object> properties) {
-		long nextRunDateTime = now - handlerConfig.getGoBackDays() * TimeUnit.DAYS.toMillis(1);
+		final long nextRunDateTime = now - handlerConfig.getGoBackDays() * TimeUnit.DAYS.toMillis(1);
 		logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" attempted nextRunDateTime={}",
 				nextRunDateTime);
 		// return getDateTimeInMillis(handlerConfig, now, 0, nextRunDateTime,
@@ -55,19 +59,42 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 			if (time == 0) {
 				tempNextRunDateTime = tempNextRunDateTime + intervalInMillis;
 			} else {
-				nextRunDateTime = time;
+				break;
 			}
 			// break if time is a positive value,or next_time is greater than
 			// now
 		} while (time == 0 && tempNextRunDateTime < now);
+		logger.info("getDateTimeInMillisForFirstRun", "_message=\"returning value\" nextRunDateTime={}",
+				nextRunDateTime);
 		return nextRunDateTime;
 	}
+
+	/*
+	 * Set the nextRunDateTime to currentTime - goBackDays. Say this time is T1.
+	 * If any folder is found for T1 or after, return the time as T1.
+	 */
 
 	private long getDateTimeInMillisForSubsequentRun(final HiveJdbcReaderHandlerConfig handlerConfig, long now,
 			long lastRunDateTime, Map<? extends String, ? extends Object> properties) {
 
-		long nextRunDateTime = lastRunDateTime + intervalInMillis;
-		return getDateTimeInMillis(handlerConfig, now, lastRunDateTime, nextRunDateTime, properties);
+		final long nextRunDateTime = lastRunDateTime + intervalInMillis;
+		long time = nextRunDateTime;
+		long tempNextRunDateTime = nextRunDateTime;
+		do {
+
+			time = getDateTimeInMillis(handlerConfig, now, lastRunDateTime, tempNextRunDateTime, properties);
+			logger.info("getDateTimeInMillisForSubsequentRun",
+					"_message=\"subsequent run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime, time);
+			if (time == 0) {
+				tempNextRunDateTime = tempNextRunDateTime + intervalInMillis;
+			} else {
+				break;
+			}
+		} while (time == 0 && tempNextRunDateTime < now);
+		if (time == 0)
+			return time;
+		else
+			return nextRunDateTime;
 	}
 
 	private long getTouchFileDate(long nextRunDateTime) {
@@ -75,7 +102,7 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 	}
 
 	private long getDateTimeInMillis(final HiveJdbcReaderHandlerConfig handlerConfig, long now, long lastRunDateTime,
-			long nextRunDateTime, Map<? extends String, ? extends Object> properties) {
+			final long nextRunDateTime, Map<? extends String, ? extends Object> properties) {
 		logger.info("getDateTimeInMillis",
 				"_message=\"will check touchfile.\" now={} nextRunDateTime={} intervalInMillis={}", now,
 				nextRunDateTime, intervalInMillis);
@@ -96,7 +123,10 @@ public class TouchFileChecker extends AbstractNextRunChecker {
 		// if we are loading data for update_date>12/20, the touch file has the
 		// date of 12/21.
 		// so, we need to add the interval twice.
-		long touchFileDate = getTouchFileDate(nextRunDateTime);
+		long touchFileDate = getTouchFileDate(nextRunDateTime);// this adds a
+																// day to the
+																// attempted
+																// date
 		localProperties.put("yyyy", yearDtf.print(touchFileDate));
 		localProperties.put("MM", monthDtf.print(touchFileDate));
 		localProperties.put("dd", dateDtf.print(touchFileDate));
