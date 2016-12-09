@@ -265,7 +265,7 @@ public abstract class AbstractHandler implements Handler {
 				final RuntimeInfo runtimeInfo = runtimeInfosIter.next();
 
 				if (!runtimeInfo.getInputDescriptor().startsWith(inputDescriptorPrefix)) {
-					logger.info(getHandlerPhase(),
+					logger.debug(getHandlerPhase(),
 							"_message=\"removing from started record list\" handler_id={} input_descriptor={} startWith={}",
 							getId(), runtimeInfo.getInputDescriptor(),
 							runtimeInfo.getInputDescriptor().startsWith(inputDescriptorPrefix));
@@ -499,7 +499,7 @@ public abstract class AbstractHandler implements Handler {
 	public int getParentRuntimeIdFromHeader() {
 		List<ActionEvent> eventList = getHandlerContext().getEventList();
 		if (eventList != null && !eventList.isEmpty()) {
-			String runtimeIdStr = eventList.get(0).getHeaders().get(ActionEventHeaderConstants.PARENT_RUNTIME_ID); 
+			String runtimeIdStr = eventList.get(0).getHeaders().get(ActionEventHeaderConstants.PARENT_RUNTIME_ID);
 			if (runtimeIdStr != null) {
 				return Integer.valueOf(runtimeIdStr);
 			}
