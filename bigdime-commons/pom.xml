@@ -15,6 +15,9 @@
 	<properties>
 		<joda.time>2.1</joda.time>
 	</properties>
+	<!-- <build> <plugins> <plugin> <groupId>org.scala-tools</groupId> <artifactId>maven-scala-plugin</artifactId> 
+		<executions> <execution> <goals> <goal>compile</goal> <goal>testCompile</goal> 
+		</goals> </execution> </executions> </plugin> </plugins> </build> -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -85,6 +88,56 @@
 		<dependency>
 			<artifactId>commons-io</artifactId>
 			<groupId>commons-io</groupId>
+		</dependency>
+
+<!-- 		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-core_2.11</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-streaming_2.11</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_2.11</artifactId>
+		</dependency>
+ -->		<dependency>
+			<groupId>org.scalactic</groupId>
+			<artifactId>scalactic_2.11</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.scalatest</groupId>
+			<artifactId>scalatest_2.11</artifactId>
+		</dependency>
+<!-- 		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-catalyst_2.11</artifactId>
+		</dependency>
+ -->		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-scala_2.11</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+		</dependency>
+
+		<!--dependency>
+			<groupId>com.databricks</groupId>
+			<artifactId>spark-csv_2.11</artifactId>
+		</dependency-->
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
 		</dependency>
 	</dependencies>
 </project>

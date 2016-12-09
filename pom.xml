@@ -82,11 +82,9 @@
 		<org.quartz-scheduler.quartz.version>2.2.1</org.quartz-scheduler.quartz.version>
 
 		<!-- Jackson -->
-		<com.fasterxml.jackson.core.jackson-annotations>2.6.3</com.fasterxml.jackson.core.jackson-annotations>
-		<com.fasterxml.jackson.core.jackson-databind>2.6.3</com.fasterxml.jackson.core.jackson-databind>
+		<com.fasterxml.jackson.core-version>2.8.1</com.fasterxml.jackson.core-version>
 		<com.fasterxml.jackson.module.jackson-module-jsonSchema.version>2.5.2</com.fasterxml.jackson.module.jackson-module-jsonSchema.version>
 		<org.codehaus.jackson-jaxrs.version>1.9.13</org.codehaus.jackson-jaxrs.version>
-		<com.fasterxml.jackson.core.jackson-core.version>2.6.3</com.fasterxml.jackson.core.jackson-core.version>
 		<org.codehaus.jackson.jackson-mapper-asl.version>1.9.13</org.codehaus.jackson.jackson-mapper-asl.version>
 		<org.codehaus.jackson.jackson-core-asl.version>1.9.13</org.codehaus.jackson.jackson-core-asl.version>
 
@@ -97,19 +95,25 @@
 		<com.google.guava-guava.version>18.0</com.google.guava-guava.version>
 		<org.javaswift.joss.version>0.9.12</org.javaswift.joss.version>
 		<org.apache.hadoop.version>2.7.1.2.4.2.0-258</org.apache.hadoop.version>
-		<!-- <org.apache.hadoop.version>2.4.1-EBAY-11</org.apache.hadoop.version> -->
+	
 		<!-- <org.apache.hadoop.version>2.4.1</org.apache.hadoop.version> -->
 		<org.apache.hadoop.hdp2.4.version>2.4.1</org.apache.hadoop.hdp2.4.version>
 		<org.apache.hive.hive-jdbc.version>1.1.1</org.apache.hive.hive-jdbc.version>
 		<joda-time.joda-time.version>2.9.4</joda-time.joda-time.version>
+		<org.apache.spark-version>1.6.1</org.apache.spark-version>
+		<org.scalactic-scalactic_2.11-version>3.0.0</org.scalactic-scalactic_2.11-version>
+		<org.scalatest-scalatest_2.11-version>3.0.0</org.scalatest-scalatest_2.11-version>
+		<com.databricks-spark-csv_2.11-version>1.5.0</com.databricks-spark-csv_2.11-version>
+		<org.scala-lang-scala-library-version>2.11.8</org.scala-lang-scala-library-version>
 	</properties>
 
 	<build>
 		<pluginManagement>
 			<plugins>
 				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.2</version>
+					<version>3.3</version>
 					<configuration>
 						<source>1.7</source>
 						<target>1.7</target>
@@ -153,6 +157,22 @@
 				</plugin>
 			</plugins>
 		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.scala-tools</groupId>
+				<artifactId>maven-scala-plugin</artifactId>
+				<version>2.15.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>compile</goal>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+
 	</build>
 
 	<dependencyManagement>
@@ -342,18 +362,24 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>${com.fasterxml.jackson.core.jackson-databind}</version>
+				<version>${com.fasterxml.jackson.core-version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
-				<version>${com.fasterxml.jackson.core.jackson-annotations}</version>
+				<version>${com.fasterxml.jackson.core-version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-core</artifactId>
-				<version>${com.fasterxml.jackson.core.jackson-core.version}</version>
+				<version>${com.fasterxml.jackson.core-version}</version>
 			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.module</groupId>
+				<artifactId>jackson-module-scala_2.11</artifactId>
+				<version>${com.fasterxml.jackson.core-version}</version>
+			</dependency>
+
 			<dependency>
 				<groupId>org.codehaus.jackson</groupId>
 				<artifactId>jackson-mapper-asl</artifactId>
@@ -451,6 +477,57 @@
 				<artifactId>joda-time</artifactId>
 				<version>${joda-time.joda-time.version}</version>
 			</dependency>
+
+			<!-- Scala -->
+			<!--<dependency>-->
+				<!--<groupId>org.apache.spark</groupId>-->
+				<!--<artifactId>spark-core_2.11</artifactId>-->
+				<!--<version>${org.apache.spark-version}</version>-->
+			<!--</dependency>-->
+			<!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql_2.11 -->
+			<!--<dependency>-->
+				<!--<groupId>org.apache.spark</groupId>-->
+				<!--<artifactId>spark-sql_2.11</artifactId>-->
+				<!--<version>${org.apache.spark-version}</version>-->
+			<!--</dependency>-->
+			<!-- https://mvnrepository.com/artifact/org.apache.spark/spark-catalyst_2.11 -->
+			<!--<dependency>-->
+				<!--<groupId>org.apache.spark</groupId>-->
+				<!--<artifactId>spark-catalyst_2.11</artifactId>-->
+				<!--<version>${org.apache.spark-version}</version>-->
+			<!--</dependency>-->
+			<!-- https://mvnrepository.com/artifact/org.apache.spark/spark-streaming_2.10 -->
+			<!--<dependency>-->
+				<!--<groupId>org.apache.spark</groupId>-->
+				<!--<artifactId>spark-streaming_2.11</artifactId>-->
+				<!--<version>${org.apache.spark-version}</version>-->
+			<!--</dependency>-->
+			<!-- https://mvnrepository.com/artifact/org.scalactic/scalactic_2.11 -->
+			<dependency>
+				<groupId>org.scalactic</groupId>
+				<artifactId>scalactic_2.11</artifactId>
+				<version>${org.scalactic-scalactic_2.11-version}</version>
+			</dependency>
+			<!-- https://mvnrepository.com/artifact/org.scalatest/scalatest_2.11 -->
+			<dependency>
+				<groupId>org.scalatest</groupId>
+				<artifactId>scalatest_2.11</artifactId>
+				<version>${org.scalatest-scalatest_2.11-version}</version>
+			</dependency>
+
+			<!-- https://mvnrepository.com/artifact/com.databricks/spark-csv_2.11 -->
+			<!--<dependency>-->
+				<!--<groupId>com.databricks</groupId>-->
+				<!--<artifactId>spark-csv_2.11</artifactId>-->
+				<!--<version>${com.databricks-spark-csv_2.11-version}</version>-->
+			<!--</dependency>-->
+			<!-- https://mvnrepository.com/artifact/org.scala-lang/scala-library -->
+			<dependency>
+				<groupId>org.scala-lang</groupId>
+				<artifactId>scala-library</artifactId>
+				<version>${org.scala-lang-scala-library-version}</version>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
@@ -527,7 +604,32 @@
 			</build>
 		</profile>
 	</profiles>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>scala</id>
+			<name>Scala Tools</name>
+			<url>http://scala-tools.org/repo-releases/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
 	<repositories>
+		<repository>
+			<id>scala</id>
+			<name>Scala Tools</name>
+			<url>http://scala-tools.org/repo-releases/</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
 		<repository>
 			<id>hadoop.releases</id>
 			<url>http://repo.hortonworks.com/content/groups/public</url>
