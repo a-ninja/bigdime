@@ -135,7 +135,7 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
 			updateRuntimeInfo(runtimeInfoStore, getEntityName(), queuedRecord.getInputDescriptor(),
 					RuntimeInfoStore.Status.STARTED, properties);
 		} else {
-			logger.info(getHandlerPhase(), "no queued record found, setting descriptor to null");
+			logger.debug(getHandlerPhase(), "no queued record found, setting descriptor to null");
 			setInputDescriptorToNull();
 		}
 	}
