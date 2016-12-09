@@ -45,7 +45,7 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 		if (loginConfigPath == null) {
 			loginConfigPath = DEFAULT_LOGIN_CONFIG_LOCATION;
 		}
-		logger.info("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
+		logger.debug("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
 		boolean skipPortAtKerberosDatabaseLookup = true;
 		System.setProperty("java.security.krb5.conf", krb5ConfigPath);
 		System.setProperty("sun.security.krb5.debug", "true");
