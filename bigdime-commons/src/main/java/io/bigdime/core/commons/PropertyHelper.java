@@ -12,12 +12,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to get the property from the map.
- * 
+ *
  * @author Neeraj Jain
  *
  */
 public final class PropertyHelper {
-	private static final Logger logger = LoggerFactory.getLogger(PropertyHelper.class);
 	private static final PropertyHelper instance = new PropertyHelper();
 
 	private PropertyHelper() {
@@ -30,7 +29,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the property from propertyMap return an int value for it. If the
 	 * property does not exist, throw a RuntimeException.
-	 * 
+	 *
 	 * @param propertyMap
 	 *            map to for the property in
 	 * @param name
@@ -47,7 +46,7 @@ public final class PropertyHelper {
 
 	/**
 	 * Get the property from propertyMap return an integer value for it.
-	 * 
+	 *
 	 * @param propertyMap
 	 *            map to look for the property in
 	 * @param name
@@ -69,7 +68,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the integer value of Object value and return the same. If the value
 	 * is null or is not a number, the default value is returned.
-	 * 
+	 *
 	 * @param value
 	 *            Object with integer value
 	 * @param defaultValue
@@ -88,7 +87,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the integer value of Object value and return the same. If the value
 	 * is null or is not a number, an exception is thrown.
-	 * 
+	 *
 	 * @param value
 	 *            Object with integer value
 	 */
@@ -103,7 +102,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the long value of Object value and return the same. If the value is
 	 * null or is not a number, the default value is returned.
-	 * 
+	 *
 	 * @param value
 	 *            Object with long value
 	 * @param defaultValue
@@ -122,7 +121,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the long value of Object value and return the same. If the value is
 	 * null or is not a number, an exception is thrown.
-	 * 
+	 *
 	 * @param value
 	 *            Object with long value
 	 */
@@ -136,7 +135,7 @@ public final class PropertyHelper {
 
 	/**
 	 * Get the property from propertyMap return a long value for it.
-	 * 
+	 *
 	 * @param propertyMap
 	 *            map to look for the property in
 	 * @param name
@@ -158,7 +157,7 @@ public final class PropertyHelper {
 
 	/**
 	 * Get the property from propertyMap return it's value.
-	 * 
+	 *
 	 * @param propertyMap
 	 *            map to look for the property in
 	 * @param name
@@ -175,7 +174,7 @@ public final class PropertyHelper {
 	/**
 	 * Get the property from propertyMap return it's value,if it not found
 	 * return the default value
-	 * 
+	 *
 	 * @param propertyMap
 	 *            map to look for the property in
 	 * @param name
@@ -214,15 +213,11 @@ public final class PropertyHelper {
 	public static void redeemTokensFromAppProperties(final Map<? super String, ? super Object> properties,
 			final Properties applicationProperties) {
 		for (Entry<? super String, ? super Object> property : properties.entrySet()) {
-			logger.info("property_name=\"{}\" value=\"{}\" isString=\"{}\"", property.getKey(), property.getValue(),
-					(property.getValue() instanceof String));
 			if (property.getValue() instanceof String) {
 				String propValue = property.getValue().toString();
 				String newValue = StringHelper.getInstance().redeemToken(propValue, applicationProperties);
 				if (!propValue.equals(newValue)) {
 					property.setValue(newValue);
-					logger.info("property_name=\"{}\" old_value=\"{}\" new_value=\"{}\"", property.getKey(), propValue,
-							newValue);
 				}
 			} else if (property.getValue() instanceof Map) {
 				redeemTokensFromAppProperties((Map) property.getValue(), applicationProperties);
@@ -235,32 +230,20 @@ public final class PropertyHelper {
 			final Map<? extends String, ? extends Object> defaultMap,
 			Map<? extends String, ? extends Object> overrideMap, String propertyName, String defaultValue) {
 		String propertyValue = PropertyHelper.getStringProperty(defaultMap, propertyName, defaultValue);
-		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
-				propertyName, propertyValue, defaultValue);
-
 		if (overrideMap == null)
 			return propertyValue;
 
 		propertyValue = PropertyHelper.getStringProperty(overrideMap, propertyName, propertyValue);
-		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
-				propertyName, propertyValue, defaultValue);
-
 		return propertyValue;
 	}
 
 	public static int getIntPropertyFromPropertiesOrSrcDesc(final Map<? extends String, ? extends Object> defaultMap,
 			Map<? extends String, ? extends Object> overrideMap, String propertyName, int defaultValue) {
 		int propertyValue = PropertyHelper.getIntProperty(defaultMap, propertyName, defaultValue);
-		logger.info("_message=\"from default map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
-				propertyName, propertyValue, defaultValue);
-
 		if (overrideMap == null)
 			return propertyValue;
 
 		propertyValue = PropertyHelper.getIntProperty(overrideMap, propertyName, propertyValue);
-		logger.info("_message=\"from override map\" property_name=\"{}\" propertyValue=\"{}\" defaultValue=\"{}\"",
-				propertyName, propertyValue, defaultValue);
 		return propertyValue;
 	}
-
 }
