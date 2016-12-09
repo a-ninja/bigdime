@@ -276,6 +276,11 @@ public abstract class AbstractHandler implements Handler {
 		return runtimeInfos;
 	}
 
+	protected List<RuntimeInfo> getAllRuntimeInfos(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
+			final String entityName, final String inputDescriptorPrefix) throws RuntimeInfoStoreException {
+		return runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), entityName, inputDescriptorPrefix);
+	}
+
 	protected List<RuntimeInfo> getAllStartedRuntimeInfos(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
 			final String entityName) throws RuntimeInfoStoreException {
 

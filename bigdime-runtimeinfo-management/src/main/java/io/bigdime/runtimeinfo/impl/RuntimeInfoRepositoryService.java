@@ -145,6 +145,16 @@ public class RuntimeInfoRepositoryService {
 
 	}
 
+	public List<RuntimeInfoDTO> getByStartsWith(String adaptorName, String entityName, String descriptor) {
+
+		Assert.notNull(adaptorName);
+		Assert.notNull(entityName);
+		Assert.notNull(descriptor);
+
+		return runtimeInfoRepository.findByAdaptorNameAndEntityNameAndInputDescriptorStartsWith(adaptorName, entityName,
+				descriptor);
+
+	}
 	public RuntimeInfoDTO get(String adaptorName, String entityName, String descriptor) {
 
 		Assert.notNull(adaptorName);

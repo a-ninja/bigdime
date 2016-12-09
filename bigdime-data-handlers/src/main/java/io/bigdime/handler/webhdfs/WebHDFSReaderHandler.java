@@ -271,13 +271,15 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 			return io.bigdime.core.ActionEvent.Status.BACKOFF;
 		}
 		long nextIndexToRead = getTotalReadFromJournal();
-		logger.info(getHandlerPhase(),
+		logger.debug(getHandlerPhase(),
 				"handler_id={} entityName={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
 				getId(), getEntityName(), nextIndexToRead, handlerConfig.getBufferSize(),
 				inputDescriptor.getFileChannel().isOpen(), inputDescriptor.getCurrentFilePath(),
 				getTotalSizeFromJournal());
 		// fileChannel.position(nextIndexToRead);
 		final ByteBuffer readInto = ByteBuffer.allocate(getBufferSize());
+//		logger.info(getHandlerPhase(), "readInto_limit={} readInto_position={}", readInto.limit(), readInto.position());
+		
 		Status statustoReturn = Status.READY;
 
 		int bytesRead = inputDescriptor.getFileChannel().read(readInto);
@@ -449,10 +451,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 		logger.info(getHandlerPhase(), "parentRuntimeId={}", parentRuntimeId);
 		if (parentRuntimeId != -1) {
 			RuntimeInfo rti = runtimeInfoStore.getById(Integer.valueOf(parentRuntimeId));
-			logger.info(getHandlerPhase(), "runtimeRecordStatus={}", rti.getStatus());
+			logger.debug(getHandlerPhase(), "runtimeRecordStatus={}", rti.getStatus());
 			return (rti.getStatus() == RuntimeInfoStore.Status.PENDING);
 		}
-		logger.info(getHandlerPhase(), "runtimeRecordStatus is valid, by default");
+		logger.debug(getHandlerPhase(), "runtimeRecordStatus is valid, by default");
 		return true;
 	}
 

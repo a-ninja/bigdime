@@ -206,7 +206,7 @@ public final class StringHelper {
 	 * "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt" to
 	 * "2016-07-01__path6/file_123.txt" or "2016-07-01/file_123.txt".
 	 * 
-	 * Less than 10 tokens are supported. Tokens are in $1, $2... format.
+	 * WARNING: Less than 10 tokens are supported. Tokens are in $1, $2... format.
 	 * 
 	 * @param inputString
 	 *            string without any tokens.

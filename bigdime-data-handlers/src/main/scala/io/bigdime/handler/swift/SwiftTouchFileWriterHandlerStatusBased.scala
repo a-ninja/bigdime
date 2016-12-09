@@ -1,7 +1,6 @@
 package io.bigdime.handler.swift
 
 import java.util
-import java.util.regex.Pattern
 
 import io.bigdime.alert.LoggerFactory
 import io.bigdime.core.ActionEvent.Status
@@ -41,7 +40,7 @@ class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHand
     setHandlerPhase("building SwiftTouchFileWriterHandler")
     fileNameFromDescriptorPattern = PropertyHelper.getStringProperty(getPropertyMap, SwiftWriterHandlerConstants.FILE_NAME_FROM_DESCRIPTOR_PATTERN)
     inputDescriptorPrefixPattern = PropertyHelper.getStringProperty(getPropertyMap, SwiftWriterHandlerConstants.INPUT_DESCRIPTOR_PREFIX_PATTERN)
-    logger.info(getHandlerPhase, "	={} inputFilePathPattern={} fileNameFromDescriptorPattern={} inputDescriptorPrefixPattern={}", inputFilePathPattern, fileNameFromDescriptorPattern, inputDescriptorPrefixPattern)
+    logger.info(getHandlerPhase, "inputFilePathPattern={} fileNameFromDescriptorPattern={} inputDescriptorPrefixPattern={}", inputFilePathPattern, fileNameFromDescriptorPattern, inputDescriptorPrefixPattern)
   }
 
   @throws[HandlerException]
@@ -72,43 +71,49 @@ class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHand
       val sourceFileName = actionEvent.getHeaders.get(ActionEventHeaderConstants.SOURCE_FILE_NAME)
 
       val inputDescriptorPrefix = StringHelper.replaceTokens(sourceFileName, inputDescriptorPrefixPattern, inputPattern, actionEvent.getHeaders)
+      logger.debug(getHandlerPhase, "inputDescriptorPrefix={}", inputDescriptorPrefix)
       val runtimeInfos = getAllRuntimeInfos(runtimeInfoStore, getEntityNameFromHeader, inputDescriptorPrefix)
 
-      val fileNames = for (rti <- runtimeInfos; if (rti.getStatus == RuntimeInfoStore.Status.VALIDATED)) yield parseOneToken(rti.getInputDescriptor, fileNameFromDescriptorPattern).get
-      val writeReady = (fileNames.size == runtimeInfos.size())
+      statusToReturn = (runtimeInfos == null || runtimeInfos.isEmpty) match {
+        case true => Status.BACKOFF_NOW
 
-      if (writeReady) {
-        val numEventsToWrite: Int = 1
-        logger.debug(getHandlerPhase, "_message=\"calling writeToSwift\" numEventsToWrite={}", numEventsToWrite.toString)
-        val eventListToWrite = actionEvents.subList(0, numEventsToWrite)
-        val outputEvent = writeToSwift(actionEvent, eventListToWrite)
-        getHandlerContext.createSingleItemEventList(outputEvent)
-        journal.reset()
-        eventListToWrite.clear()
-      }
-      // if we wrote and there is more data to write, callback
-      if (writeReady) {
-        if (!actionEvents.isEmpty) {
-          logger.debug(getHandlerPhase, "_message=\"returning callback\" actionEvents.size={}", actionEvents.size.toString)
-          journal.setEventList(actionEvents)
-          statusToReturn = Status.CALLBACK
-        }
-        else {
-          logger.debug(getHandlerPhase, "_message=\"returning ready\" actionEvents.size={}", actionEvents.size.toString)
-          statusToReturn = Status.READY
-        }
-      }
-      else {
-        statusToReturn = Status.BACKOFF_NOW // no need to call next
-        // handler
+        case _ =>
+          logger.debug(getHandlerPhase, "runtimeInfos.size={}", runtimeInfos.size.toString)
+          val fileNames = for (rti <- runtimeInfos; if (rti.getStatus == RuntimeInfoStore.Status.VALIDATED)) yield parseOneToken(rti.getInputDescriptor, fileNameFromDescriptorPattern).get
+          logger.debug(getHandlerPhase, "fileNames.size={} runtimeInfos.size={}", fileNames.size.toString, runtimeInfos.size().toString)
+
+          (fileNames.size == runtimeInfos.size()) match {
+            case true =>
+              val numEventsToWrite: Int = 1
+              logger.debug(getHandlerPhase, "_message=\"calling writeToSwift\" numEventsToWrite={}", numEventsToWrite.toString)
+
+              actionEvent.setBody(fileNames.mkString("\n").getBytes)
+              val eventListToWrite = actionEvents.subList(0, numEventsToWrite)
+              val outputEvent = writeToSwift(actionEvent, eventListToWrite)
+              getHandlerContext.createSingleItemEventList(outputEvent)
+              journal.reset()
+              eventListToWrite.clear()
+              if (!actionEvents.isEmpty) {
+                logger.debug(getHandlerPhase, "_message=\"returning callback\" actionEvents.size={}", actionEvents.size.toString)
+                journal.setEventList(actionEvents)
+                Status.CALLBACK
+              }
+              else {
+                logger.debug(getHandlerPhase, "_message=\"returning ready\" actionEvents.size={}", actionEvents.size.toString)
+                Status.READY
+              }
+            case _ => Status.BACKOFF_NOW // no need to call next
+            // handler
+          }
       }
     } catch {
       case e: Exception => throw new HandlerException(e.getMessage(), e)
     }
     val endTime = System.currentTimeMillis();
     logger.debug(getHandlerPhase(), "statusToReturn={}", statusToReturn);
-    logger.info(getHandlerPhase(), "SwiftTouchFileWriterHandler finished in {} milliseconds",
+    logger.info(getHandlerPhase(), "SwiftTouchFileWriterHandlerStatusBased finished in {} milliseconds",
       (endTime - startTime).toString);
     statusToReturn
   }
+
 }
