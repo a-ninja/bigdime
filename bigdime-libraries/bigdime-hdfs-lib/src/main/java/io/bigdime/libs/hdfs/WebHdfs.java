@@ -475,7 +475,7 @@ public class WebHdfs {
 			logger.error("_message=\"{} failed:\"", method.getName(), e1);
 		}
 		if (!isSuccess) {
-			logger.error("_message=\"{} failed After {} retries :\", statusCode={} exceptionReason={} args={}",
+			logger.warn("_message=\"{} failed After {} retries :\", statusCode={} exceptionReason={} args={}",
 					method.getName(), maxAttempts, statusCode, exceptionReason, args);
 			throw new WebHdfsException(statusCode, exceptionReason);
 		} else {
