@@ -74,9 +74,6 @@ class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHand
 
       logger.info(getHandlerPhase, "actionEvents.size={}", actionEvents.size.toString)
 
-      //      val batchEvent = actionEvents.get(0).asInstanceOf[BatchEvent]
-
-      //      val actionEvent = batchEvent.events(0)
       logger.info(getHandlerPhase, "actionEvent.headers={}", actionEvent.getHeaders)
 
       // /webhdfs/v1/user/johndow/bigdime/newdir3/20160101/part1_prt2_part3/0001_0.ext

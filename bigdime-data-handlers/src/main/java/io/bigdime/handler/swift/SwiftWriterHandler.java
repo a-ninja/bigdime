@@ -7,6 +7,7 @@ import org.javaswift.joss.client.factory.AccountConfig;
 import org.javaswift.joss.client.factory.AccountFactory;
 import org.javaswift.joss.model.Account;
 import org.javaswift.joss.model.Container;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -33,22 +34,24 @@ import io.bigdime.core.handler.AbstractHandler;
 public abstract class SwiftWriterHandler extends AbstractHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(SwiftWriterHandler.class));
 
-	protected String username;
-	protected String password; // make it char[]
-	protected String authUrl;
-	protected String tenantId;
-	protected String tenantName;
+//	protected String username;
+//	protected String password; // make it char[]
+//	protected String authUrl;
+//	protected String tenantId;
+//	protected String tenantName;
 
 	protected String containerName;
 
-	protected AccountConfig config;
-	protected Account account;
-	protected Container container;
+//	protected AccountConfig config;
+//	protected Account account;
+//	protected Container container;
 	protected String inputFilePathPattern;
 	protected String outputFilePathPattern;
 	protected Pattern inputPattern;
 
 	private boolean initialized = false;
+	@Autowired
+	protected SwiftClient swiftClient;
 
 	@Override
 	public void build() throws AdaptorConfigurationException {
@@ -56,35 +59,35 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 		setHandlerPhase("building SwiftWriterHandler");
 		logger.info(getHandlerPhase(), "properties={}", getPropertyMap());
 
-		username = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.USER_NAME);
-		password = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.PASSWORD);
-		authUrl = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.AUTH_URL);
-		tenantId = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.TENANT_ID);
-		tenantName = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.TENANT_NAME);
-		containerName = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.CONTAINER_NAME);
+//		username = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.USER_NAME);
+//		password = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.PASSWORD);
+//		authUrl = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.AUTH_URL);
+//		tenantId = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.TENANT_ID);
+//		tenantName = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.TENANT_NAME);
+//		containerName = PropertyHelper.getStringProperty(getPropertyMap(), SwiftWriterHandlerConstants.CONTAINER_NAME);
 
 		inputFilePathPattern = PropertyHelper.getStringProperty(getPropertyMap(),
 				SwiftWriterHandlerConstants.INPUT_FILE_PATH_PATTERN);
 		outputFilePathPattern = PropertyHelper.getStringProperty(getPropertyMap(),
 				SwiftWriterHandlerConstants.OUTPUT_FILE_PATH_PATTERN);
 
-		logger.debug(getHandlerPhase(),
-				"username={} authUrl={} tenantId={} tenantName={} containerName={} inputFilePathPattern=\"{}\" outputFilePathPattern=\"{}\"",
-				username, authUrl, tenantId, tenantName, containerName, inputFilePathPattern, outputFilePathPattern);
+//		logger.debug(getHandlerPhase(),
+//				"username={} authUrl={} tenantId={} tenantName={} containerName={} inputFilePathPattern=\"{}\" outputFilePathPattern=\"{}\"",
+//				username, authUrl, tenantId, tenantName, containerName, inputFilePathPattern, outputFilePathPattern);
 
 		inputPattern = Pattern.compile(inputFilePathPattern);
 	}
 
 	protected void init() {
 		logger.info(getHandlerPhase(), "_message=\"connecting to swift\"");
-		config = new AccountConfig();
-		config.setUsername(username);
-		config.setPassword(password);
-		config.setAuthUrl(authUrl);
-		config.setTenantId(tenantId);
-		config.setTenantName(tenantName);
-		account = new AccountFactory(config).createAccount();
-		container = account.getContainer(containerName);
+//		config = new AccountConfig();
+//		config.setUsername(username);
+//		config.setPassword(password);
+//		config.setAuthUrl(authUrl);
+//		config.setTenantId(tenantId);
+//		config.setTenantName(tenantName);
+//		account = new AccountFactory(config).createAccount();
+//		container = account.getContainer(containerName);
 
 		// String pattern =
 		// "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)";
@@ -157,12 +160,12 @@ public abstract class SwiftWriterHandler extends AbstractHandler {
 
 	protected abstract Status process0(List<ActionEvent> actionEvents) throws HandlerException;
 
-	protected void setOutputEventHeaders(final ActionEvent outputEvent) {
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.USER_NAME, username);
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SECRET, password);
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.AUTH_URL, authUrl);
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID, tenantId);
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME, tenantName);
-		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME, containerName);
-	}
+//	protected void setOutputEventHeaders(final ActionEvent outputEvent) {
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.USER_NAME, username);
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.SECRET, password);
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.AUTH_URL, authUrl);
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_ID, tenantId);
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.TENANT_NAME, tenantName);
+//		outputEvent.getHeaders().put(ActionEventHeaderConstants.SwiftHeaders.CONTAINER_NAME, containerName);
+//	}
 }

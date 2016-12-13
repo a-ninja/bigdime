@@ -18,62 +18,54 @@ import io.bigdime.core.commons.StringHelper;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 /**
- * 
  * @author Neeraj Jain
- *
  */
 
 @Component
 @Scope("prototype")
 public final class SwiftFileWriterHandler extends SwiftWriterHandler {
-	private static final AdaptorLogger logger = new AdaptorLogger(
-			LoggerFactory.getLogger(SwiftFileWriterHandler.class));
+    private static final AdaptorLogger logger = new AdaptorLogger(
+            LoggerFactory.getLogger(SwiftFileWriterHandler.class));
 
-	@Override
-	public Status process() throws HandlerException {
-		setHandlerPhase("processing SwiftFileWriterHandler");
-		return super.process();
-	}
+    @Override
+    public Status process() throws HandlerException {
+        setHandlerPhase("processing SwiftFileWriterHandler");
+        return super.process();
+    }
 
-	protected Status process0(List<ActionEvent> actionEvents) throws HandlerException {
-		long startTime = System.currentTimeMillis();
-		SwiftWriterHandlerJournal journal = getJournal(SwiftWriterHandlerJournal.class);
-		if (journal == null) {
-			logger.debug(getHandlerPhase(), "jounral is null, initializing");
-			journal = new SwiftWriterHandlerJournal();
-			getHandlerContext().setJournal(getId(), journal);
-		}
-		Status statusToReturn = Status.READY;
+    protected Status process0(List<ActionEvent> actionEvents) throws HandlerException {
+        long startTime = System.currentTimeMillis();
+        SwiftWriterHandlerJournal journal = getJournal(SwiftWriterHandlerJournal.class);
+        if (journal == null) {
+            logger.debug(getHandlerPhase(), "jounral is null, initializing");
+            journal = new SwiftWriterHandlerJournal();
+            getHandlerContext().setJournal(getId(), journal);
+        }
+        Status statusToReturn = Status.READY;
 
-		try {
+        try {
 
-			ActionEvent actionEvent = actionEvents.remove(0);
+            ActionEvent actionEvent = actionEvents.remove(0);
 
-			writeToSwift(actionEvent);
-			if (!actionEvents.isEmpty()) {
-				journal.setEventList(actionEvents);
-			}
-		} catch (Exception e) {
-			throw new HandlerException(e.getMessage(), e);
-		}
-		long endTime = System.currentTimeMillis();
-		logger.debug(getHandlerPhase(), "statusToReturn={}", statusToReturn);
-		logger.info(getHandlerPhase(), "SwiftFileWriterHandler finished in {} milliseconds", (endTime - startTime));
-		return statusToReturn;
+            writeToSwift(actionEvent);
+            if (!actionEvents.isEmpty()) {
+                journal.setEventList(actionEvents);
+            }
+        } catch (Exception e) {
+            throw new HandlerException(e.getMessage(), e);
+        }
+        long endTime = System.currentTimeMillis();
+        logger.debug(getHandlerPhase(), "statusToReturn={}", statusToReturn);
+        logger.info(getHandlerPhase(), "SwiftFileWriterHandler finished in {} milliseconds", (endTime - startTime));
+        return statusToReturn;
 
-	}
+    }
 
-	private void writeToSwift(final ActionEvent actionEvent) throws IOException, HandlerException {
+    private void writeToSwift(final ActionEvent actionEvent) throws IOException, HandlerException {
 
-		String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
-		String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern,
-				actionEvent.getHeaders());
-		uploadFile(container, swiftObjectName, new String(fileName));
-	}
-
-	private void uploadFile(final Container container, final String objectName, final String fileName) {
-		StoredObject object = container.getObject(objectName);
-		object.uploadObject(new File(fileName));
-		// object.get
-	}
+        String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
+        String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern,
+                actionEvent.getHeaders());
+        swiftClient.uploadFile(swiftObjectName, new String(fileName));
+    }
 }

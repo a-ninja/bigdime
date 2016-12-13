@@ -22,7 +22,6 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 public abstract class AbstractSourceHandler extends AbstractHandler {
     private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(AbstractSourceHandler.class));
 
-    protected long dirtyRecordCount = 0;
     protected List<RuntimeInfo> dirtyRecords;
     @Autowired
     private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
@@ -65,10 +64,9 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
             initClass();
             dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, getEntityName(), getInputDescriptorPrefix());
             if (dirtyRecords != null && !dirtyRecords.isEmpty()) {
-                dirtyRecordCount = dirtyRecords.size();
                 logger.warn(getHandlerPhase(),
                         "_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}",
-                        getId(), dirtyRecordCount, getEntityName());
+                        getId(), dirtyRecords.size(), getEntityName());
             } else {
                 logger.info(getHandlerPhase(), "_message=\"no dirty records found\" handler_id={}", getId());
             }
@@ -138,10 +136,6 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
             logger.debug(getHandlerPhase(), "no queued record found, setting descriptor to null");
             setInputDescriptorToNull();
         }
-    }
-
-    public long getDirtyRecordCount() {
-        return dirtyRecordCount;
     }
 
     public List<RuntimeInfo> getDirtyRecords() {
