@@ -42,11 +42,8 @@ public final class SwiftFileWriterHandler extends SwiftWriterHandler {
             getHandlerContext().setJournal(getId(), journal);
         }
         Status statusToReturn = Status.READY;
-
         try {
-
             ActionEvent actionEvent = actionEvents.remove(0);
-
             writeToSwift(actionEvent);
             if (!actionEvents.isEmpty()) {
                 journal.setEventList(actionEvents);
