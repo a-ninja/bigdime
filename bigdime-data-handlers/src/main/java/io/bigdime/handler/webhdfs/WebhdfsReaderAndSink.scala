@@ -1,67 +1,51 @@
 package io.bigdime.handler.webhdfs
 
 import java.io.IOException
-import java.io.InputStream
-import java.nio.ByteBuffer
-import java.nio.channels.Channels
-import java.nio.channels.ReadableByteChannel
-import java.util.HashMap
-import java.util.List
-import java.util.Map
-import java.util.Map.Entry
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
+import io.bigdime.alert.Logger.{ALERT_CAUSE, ALERT_SEVERITY, ALERT_TYPE}
+import io.bigdime.alert.LoggerFactory
+import io.bigdime.core.ActionEvent.Status
+import io.bigdime.core._
+import io.bigdime.core.commons.{AdaptorLogger, CollectionUtil, PropertyHelper, StringHelper}
+import io.bigdime.core.config.AdaptorConfigConstants
+import io.bigdime.core.constants.ActionEventHeaderConstants
+import io.bigdime.core.handler.{AbstractSourceHandler, SimpleJournal}
+import io.bigdime.core.runtimeinfo.{RuntimeInfo, RuntimeInfoStore, RuntimeInfoStoreException}
+import io.bigdime.handler.file.FileInputStreamReaderHandlerConstants
+import io.bigdime.handler.swift.{SwiftClient, SwiftWriterHandlerConstants}
+import io.bigdime.handler.util.RetryLimitedCountPolicy
+import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
+import io.bigdime.libs.hdfs.{HDFS_AUTH_OPTION, WebHdfsException, WebHdfsReader}
 import org.apache.commons.lang3.StringUtils
+import org.javaswift.joss.exception.CommandException
+import org.javaswift.joss.model.StoredObject
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
-import io.bigdime.alert.Logger.ALERT_CAUSE
-import io.bigdime.alert.Logger.ALERT_SEVERITY
-import io.bigdime.alert.Logger.ALERT_TYPE
-import io.bigdime.alert.LoggerFactory
-import io.bigdime.core.ActionEvent
-import io.bigdime.core.ActionEvent.Status
-import io.bigdime.core.AdaptorConfigurationException
-import io.bigdime.core.HandlerException
-import io.bigdime.core.InvalidValueConfigurationException
-import io.bigdime.core.commons.AdaptorLogger
-import io.bigdime.core.commons.CollectionUtil
-import io.bigdime.core.commons.PropertyHelper
-import io.bigdime.core.commons.StringHelper
-import io.bigdime.core.config.{AdaptorConfig, AdaptorConfigConstants}
-import io.bigdime.core.constants.ActionEventHeaderConstants
-import io.bigdime.core.handler.AbstractSourceHandler
-import io.bigdime.core.handler.SimpleJournal
-import io.bigdime.core.runtimeinfo.RuntimeInfo
-import io.bigdime.core.runtimeinfo.RuntimeInfoStore
-import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException
-import io.bigdime.handler.file.FileInputStreamReaderHandlerConstants
-import io.bigdime.handler.swift.{SwiftClient, SwiftWriter, SwiftWriterHandlerConstants}
-import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
-import io.bigdime.libs.hdfs.FileStatus
-import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION
-import io.bigdime.libs.hdfs.WebHdfsException
-import io.bigdime.libs.hdfs.WebHdfsReader
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import util.control.Breaks._
 
 /**
   * Created by neejain on 12/9/16.
   */
+object WebhdfsReaderAndSink {
+  private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[WebhdfsReaderAndSink]))
+}
+
 @Component
 @Scope("prototype")
 class WebhdfsReaderAndSink extends AbstractSourceHandler {
-  private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[WebHDFSReaderHandler]))
-  private val DEFAULT_BUFFER_SIZE = 1024 * 1024
+
+  import WebhdfsReaderAndSink.logger
+
   private val hdfsFileName: String = null
   private var entityName: String = null
   private var webHDFSPathParser: WebHDFSPathParser = null
@@ -71,7 +55,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @Autowired private val runtimeInfoStore: RuntimeInfoStore[RuntimeInfo] = null
   private var processingDirty = false
   //  private var inputDescriptor: WebHDFSInputDescriptor = _
-  private val INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebHDFSReaderHandler,webhdfsPath:"
+  private val INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:"
   private val handlerConfig = new WebHDFSReaderHandlerConfig
   protected var inputFilePathPattern: String = null
   protected var outputFilePathPattern: String = null
@@ -79,13 +63,14 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @Autowired private val webHdfsReader: WebHdfsReader = null
 
   @Autowired private val swiftClient: SwiftClient = null
+  private var recordList: mutable.Buffer[RuntimeInfo] = _
 
   @throws[AdaptorConfigurationException]
   override def build() {
     setHandlerPhase("building WebHDFSReaderHandler")
     super.build()
     try {
-      var port = 0
+      var port: Integer = 0
 
       logger.info(getHandlerPhase, "building WebHDFSReaderHandler")
       val readHdfsPathFrom = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.READ_HDFS_PATH_FROM)
@@ -103,13 +88,14 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val hostNames = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.HOST_NAMES)
       port = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderHandlerConstants.PORT)
       val hdfsUser = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.HDFS_USER)
-      val bufferSize = PropertyHelper.getIntProperty(getPropertyMap, FileInputStreamReaderHandlerConstants.BUFFER_SIZE, DEFAULT_BUFFER_SIZE)
+      //      val bufferSize = PropertyHelper.getIntProperty(getPropertyMap, FileInputStreamReaderHandlerConstants.BUFFER_SIZE, DEFAULT_BUFFER_SIZE)
       val waitForFileName = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.WAIT_FOR_FILE_NAME)
       val authChoice = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString)
       val authOption = HDFS_AUTH_OPTION.getByName(authChoice)
-      //      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}", hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName)
+      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}",
+        hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName)
       handlerConfig.setAuthOption(authOption)
-      handlerConfig.setBufferSize(bufferSize)
+      //      handlerConfig.setBufferSize(bufferSize)
       handlerConfig.setEntityName(entityName)
       //      handlerConfig.setHdfsPath(hdfsPath)
       handlerConfig.setHdfsUser(hdfsUser)
@@ -123,8 +109,6 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
       if (readHdfsPathFrom == null) throw new InvalidValueConfigurationException("Invalid value for readHdfsPathFrom: \"" + readHdfsPathFrom + "\" not supported. Supported values are:" + READ_HDFS_PATH_FROM.values)
       logger.info("swiftWriter=", Option(swiftClient).getOrElse("null swiftWriter").toString)
-      //      logger.info("swiftWriter=", Option(swiftClient.authUrl).getOrElse("null username").toString)
-      //      logger.info("swiftWriter.tenantId=", Option(swiftClient.tenantId).getOrElse("null username").toString)
     }
     catch {
       case ex: Exception => {
@@ -145,7 +129,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     if (isFirstRun) if (getReadHdfsPathFrom eq READ_HDFS_PATH_FROM.HEADERS) {
       entityName = getEntityNameFromHeader
       val parentRuntimeId = getParentRuntimeIdFromHeader
-      //      logger.info(getHandlerPhase, "from header, entityName={} parentRuntimeId={}", entityName, parentRuntimeId)
+      logger.info(getHandlerPhase, "from header, entityName={} parentRuntimeId={}", entityName, Integer.valueOf(parentRuntimeId))
     }
     else logger.info(getHandlerPhase, "from config, entityName={} ", entityName)
   }
@@ -155,169 +139,221 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @throws[HandlerException]
   @throws[RuntimeInfoStoreException]
   override protected def doProcess: ActionEvent.Status = {
-    if (recordList != null && recordList.nonEmpty) {
-      processRecords(recordList)
-      Status.READY
-    } else
-      Status.BACKOFF
+    //    if (recordList != null && recordList.nonEmpty) {
+    processRecords(recordList)
+    Status.READY
+    //    } else
+    //      Status.BACKOFF
   }
 
-  @throws[HandlerException]
-  def processWithRetry: ActionEvent.Status = {
-    var success = false
-    var attempt = 0
-    val maxAttempts = 5
-    var cause: Throwable = null
-    do {
-      setHandlerPhase("processing " + getName)
-      incrementInvocationCount()
-      //      logger.debug(getHandlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount)
-      try {
-        attempt += 1
-        init() // initialize cleanup records etc
-        initDescriptor()
-        if (isInputDescriptorNull) {
-          logger.debug(getHandlerPhase, "returning BACKOFF")
-          return io.bigdime.core.ActionEvent.Status.BACKOFF
-        }
-        val status = doProcess
-        success = true
-        return status
-      }
-      catch {
-        case ex: HandlerException => {
-          logger.warn(getHandlerPhase, "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"", ex.getMessage, ex.getCause.getMessage)
-          if (ex.getCause != null && ex.getCause.getMessage != null && ex.getCause.getMessage == "Not Found") {
-            logger.warn(getHandlerPhase, "_message=\"file not found in hdfs, returning backoff\" error={}", ex.getMessage)
-            return Status.BACKOFF_NOW
-          }
-          else throw ex
-        }
-        case e: IOException => {
-          //          logger.warn(getHandlerPhase, "_message=\"IOException received\" error={} attempt={} maxAttempts={}", e.getMessage, attempt, maxAttempts)
-          cause = e
-          // let it retry
-        }
-        case e: RuntimeInfoStoreException => {
-          throw new HandlerException("Unable to process", e)
-        }
-        case e: Exception => {
-          throw new HandlerException("Unable to process", e)
-        }
-      }
-    } while (!success && attempt < maxAttempts)
-    // If here, that means there was an IOException
-    throw new HandlerException("Unable to process", cause)
-  }
+  //  @throws[HandlerException]
+  //  def processWithRetry1: ActionEvent.Status = {
+  //    var success = false
+  //    var attempt = 0
+  //    val maxAttempts = 5
+  //    var cause: Throwable = null
+  //    do {
+  //      setHandlerPhase("processing " + getName)
+  //      incrementInvocationCount()
+  //      logger.debug(getHandlerPhase, "_messagge=\"entering process\" invocation_count={}", getInvocationCount.toString)
+  //      try {
+  //        attempt += 1
+  //        init() // initialize cleanup records etc
+  //        initDescriptor()
+  //        if (isInputDescriptorNull) {
+  //          logger.debug(getHandlerPhase, "returning BACKOFF")
+  //          return io.bigdime.core.ActionEvent.Status.BACKOFF
+  //        }
+  //        val status = doProcess
+  //        success = true
+  //        return status
+  //      }
+  //      catch {
+  //        case ex: HandlerException => {
+  //          logger.warn(getHandlerPhase, "_message=\"file not found in hdfs\" error=\"{}\" cause=\"{}\"", ex.getMessage, ex.getCause.getMessage)
+  //          if (ex.getCause != null && ex.getCause.getMessage != null && ex.getCause.getMessage == "Not Found") {
+  //            logger.warn(getHandlerPhase, "_message=\"file not found in hdfs, returning backoff\" error={}", ex.getMessage)
+  //            return Status.BACKOFF_NOW
+  //          }
+  //          else throw ex
+  //        }
+  //        case e: IOException => {
+  //          //          logger.warn(getHandlerPhase, "_message=\"IOException received\" error={} attempt={} maxAttempts={}", e.getMessage, attempt, maxAttempts)
+  //          cause = e
+  //          // let it retry
+  //        }
+  //        case e: RuntimeInfoStoreException => {
+  //          throw new HandlerException("Unable to process", e)
+  //        }
+  //        case e: Exception => {
+  //          throw new HandlerException("Unable to process", e)
+  //        }
+  //      }
+  //    } while (!success && attempt < maxAttempts)
+  //    // If here, that means there was an IOException
+  //    throw new HandlerException("Unable to process", cause)
+  //  }
 
   @throws[HandlerException]
   override def process: ActionEvent.Status = {
-    return processWithRetry
+    init() // initialize cleanup records etc
+    initDescriptor()
+    if (isInputDescriptorNull) {
+      logger.debug(getHandlerPhase, "returning BACKOFF")
+      return io.bigdime.core.ActionEvent.Status.BACKOFF
+    }
+    doProcess
+
+    //    return processWithRetry
   }
 
+  override protected def isInputDescriptorNull = recordList == null || recordList.isEmpty
 
   def processRecords(records: mutable.Buffer[RuntimeInfo]) = {
-    val THREAD_POOL_SIZE = 10
-    logger.info(getHandlerPhase, "processRecords")
-    val futures = new ArrayBuffer[Future[Unit]]()
+    val THREAD_POOL_SIZE = 30
+    logger.info(getHandlerPhase, "processRecords{}", records)
+    val futures = new ArrayBuffer[Future[(WebHDFSInputDescriptor, StoredObject)]]()
     Option(records) match {
       case null => 0
       case _ => {
         val batchSize = Math.min(records.size(), THREAD_POOL_SIZE)
         implicit val ec = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(THREAD_POOL_SIZE))
         var loopCount = 0
-        breakable {
-          records.foreach(_ => {
-            val rec = records.remove(0)
-            logger.info(getHandlerPhase, "rec={}", rec.getInputDescriptor)
-            futures += Future {
-              readWrite(rec)
-//              val properties = new java.util.HashMap[String, String]
-//              properties.put("handlerName", getHandlerClass)
-//              updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.STARTED, properties)
-//
-//              var webHdfsPathToProcess: String = null
-//              try {
-//                val fullDescriptorStr = rec.getInputDescriptor
-//                val inputDescriptor = new WebHDFSInputDescriptor
-//                inputDescriptor.parseDescriptor(fullDescriptorStr)
-//                webHdfsPathToProcess = inputDescriptor.getWebhdfsPath
-//                val inputStream = webHdfsReader.getInputStream(webHdfsPathToProcess)
-//                val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
-//                logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
-//                swiftClient.write(targetPath, inputStream)
-//                logger.debug(getHandlerPhase, "current_file_path={}", inputDescriptor.getCurrentFilePath)
-//              }
-//              catch {
-//                case e: Any => {
-//                  rec.getProperties.put("error", e.getMessage)
-//                  try {
-//                    logger.debug(getHandlerPhase, "_message=\"deleting record from runtime info\" runtimeInfo={}", rec)
-//                    runtimeInfoStore.delete(rec)
-//                  }
-//                  catch {
-//                    case e1: RuntimeInfoStoreException => {
-//                      logger.debug(getHandlerPhase, "_message=\"unable to update runtime info\" file_path={}", webHdfsPathToProcess)
-//                    }
-//                  }
-//                  throw new HandlerException("unable to process:" + webHdfsPathToProcess + ", error=" + e.getMessage, e)
-//                }
-//              }
-            }
-            loopCount += 1
-            if (loopCount >= batchSize) break
+        //        breakable {
+        val iter = records.iterator
+        while (iter.hasNext && loopCount < batchSize) {
+          val rec = iter.next()
+          iter.remove()
+          logger.info(getHandlerPhase, "rec={}", rec.getInputDescriptor)
+          futures += Future {
+            readWrite(rec)
           }
-          )
+          loopCount += 1
         }
+
+        val eventList = new ListBuffer[ActionEvent]
         for (f <- futures) {
           f onComplete {
-            case Success(x) => logger.info(getHandlerPhase, "Got the callback")
+            case Success((inputDescriptor, soredObject)) => {
+              logger.info(getHandlerPhase, "Got the callback...inputDescriptor={}", inputDescriptor)
+              val innerEvent = new ActionEvent
+              eventList += innerEvent
+              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_NAME)
+              innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_NAME, inputDescriptor.getCurrentFilePath)
+
+              //              innerEvent.getHeaders.put("read_count", "" + getSimpleJournal.getReadCount)
+              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.INPUT_DESCRIPTOR)
+              innerEvent.getHeaders.put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, inputDescriptor.getCurrentFilePath)
+              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.FULL_DESCRIPTOR)
+              innerEvent.getHeaders.put(ActionEventHeaderConstants.FULL_DESCRIPTOR, inputDescriptor.getFullDescriptor)
+              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.ENTITY_NAME)
+              innerEvent.getHeaders.put(ActionEventHeaderConstants.ENTITY_NAME, entityName)
+              //              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_TOTAL_SIZE)
+              //              innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_SIZE, inputDescriptor.getCurrentFileStatus.getLength.toString)
+              //              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_TOTAL_READ)
+              //              innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_READ, inputDescriptor.getCurrentFileStatus.getLength.toString)
+
+              //              logger.info(getHandlerPhase, "headers={}", innerEvent.getHeaders)
+
+              //              val outputEvent = new BatchEvent(eventList.toList)
+              logger.info(getHandlerPhase, "submitting to channel={}")
+              processChannelSubmission(innerEvent)
+            }
             case Failure(e) => logger.warn(getHandlerPhase, "future failed", e)
           }
         }
 
         for (f <- futures) {
-          Await.result(f, Duration(600, "seconds"))
+          Await.result(f, Duration.Inf)
         }
-
       }
     }
   }
 
-  private def readWrite(rec:RuntimeInfo) = {
+  private def readWrite(rec: RuntimeInfo): (WebHDFSInputDescriptor, StoredObject) = {
     val properties = new java.util.HashMap[String, String]
     properties.put("handlerName", getHandlerClass)
     updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.STARTED, properties)
 
-    var webHdfsPathToProcess: String = null
-    try {
-      val fullDescriptorStr = rec.getInputDescriptor
-      val inputDescriptor = new WebHDFSInputDescriptor
-      inputDescriptor.parseDescriptor(fullDescriptorStr)
+    val ts = List[Class[_ <: Throwable]](classOf[HandlerException], classOf[CommandException])
+
+    RetryLimitedCountPolicy(5, ts)(() => {
+      var webHdfsPathToProcess: String = null
+      val inputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
+      inputDescriptor.parseDescriptor(rec.getInputDescriptor)
       webHdfsPathToProcess = inputDescriptor.getWebhdfsPath
       val inputStream = webHdfsReader.getInputStream(webHdfsPathToProcess)
+      logger.info(getHandlerPhase, "got input stream")
       val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
       logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
-      swiftClient.write(targetPath, inputStream)
-      logger.debug(getHandlerPhase, "current_file_path={}", inputDescriptor.getCurrentFilePath)
+      val swiftObject = swiftClient.write(targetPath, inputStream)
+      updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
+      logger.info(getHandlerPhase, "wrote to swift from sink")
+      (inputDescriptor, swiftObject)
     }
-    catch {
-      case e: Any => {
-        rec.getProperties.put("error", e.getMessage)
-        try {
-          logger.debug(getHandlerPhase, "_message=\"deleting record from runtime info\" runtimeInfo={}", rec)
-          runtimeInfoStore.delete(rec)
-        }
-        catch {
-          case e1: RuntimeInfoStoreException => {
-            logger.debug(getHandlerPhase, "_message=\"unable to update runtime info\" file_path={}", webHdfsPathToProcess)
-          }
-        }
-        throw new HandlerException("unable to process:" + webHdfsPathToProcess + ", error=" + e.getMessage, e)
+    )
+
+
+    //    var webHdfsPathToProcess: String = null
+    //    try {
+    //      val inputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
+    //      inputDescriptor.parseDescriptor(rec.getInputDescriptor)
+    //      webHdfsPathToProcess = inputDescriptor.getWebhdfsPath
+    //      val inputStream = webHdfsReader.getInputStream(webHdfsPathToProcess)
+    //      logger.info(getHandlerPhase, "got input stream")
+    //      val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
+    //      logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
+    //      val swiftObject = swiftClient.write(targetPath, inputStream)
+    //      updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
+    //      logger.info(getHandlerPhase, "wrote to swift from sink")
+    //      (inputDescriptor, swiftObject)
+    //    }
+    //    catch {
+    //      case e: Any => {
+    //        logger.warn(getHandlerPhase, "_message=\"error in processing record={}", e.toString, e)
+    //        rec.getProperties.put("error", e.getMessage)
+    //        readWrite(rec)
+    //        //        try {
+    //        //          logger.debug(getHandlerPhase, "_message=\"deleting record from runtime info\" runtimeInfo={}", rec)
+    //        //          runtimeInfoStore.delete(rec)
+    //        //        } catch {
+    //        //          case e1: RuntimeInfoStoreException => {
+    //        //            logger.debug(getHandlerPhase, "_message=\"unable to update runtime info\" file_path={}", webHdfsPathToProcess)
+    //        //          }
+    //        //        }
+    //        //        throw new HandlerException("unable to process:" + webHdfsPathToProcess + ", error=" + e.getMessage, e)
+    //      }
+    //    }
+  }
+
+
+  @throws[RuntimeInfoStoreException]
+  override def init() {
+    if (isFirstRun) {
+      initClass()
+      dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, getEntityName, getInputDescriptorPrefix).asScala
+      if (dirtyRecords != null && !dirtyRecords.isEmpty) {
+        dirtyRecordCount = dirtyRecords.size
+        logger.warn(getHandlerPhase, "_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}", getId, dirtyRecordCount.toString, getEntityName)
       }
+      else logger.info(getHandlerPhase, "_message=\"no dirty records found\" handler_id={}", getId)
     }
   }
-  private var recordList: mutable.Buffer[RuntimeInfo] = _
+
+  @throws[HandlerException]
+  @throws[RuntimeInfoStoreException]
+  override protected def initDescriptor() {
+    if (CollectionUtil.isNotEmpty(dirtyRecords))
+      initDescriptorForCleanup()
+    else
+      initDescriptorForNormal()
+  }
+
+  @throws[HandlerException]
+  override protected def initDescriptorForCleanup() {
+    recordList = dirtyRecords.asScala
+    processingDirty = true
+  }
 
   @throws[RuntimeInfoStoreException]
   @throws[HandlerException]
@@ -331,20 +367,17 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     //thread pool size =10.
     //submit the list of events
 
-    //    import scala.collection.JavaConverters._
-    //    import scala.collection.JavaConversions._
 
     if (recordList == null || recordList.isEmpty) {
 
       val queuedRecords = getAllRuntimeInfos(runtimeInfoStore, getEntityName, getInputDescriptorPrefix, RuntimeInfoStore.Status.QUEUED)
       if (queuedRecords == null || queuedRecords.isEmpty) {
         if (findAndAddRuntimeInfoRecords) recordList = getAllRuntimeInfos(runtimeInfoStore, getEntityName, getInputDescriptorPrefix, RuntimeInfoStore.Status.QUEUED).asScala
-      }
+      } else recordList = queuedRecords.asScala
     }
     //    val l = getAllRuntimeInfos(runtimeInfoStore, getEntityName, getInputDescriptorPrefix, RuntimeInfoStore.Status.QUEUED).asScala
     //    l
     //    l.remove()
-    import scala.collection.JavaConverters._
 
     //    val l:scala.List[RuntimeInfo] = recordList.asScala.toList
     //    l match {
@@ -352,25 +385,31 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     //    }
   }
 
+  import scala.language.implicitConversions
+  //  import java.lang.Integer._
+  //  import java.lang.Boolean._
+
+  //  implicit def int2Integer(x: Int):AnyRef = java.lang.Integer.valueOf(x)
+  //  implicit def boolean2Integer(x: Boolean):java.lang.Boolean = java.lang.Boolean.valueOf(x)
+
   @throws[RuntimeInfoStoreException]
   @throws[HandlerException]
   override protected def findAndAddRuntimeInfoRecords: Boolean = {
-    var recordsFound = false
+    var recordsFound: java.lang.Boolean = false
     try {
       val availableHdfsDirectories = webHDFSPathParser.parse(getHdfsPath, getPropertyMap, getHandlerContext.getEventList, ActionEventHeaderConstants.HDFS_PATH)
-      import scala.collection.JavaConversions._
       for (directoryPath <- availableHdfsDirectories) {
         try {
           recordsFound |= initializeRuntimeInfoRecords(directoryPath)
         }
         catch {
           case e: Any => {
-            //            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound, e.getMessage)
+            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound, e.getMessage)
             throw new HandlerException(e)
           }
         }
       }
-      //      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" recordsFound={}", recordsFound)
+      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" recordsFound={}", recordsFound)
       recordsFound
     }
     finally logger.debug(getHandlerPhase, "releasing webhdfs connection")
@@ -388,10 +427,10 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
   @throws[RuntimeInfoStoreException]
   protected def parentRuntimeRecordValid: Boolean = {
-    val parentRuntimeId = getParentRuntimeIdFromHeader
-    //    logger.info(getHandlerPhase, "parentRuntimeId={}", parentRuntimeId)
+    val parentRuntimeId: Integer = getParentRuntimeIdFromHeader
+    logger.info(getHandlerPhase, "parentRuntimeId={}", parentRuntimeId)
     if (parentRuntimeId != -1) {
-      val rti = runtimeInfoStore.getById(Integer.valueOf(parentRuntimeId))
+      val rti = runtimeInfoStore.getById(parentRuntimeId)
       logger.debug(getHandlerPhase, "runtimeRecordStatus={}", rti.getStatus)
       return rti.getStatus eq RuntimeInfoStore.Status.PENDING
     }
@@ -405,10 +444,9 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   private def initializeRuntimeInfoRecords(directoryPath: String) = {
     var recordsFound = false
     try {
-      val parentRecordValid = parentRuntimeRecordValid
+      val parentRecordValid: java.lang.Boolean = parentRuntimeRecordValid
       if (parentRecordValid && isReadyFilePresent(directoryPath)) {
         val fileNames = webHdfsReader.list(directoryPath, false)
-        import scala.collection.JavaConversions._
         for (fileName <- fileNames) {
           val properties = new java.util.HashMap[String, String]
           recordsFound = true
@@ -416,11 +454,11 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
           properties.put(WebHDFSReaderHandlerConstants.HDFS_FILE_NAME, fileName)
           // queueRuntimeInfo(runtimeInfoStore, entityName,
           // getInputDescriptorPrefix() + fileName, properties);
-          val tempInputDescriptor = new WebHDFSInputDescriptor
+          val tempInputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
           queueRuntimeInfo(runtimeInfoStore, entityName, tempInputDescriptor.createFullDescriptor(fileName), properties)
         }
       }
-      //      else logger.info(getHandlerPhase, "_message=\"ready file is not present\" waitForFileName={} parentRecordValid={}", waitForFileName, parentRecordValid)
+      else logger.info(getHandlerPhase, "_message=\"ready file is not present\" waitForFileName={} parentRecordValid={}", waitForFileName, parentRecordValid)
     }
     catch {
       case e: WebHdfsException => {
@@ -473,14 +511,14 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   }
 
   @throws[HandlerException]
-  private def totalReadFromJournal = getSimpleJournal.getTotalRead
+  private def totalReadFromJournal: java.lang.Long = getSimpleJournal.getTotalRead
 
   @throws[HandlerException]
-  private def totalSizeFromJournal = getSimpleJournal.getTotalSize
+  private def totalSizeFromJournal: java.lang.Long = getSimpleJournal.getTotalSize
 
   @throws[HandlerException]
   private def readAll = {
-    //    logger.debug(getHandlerPhase, "total_read={} total_size={}", totalReadFromJournal, totalSizeFromJournal)
+    logger.debug(getHandlerPhase, "total_read={} total_size={}", totalReadFromJournal, totalSizeFromJournal)
     totalReadFromJournal == totalSizeFromJournal
   }
 

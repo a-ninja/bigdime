@@ -21,12 +21,16 @@ import scala.language.implicitConversions
   * TODO: Cache the VALIDATED records, based on the parentRuntimeId to avoid fetching the information from DB evertytime.
   * Created by neejain on 12/8/16.
   */
+object SwiftTouchFileWriterHandlerStatusBased {
+  private val logger = new AdaptorLogger(LoggerFactory.getLogger(getClass))
+}
+
 @Component
 @Scope("prototype")
 class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHandler {
 
+  import SwiftTouchFileWriterHandlerStatusBased.logger
 
-  private val logger = new AdaptorLogger(LoggerFactory.getLogger(getClass))
   protected var fileNameFromDescriptorPattern: String = _
   protected var inputDescriptorPrefixPattern: String = _
   @Autowired private val runtimeInfoStore: RuntimeInfoStore[RuntimeInfo] = null
@@ -67,12 +71,26 @@ class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHand
     val startTime = System.currentTimeMillis
     try {
       val actionEvent = actionEvents.get(0)
+
+      logger.info(getHandlerPhase, "actionEvents.size={}", actionEvents.size.toString)
+
+      //      val batchEvent = actionEvents.get(0).asInstanceOf[BatchEvent]
+
+      //      val actionEvent = batchEvent.events(0)
+      logger.info(getHandlerPhase, "actionEvent.headers={}", actionEvent.getHeaders)
+
       // /webhdfs/v1/user/johndow/bigdime/newdir3/20160101/part1_prt2_part3/0001_0.ext
+
+      val entityName = actionEvent.getHeaders.get(ActionEventHeaderConstants.ENTITY_NAME)
       val sourceFileName = actionEvent.getHeaders.get(ActionEventHeaderConstants.SOURCE_FILE_NAME)
 
+      logger.info(getHandlerPhase, "sourceFileName={}", sourceFileName)
       val inputDescriptorPrefix = StringHelper.replaceTokens(sourceFileName, inputDescriptorPrefixPattern, inputPattern, actionEvent.getHeaders)
       logger.debug(getHandlerPhase, "inputDescriptorPrefix={}", inputDescriptorPrefix)
-      val runtimeInfos = getAllRuntimeInfos(runtimeInfoStore, getEntityNameFromHeader, inputDescriptorPrefix)
+      val runtimeInfos = getAllRuntimeInfos(runtimeInfoStore, entityName, inputDescriptorPrefix)
+
+      if (runtimeInfos != null)
+        logger.info(getHandlerPhase, "runtimeInfos.size={}", runtimeInfos.size.toString)
 
       statusToReturn = (runtimeInfos == null || runtimeInfos.isEmpty) match {
         case true => Status.BACKOFF_NOW

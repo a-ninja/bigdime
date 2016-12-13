@@ -61,7 +61,7 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 	@Override
 	public synchronized boolean delete(RuntimeInfo adaptorRuntimeInfo) {
 		if (adaptorRuntimeInfo == null) {
-			logger.warn(SOURCENAME, "delete entry", "Unable to create entry due to invalid arguments");
+			logger.warn(SOURCENAME, "delete entry", "Unable to delete entry due to invalid arguments");
 			throw new IllegalArgumentException("Provided argument is not valid");
 		} else {
 			RuntimeInfoDTO runtimeInfoDTO = runtimeInfoRepositoryService.get(adaptorRuntimeInfo.getAdaptorName(),
