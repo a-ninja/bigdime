@@ -20,7 +20,6 @@ object SwiftClient {
   private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[SwiftClient]))
 }
 
-
 @Component
 @Scope("prototype")
 case class SwiftClient() {
