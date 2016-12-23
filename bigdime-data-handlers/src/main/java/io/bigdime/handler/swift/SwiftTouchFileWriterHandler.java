@@ -23,7 +23,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 @Component
 @Scope("prototype")
-public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHandler {
+public final class SwiftTouchFileWriterHandler extends AbstractByteWriterHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(SwiftTouchFileWriterHandler.class));
 

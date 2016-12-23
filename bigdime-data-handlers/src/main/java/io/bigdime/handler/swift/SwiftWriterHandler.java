@@ -3,10 +3,7 @@ package io.bigdime.handler.swift;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.javaswift.joss.client.factory.AccountConfig;
-import org.javaswift.joss.client.factory.AccountFactory;
-import org.javaswift.joss.model.Account;
-import org.javaswift.joss.model.Container;
+import io.bigdime.handler.SwiftClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -20,7 +17,6 @@ import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
-import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
 
 /**

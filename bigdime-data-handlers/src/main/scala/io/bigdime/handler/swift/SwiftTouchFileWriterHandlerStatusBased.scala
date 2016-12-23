@@ -27,7 +27,7 @@ object SwiftTouchFileWriterHandlerStatusBased {
 
 @Component
 @Scope("prototype")
-class SwiftTouchFileWriterHandlerStatusBased extends SwiftAbstractByteWriterHandler {
+class SwiftTouchFileWriterHandlerStatusBased extends AbstractByteWriterHandler {
 
   import SwiftTouchFileWriterHandlerStatusBased.logger
 

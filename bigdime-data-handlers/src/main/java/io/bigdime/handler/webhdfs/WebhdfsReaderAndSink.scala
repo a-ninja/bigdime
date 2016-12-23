@@ -13,7 +13,8 @@ import io.bigdime.core.config.AdaptorConfigConstants
 import io.bigdime.core.constants.ActionEventHeaderConstants
 import io.bigdime.core.handler.AbstractSourceHandler
 import io.bigdime.core.runtimeinfo.{RuntimeInfo, RuntimeInfoStore, RuntimeInfoStoreException}
-import io.bigdime.handler.swift.{SwiftClient, SwiftWriterHandlerConstants}
+import io.bigdime.handler.SwiftClient
+import io.bigdime.handler.swift.SwiftWriterHandlerConstants
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
 import io.bigdime.libs.hdfs.{HDFS_AUTH_OPTION, WebHdfsException, WebHdfsReader}
 import io.bigdime.util.Retry
@@ -21,6 +22,7 @@ import org.apache.commons.lang3.StringUtils
 import org.javaswift.joss.exception.CommandException
 import org.javaswift.joss.model.StoredObject
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
@@ -61,6 +63,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   protected var outputFilePathPattern: String = null
   protected var inputPattern: Pattern = null
   @Autowired private val webHdfsReader: WebHdfsReader = null
+  @Autowired private val context: ApplicationContext = null
 
   @Autowired private val swiftClient: SwiftClient = null
   private var recordList: mutable.Buffer[RuntimeInfo] = _
@@ -229,6 +232,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   private def readWrite(rec: RuntimeInfo): (WebHDFSInputDescriptor, StoredObject) = {
     val properties = new java.util.HashMap[String, String]
     properties.put("handlerName", getHandlerClass)
+    properties.put(ActionEventHeaderConstants.ENTITY_NAME, entityName)
     updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.STARTED, properties)
 
     val ts = List[Class[_ <: Throwable]](classOf[HandlerException], classOf[CommandException], classOf[java.sql.SQLException], classOf[IOException])
@@ -237,15 +241,17 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val inputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
       inputDescriptor.parseDescriptor(rec.getInputDescriptor)
       val webHdfsPathToProcess = inputDescriptor.getWebhdfsPath
-      val inputStream = webHdfsReader.getInputStream(webHdfsPathToProcess)
+
+      val webHdfsReaderForStream = context.getBean(classOf[WebHdfsReader])
+
+      val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
       logger.debug(getHandlerPhase, "got input stream")
       val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
       logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
       val swiftObject = swiftClient.write(targetPath, inputStream)
       updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
       logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
-      //      webHdfsReader.releaseWebHdfsForInputStream() not thread safe
-      inputStream.close()
+      webHdfsReaderForStream.releaseWebHdfsForInputStream()
       (inputDescriptor, swiftObject)
     }).get
 

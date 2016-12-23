@@ -1,4 +1,4 @@
-package io.bigdime.handler.swift
+package io.bigdime.handler
 
 import java.io.{File, InputStream}
 import java.util.concurrent.TimeUnit
@@ -13,6 +13,20 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
+trait Client[I, O] {
+
+  /**
+    *
+    * @param outputDescriptor
+    * @param inputStream
+    */
+  def write(outputDescriptor: I, inputStream: InputStream): O
+
+  def write(outputDescriptor: I, data: Array[Byte]): O
+
+  def write(outputDescriptor: I, fileName: String): O
+}
+
 /**
   * Created by neejain on 12/10/16.
   */
@@ -22,7 +36,7 @@ object SwiftClient {
 
 @Component
 @Scope("prototype")
-case class SwiftClient() {
+case class SwiftClient() extends Client[String, StoredObject] {
 
   import SwiftClient.logger
 
@@ -75,14 +89,15 @@ case class SwiftClient() {
     }
   }
 
-  def write(targetPath: String, data: InputStream) = {
+
+  override def write(targetPath: String, data: InputStream) = {
     val storedObject = container.getObject(targetPath)
     storedObject.uploadObject(data)
     storedObject
   }
 
 
-  protected def uploadBytes(objectName: String, data: Array[Byte]): StoredObject = {
+  override def write(objectName: String, data: Array[Byte]): StoredObject = {
     var storedObject: StoredObject = null
     retryUntilSuccessful(() => {
       storedObject = container.getObject(objectName)
@@ -95,10 +110,26 @@ case class SwiftClient() {
     storedObject
   }
 
-  protected def uploadFile(objectName: String, fileName: String) {
+  override def write(objectName: String, fileName: String) = {
     retryUntilSuccessful(() => {
       val storedObject = container.getObject(objectName)
       storedObject.uploadObject(new File(fileName))
     })
+    ???
   }
+
+}
+
+
+case class KafkaClient() extends Client[String, String] {
+  /**
+    *
+    * @param outputDescriptor
+    * @param inputStream
+    */
+  override def write(outputDescriptor: String, inputStream: InputStream): String = ???
+
+  override def write(outputDescriptor: String, data: Array[Byte]): String = ???
+
+  override def write(outputDescriptor: String, fileName: String): String = ???
 }

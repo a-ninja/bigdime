@@ -63,6 +63,6 @@ public final class SwiftFileWriterHandler extends SwiftWriterHandler {
         String fileName = actionEvent.getHeaders().get(ActionEventHeaderConstants.SOURCE_FILE_NAME);
         String swiftObjectName = StringHelper.replaceTokens(fileName, outputFilePathPattern, inputPattern,
                 actionEvent.getHeaders());
-        swiftClient.uploadFile(swiftObjectName, new String(fileName));
+        swiftClient.write(swiftObjectName, new String(fileName));
     }
 }

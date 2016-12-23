@@ -35,11 +35,11 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
             for (r <- retriables if (e.getClass.isInstanceOf[r.type])) {
               Thread.sleep(attempt * delay)
             }
-          } else throw new RetriesExhaustedException(causes.toList)
+          } else throw RetriesExhaustedException(causes.toList)
       }
     }
 
-    throw new RetriesExhaustedException(causes.toList)
+    throw RetriesExhaustedException(causes.toList)
   }
 }
 
