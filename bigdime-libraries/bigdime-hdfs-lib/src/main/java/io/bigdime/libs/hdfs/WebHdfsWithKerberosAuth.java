@@ -25,78 +25,79 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 
  * @author Neeraj Jain
- *
  */
 public class WebHdfsWithKerberosAuth extends WebHdfs {
-	private static Logger logger = LoggerFactory.getLogger(WebHdfsWithKerberosAuth.class);
+    private static Logger logger = LoggerFactory.getLogger(WebHdfsWithKerberosAuth.class);
 
-	private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
-	private static String DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf";
+    private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
+    private static String DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf";
 
-	protected WebHdfsWithKerberosAuth(String host, int port) {
-		super(host, port);
-		String krb5ConfigPath = System.getProperty("java.security.krb5.conf");
-		if (krb5ConfigPath == null) {
-			krb5ConfigPath = DEFAULT_KRB5_CONFIG_LOCATION;
-		}
-		String loginConfigPath = System.getProperty("java.security.auth.login.config");
-		if (loginConfigPath == null) {
-			loginConfigPath = DEFAULT_LOGIN_CONFIG_LOCATION;
-		}
-		logger.debug("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
-		boolean skipPortAtKerberosDatabaseLookup = true;
-		System.setProperty("java.security.krb5.conf", krb5ConfigPath);
-		System.setProperty("sun.security.krb5.debug", "true");
-		System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
-		System.setProperty("java.security.auth.login.config", loginConfigPath);
-		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
-				.register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
+    protected WebHdfsWithKerberosAuth(String host, int port) {
+        super(host, port);
+        auth();
+    }
 
-		try {
-			final URI uri = new URI(host);
-			if (uri.getScheme().equalsIgnoreCase("https")) {
+    protected void auth() {
+        String krb5ConfigPath = System.getProperty("java.security.krb5.conf");
+        if (krb5ConfigPath == null) {
+            krb5ConfigPath = DEFAULT_KRB5_CONFIG_LOCATION;
+        }
+        String loginConfigPath = System.getProperty("java.security.auth.login.config");
+        if (loginConfigPath == null) {
+            loginConfigPath = DEFAULT_LOGIN_CONFIG_LOCATION;
+        }
+        logger.debug("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
+        boolean skipPortAtKerberosDatabaseLookup = true;
+        System.setProperty("java.security.krb5.conf", krb5ConfigPath);
+        System.setProperty("sun.security.krb5.debug", "true");
+        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+        System.setProperty("java.security.auth.login.config", loginConfigPath);
+        Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider>create()
+                .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
 
-				setHttpClient(HttpClientBuilder.create().setConnectionManager(getConnectionManagerWithDefaultSSL())
-						.setDefaultAuthSchemeRegistry(authSchemeRegistry).build());
-			} else {
-				setHttpClient(HttpClientBuilder.create().setDefaultAuthSchemeRegistry(authSchemeRegistry).build());
-			}
-		} catch (Exception e) {
-			logger.warn("_message=\"{} failed to create httpClient\" ", e);
-		}
+        try {
+            final URI uri = new URI(host);
+            if (uri.getScheme().equalsIgnoreCase("https")) {
 
-		// this.addParameter("anonymous", "true");
-	}
+                setHttpClient(HttpClientBuilder.create().setConnectionManager(getConnectionManagerWithDefaultSSL())
+                        .setDefaultAuthSchemeRegistry(authSchemeRegistry).build());
+            } else {
+                setHttpClient(HttpClientBuilder.create().setDefaultAuthSchemeRegistry(authSchemeRegistry).build());
+            }
+        } catch (Exception e) {
+            logger.warn("_message=\"{} failed to create httpClient\" ", e);
+        }
 
-	public static WebHdfsWithKerberosAuth getInstance(String host, int port) {
-		return new WebHdfsWithKerberosAuth(host, port);
-	}
+    }
 
-	// LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
-	protected HttpResponse get() throws ClientProtocolException, IOException {
-		logger.debug("WebHdfsWithKerberosAuth getting");
-		HttpClientContext context = HttpClientContext.create();
-		BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-		Credentials useJaasCreds = new Credentials() {
-			public String getPassword() {
-				return null;
-			}
+    public static WebHdfsWithKerberosAuth getInstance(String host, int port) {
+        return new WebHdfsWithKerberosAuth(host, port);
+    }
 
-			public Principal getUserPrincipal() {
-				return null;
-			}
-		};
+    // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
+    protected HttpResponse get() throws ClientProtocolException, IOException {
+        logger.debug("WebHdfsWithKerberosAuth getting");
+        HttpClientContext context = HttpClientContext.create();
+        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        Credentials useJaasCreds = new Credentials() {
+            public String getPassword() {
+                return null;
+            }
 
-		credentialsProvider.setCredentials(new AuthScope(null, -1, null), useJaasCreds);
-		context.setCredentialsProvider(credentialsProvider);
-		// this.addParameter("anonymous=true", "true");
-		logger.debug("WebHdfsWithKerberosAuth getting from:{}", uri);
-		httpRequest = new HttpGet(uri);
-		logger.debug("HTTP request: {}", httpRequest.getURI());
-		uri = null;
+            public Principal getUserPrincipal() {
+                return null;
+            }
+        };
 
-		return httpClient.execute(httpRequest, context);
-	}
+        credentialsProvider.setCredentials(new AuthScope(null, -1, null), useJaasCreds);
+        context.setCredentialsProvider(credentialsProvider);
+        // this.addParameter("anonymous=true", "true");
+        logger.debug("WebHdfsWithKerberosAuth getting from:{}", uri);
+        httpRequest = new HttpGet(uri);
+        logger.debug("HTTP request: {}", httpRequest.getURI());
+        uri = null;
+
+        return httpClient.execute(httpRequest, context);
+    }
 }

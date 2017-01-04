@@ -1,6 +1,7 @@
 package io.bigdime.handler.webhdfs
 
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
@@ -40,7 +41,10 @@ import scala.util.{Failure, Success}
 object WebhdfsReaderAndSink {
   private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[WebhdfsReaderAndSink]))
   private val INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:"
-  private val THREAD_POOL_SIZE = 10
+  private val THREAD_POOL_SIZE = 25
+  private val executors = Executors.newFixedThreadPool(THREAD_POOL_SIZE)
+  private val ec = ExecutionContext.fromExecutor(executors)
+
 }
 
 @Component
@@ -68,7 +72,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @Autowired private val swiftClient: SwiftClient = null
   private var recordList: mutable.Buffer[RuntimeInfo] = _
 
-  private var parDoSize = THREAD_POOL_SIZE
+  //  private var parDoSize = THREAD_POOL_SIZE
 
   @throws[AdaptorConfigurationException]
   override def build() {
@@ -97,7 +101,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val authChoice = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString)
       val authOption = HDFS_AUTH_OPTION.getByName(authChoice)
 
-      parDoSize = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderAndSinkConstants.THREAD_POOL_SIZE, THREAD_POOL_SIZE)
+      //      parDoSize = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderAndSinkConstants.THREAD_POOL_SIZE, THREAD_POOL_SIZE)
 
       logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}",
         hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName)
@@ -177,9 +181,10 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     Option(records) match {
       case null => 0
       case _ => {
-        val batchSize = Math.min(records.size(), parDoSize)
-        val executors = Executors.newFixedThreadPool(batchSize)
-        implicit val ec = ExecutionContext.fromExecutor(executors)
+        val batchSize = Math.min(records.size(), THREAD_POOL_SIZE)
+        //        val executors = Executors.newFixedThreadPool(batchSize)
+        //        implicit val ec = ExecutionContext.fromExecutor(executors)
+        implicit val executionContext = ec
 
         var loopCount = 0
         val iter = records.iterator
@@ -224,7 +229,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
         for (f <- futures) {
           Await.result(f, Duration.Inf)
         }
-        executors.shutdown()
+        //        executors.shutdown()
       }
     }
   }
@@ -235,7 +240,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     properties.put(ActionEventHeaderConstants.ENTITY_NAME, entityName)
     updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.STARTED, properties)
 
-    val ts = List[Class[_ <: Throwable]](classOf[HandlerException], classOf[CommandException], classOf[java.sql.SQLException], classOf[IOException])
+    val ts = List[Class[_ <: Throwable]](classOf[HandlerException], classOf[CommandException], classOf[java.sql.SQLException], classOf[IOException], classOf[InvocationTargetException])
 
     Retry(5, ts)(() => {
       val inputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
@@ -244,15 +249,18 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
       val webHdfsReaderForStream = context.getBean(classOf[WebHdfsReader])
 
-      val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
-      logger.debug(getHandlerPhase, "got input stream")
-      val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
-      logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
-      val swiftObject = swiftClient.write(targetPath, inputStream)
-      updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
-      logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
-      webHdfsReaderForStream.releaseWebHdfsForInputStream()
-      (inputDescriptor, swiftObject)
+      try {
+        val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
+        logger.debug(getHandlerPhase, "got input stream")
+        val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
+        logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
+        val swiftObject = swiftClient.write(targetPath, inputStream)
+        updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
+        logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
+        (inputDescriptor, swiftObject)
+      } finally {
+        webHdfsReaderForStream.releaseWebHdfsForInputStream()
+      }
     }).get
 
   }
