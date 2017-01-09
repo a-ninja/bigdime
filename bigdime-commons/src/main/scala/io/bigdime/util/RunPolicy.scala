@@ -1,5 +1,7 @@
 package io.bigdime.util
 
+import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -19,7 +21,14 @@ case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]]) extends
   }
 }
 
+object Retry {
+  val logger = LoggerFactory.getLogger("Retry")
+}
+
 case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000) extends RunPolicy {
+
+  import Retry.logger
+
   override def apply[T](block: () => T): Option[T] = {
     var attempt = 0
 
@@ -30,6 +39,7 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
         return Some(block())
       } catch {
         case e: Exception =>
+          logger.warn("code block executed with Exception", e)
           causes += e
           if (attempt < maxAttempts) {
             for (r <- retriables if (e.getClass.isInstanceOf[r.type])) {
@@ -44,11 +54,19 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
 }
 
 case class RetryAndGiveUp(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000) extends RunPolicy {
+
+  import Retry.logger
+
   override def apply[T](block: () => T): Option[T] = {
     try {
       Retry(maxAttempts, retriables, delay)(block)
     } catch {
-      case e: Exception => None
+      case e: RetriesExhaustedException => e.causes.foreach(ex => {
+        logger.warn("RetryAndGiveUp", ex)
+      })
+        None
+      case e: Throwable => logger.warn("RetryAndGiveUp", e)
+        None
     }
   }
 }

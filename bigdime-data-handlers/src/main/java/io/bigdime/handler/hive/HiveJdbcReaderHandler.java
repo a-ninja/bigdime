@@ -98,7 +98,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 	private HiveReaderDescriptor inputDescriptor;
 	private long hiveConfDateTime;
 
-	private static final int MILLS_IN_A_DAY = 24 * 60 * 60 * 1000;
+	private static final long MILLS_IN_A_DAY = 24 * 60 * 60 * 1000l;
 	private long intervalInMins = 24 * 60;// default to a day
 	private long intervalInMillis = intervalInMins * 60 * 1000;
 
@@ -199,7 +199,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 		long minGoBackMillis = DateNaturalLanguageExpressionParser.toMillis(minGoBackExpression);
 
 		Preconditions.checkArgument(goBackDays * MILLS_IN_A_DAY >= minGoBackMillis,
-				"\"go-back-days\" must be more than \"min-go-back\"");
+				"\"go-back-days\"("+goBackDays * MILLS_IN_A_DAY+") must be more than \"min-go-back\"("+minGoBackMillis+")");
 
 		String latencyExpression = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(getPropertyMap(),
 				srcDescValueMap, HiveJdbcReaderHandlerConstants.LATENCY, DEFAULT_LATENCY);
