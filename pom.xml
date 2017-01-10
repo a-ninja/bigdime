@@ -99,8 +99,6 @@
         <org.javaswift.joss.version>0.9.12</org.javaswift.joss.version>
         <org.apache.hadoop.version>2.7.1.2.4.2.0-258</org.apache.hadoop.version>
 
-        <!-- <org.apache.hadoop.version>2.4.1</org.apache.hadoop.version> -->
-        <org.apache.hadoop.hdp2.4.version>2.4.1</org.apache.hadoop.hdp2.4.version>
         <org.apache.hive.hive-jdbc.version>1.1.1</org.apache.hive.hive-jdbc.version>
         <joda-time.joda-time.version>2.9.4</joda-time.joda-time.version>
         <org.apache.spark-version>1.6.1</org.apache.spark-version>
