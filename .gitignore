@@ -41,3 +41,7 @@ dist/config/META-INF/adaptor.json_*
 dist/config/log4j.properties
 pom.xml.n
 r.sh
+*.iml
+*.cache-main
+*.cache-tests
+.idea
