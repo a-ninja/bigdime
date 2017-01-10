@@ -346,6 +346,7 @@ public class WebHdfs {
             this.httpRequest.releaseConnection();
             httpRequest = null;
         }
+        httpClient = null;
     }
 
     public void openConnection() {
@@ -447,9 +448,9 @@ public class WebHdfs {
         try {
             do {
                 attempts++;
-                logger.debug("_message=\"invoking {}\" attempt={} args={}", method.getName(), attempts, args);
+                logger.debug("_message=\"invoking {}\" attempt={} args={} http_request_null={}", method.getName(), attempts, args, httpRequest == null);
                 try {
-                    if (httpRequest == null)
+                    if (httpClient == null)
                         initConnection();
                     HttpResponse response = (HttpResponse) method.invoke(this, args);
                     statusCode = response.getStatusLine().getStatusCode();

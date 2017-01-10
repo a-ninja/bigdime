@@ -35,7 +35,6 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 
     protected WebHdfsWithKerberosAuth(String host, int port) {
         super(host, port);
-        initConnection();
     }
 
     protected void initConnection() {
