@@ -139,9 +139,9 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     if (isFirstRun) if (getReadHdfsPathFrom eq READ_HDFS_PATH_FROM.HEADERS) {
       entityName = getEntityNameFromHeader
       val parentRuntimeId = getParentRuntimeIdFromHeader
-      logger.info(getHandlerPhase, "from header, entityName={} parentRuntimeId={}", entityName, Integer.valueOf(parentRuntimeId))
+      logger.info(getHandlerPhase, "from header, entity_name={} parent_runtime_id={}", entityName, Integer.valueOf(parentRuntimeId))
     }
-    else logger.info(getHandlerPhase, "from config, entityName={} ", entityName)
+    else logger.info(getHandlerPhase, "from config, entity_name={} ", entityName)
   }
 
 
@@ -176,7 +176,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
   def processRecords(records: mutable.Buffer[RuntimeInfo]) = {
 
-    logger.info(getHandlerPhase, "processRecords.size={}", Integer.valueOf(records.size))
+    logger.info(getHandlerPhase, "process_records.size={}", Integer.valueOf(records.size))
     val futures = new ArrayBuffer[Future[(WebHDFSInputDescriptor, StoredObject)]]()
     Option(records) match {
       case null => 0
@@ -253,10 +253,10 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
         val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
         logger.debug(getHandlerPhase, "got input stream")
         val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
-        logger.info(getHandlerPhase, "webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
+        logger.info(getHandlerPhase, "webhdfs_path_to_process={} target_path={}", webHdfsPathToProcess, targetPath)
         val swiftObject = swiftClient.write(targetPath, inputStream)
         updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
-        logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webHdfsPathToProcess={} targetPath={}", webHdfsPathToProcess, targetPath)
+        logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webhdfs_path_to_process={} targetPath={}", webHdfsPathToProcess, targetPath)
         (inputDescriptor, swiftObject)
       } finally {
         webHdfsReaderForStream.releaseWebHdfsForInputStream()
@@ -272,7 +272,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       initClass()
       dirtyRecords = getAllStartedRuntimeInfos(runtimeInfoStore, getEntityName, getInputDescriptorPrefix).asScala
       if (CollectionUtil.isNotEmpty(dirtyRecords)) {
-        logger.warn(getHandlerPhase, "_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entityName={}", getId, dirtyRecords.size.toString, getEntityName)
+        logger.warn(getHandlerPhase, "_message=\"dirty records found\" handler_id={} dirty_record_count=\"{}\" entity_name={}", getId, dirtyRecords.size.toString, getEntityName)
       } else
         logger.info(getHandlerPhase, "_message=\"no dirty records found\" handler_id={}", getId)
     }
@@ -320,12 +320,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
         }
         catch {
           case e: Any => {
-            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound, e.getMessage)
+            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" records_found={}", recordsFound, e.getMessage)
             throw new HandlerException(e)
           }
         }
       }
-      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" recordsFound={}", recordsFound)
+      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" records_found={}", recordsFound)
       recordsFound
     }
     finally logger.debug(getHandlerPhase, "releasing webhdfs connection")
@@ -344,10 +344,10 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @throws[RuntimeInfoStoreException]
   protected def parentRuntimeRecordValid: Boolean = {
     val parentRuntimeId: Integer = getParentRuntimeIdFromHeader
-    logger.info(getHandlerPhase, "parentRuntimeId={}", parentRuntimeId)
+    logger.info(getHandlerPhase, "parent_runtime_id={}", parentRuntimeId)
     if (parentRuntimeId != -1) {
       val rti = runtimeInfoStore.getById(parentRuntimeId)
-      logger.debug(getHandlerPhase, "runtimeRecordStatus={}", rti.getStatus)
+      logger.debug(getHandlerPhase, "runtime_record_status={}", rti.getStatus)
       return rti.getStatus eq RuntimeInfoStore.Status.PENDING
     }
     logger.debug(getHandlerPhase, "runtimeRecordStatus is valid, by default")
@@ -372,12 +372,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
           queueRuntimeInfo(runtimeInfoStore, entityName, tempInputDescriptor.createFullDescriptor(fileName), properties)
         }
       }
-      else logger.info(getHandlerPhase, "_message=\"ready file is not present\" waitForFileName={} parentRecordValid={}", waitForFileName, parentRecordValid)
+      else logger.info(getHandlerPhase, "_message=\"ready file is not present\" wait_for_file_name={} parent_record_valid={}", waitForFileName, parentRecordValid)
     }
     catch {
       case e: WebHdfsException => {
-        if (e.getStatusCode == 404) logger.info(getHandlerPhase, "_message=\"path not found\" directoryPath={} error_message={}", directoryPath, e.getMessage)
-        else if (e.getStatusCode == 401 || e.getStatusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directoryPath={} error_message={}", directoryPath, e.getMessage)
+        if (e.getStatusCode == 404) logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
+        else if (e.getStatusCode == 401 || e.getStatusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directory_path={} error_message={}", directoryPath, e.getMessage)
       }
     }
     recordsFound

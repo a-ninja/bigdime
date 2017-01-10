@@ -64,7 +64,7 @@ public class WebHdfs {
     protected URI uri = null;
     protected HttpRequestBase httpRequest = null;
     private ObjectNode jsonParameters = null;
-    private RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
+    protected RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
     private List<Header> headers;
 
     public WebHdfs setParameters(ObjectNode jsonParameters) {
@@ -128,14 +128,11 @@ public class WebHdfs {
             } else {
                 this.httpClient = HttpClientBuilder.create().build();
             }
+            logger.debug("_message=\"created httpClient");
         } catch (Exception e) {
             logger.warn("_message=\"{} failed to create httpClient\" ", e);
         }
         roundRobinStrategy.setHosts(host);
-    }
-
-    protected void auth() {
-
     }
 
     protected WebHdfs(String host, int port) {
@@ -465,7 +462,7 @@ public class WebHdfs {
                         releaseConnection();
                     } else if (statusCode == 401) {
                         logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
-                        auth();
+                        releaseConnection();
                     } else {
                         logResponse(response, method.getName(), attempts, args);
                         releaseConnection();

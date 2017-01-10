@@ -35,10 +35,11 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 
     protected WebHdfsWithKerberosAuth(String host, int port) {
         super(host, port);
-        auth();
+        initConnection();
     }
 
-    protected void auth() {
+    protected void initConnection() {
+        logger.debug("initializing connection");
         String krb5ConfigPath = System.getProperty("java.security.krb5.conf");
         if (krb5ConfigPath == null) {
             krb5ConfigPath = DEFAULT_KRB5_CONFIG_LOCATION;
@@ -68,6 +69,7 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
         } catch (Exception e) {
             logger.warn("_message=\"{} failed to create httpClient\" ", e);
         }
+        roundRobinStrategy.setHosts(host);
 
     }
 

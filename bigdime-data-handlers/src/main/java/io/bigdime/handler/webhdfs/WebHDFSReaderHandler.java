@@ -234,10 +234,10 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
             if (getReadHdfsPathFrom() == READ_HDFS_PATH_FROM.HEADERS) {
                 entityName = getEntityNameFromHeader();
                 int parentRuntimeId = getParentRuntimeIdFromHeader();
-                logger.info(getHandlerPhase(), "from header, entityName={} parentRuntimeId={}", entityName,
+                logger.info(getHandlerPhase(), "from header, entity_name={} parent_runtime_id={}", entityName,
                         parentRuntimeId);
             } else {
-                logger.info(getHandlerPhase(), "from config, entityName={} ", entityName);
+                logger.info(getHandlerPhase(), "from config, entity_name={} ", entityName);
             }
         }
     }
@@ -265,7 +265,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
         }
         long nextIndexToRead = getTotalReadFromJournal();
         logger.debug(getHandlerPhase(),
-                "handler_id={} entityName={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
+                "handler_id={} entity_name={} next_index_to_read={} buffer_size={} is_channel_open={} current_file_path={} current_file_size={}",
                 getId(), getEntityName(), nextIndexToRead, handlerConfig.getBufferSize(),
                 inputDescriptor.getFileChannel().isOpen(), inputDescriptor.getCurrentFilePath(),
                 getTotalSizeFromJournal());
@@ -288,7 +288,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
                 outputEvent.getHeaders().putAll(eventList.get(0).getHeaders());
             }
             byte[] readBody = new byte[bytesRead];
-            logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} readBody.length={} fileLength={} readCount={}",
+            logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} read_body.length={} file_length={} read_count={}",
                     getId(), bytesRead, readBody.length, inputDescriptor.getCurrentFileStatus().getLength(),
                     getSimpleJournal().getReadCount());
 
@@ -316,7 +316,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
             // for the first time
 
             if (readAll()) {
-                logger.info(getHandlerPhase(), "\"read all data\" handler_id={} readCount={} current_file_path={}",
+                logger.info(getHandlerPhase(), "\"read all data\" handler_id={} read_count={} current_file_path={}",
                         getId(), getSimpleJournal().getReadCount(), inputDescriptor.getCurrentFilePath());
                 getSimpleJournal().reset();
                 outputEvent.getHeaders().put(ActionEventHeaderConstants.READ_COMPLETE, Boolean.TRUE.toString());
@@ -365,7 +365,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
                     throw ex;
                 }
             } catch (IOException e) {
-                logger.warn(getHandlerPhase(), "_message=\"IOException received\" error={} attempt={} maxAttempts={}",
+                logger.warn(getHandlerPhase(), "_message=\"IOException received\" error={} attempt={} max_attempts={}",
                         e.getMessage(), attempt, maxAttempts);
                 cause = e;
                 // let it retry
@@ -411,12 +411,12 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
                 } catch (IOException | WebHdfsException e) {
                     logger.warn(getHandlerPhase(),
-                            "_message=\"could not initialized runtime info records\" recordsFound={}", recordsFound,
+                            "_message=\"could not initialized runtime info records\" records_found={}", recordsFound,
                             e.getMessage());
                     throw new HandlerException(e);
                 }
             }
-            logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" recordsFound={}",
+            logger.info(getHandlerPhase(), "_message=\"initialized runtime info records\" records_found={}",
                     recordsFound);
 
             return recordsFound;
@@ -441,13 +441,13 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
     protected boolean parentRuntimeRecordValid() throws RuntimeInfoStoreException {
         int parentRuntimeId = getParentRuntimeIdFromHeader();
-        logger.info(getHandlerPhase(), "parentRuntimeId={}", parentRuntimeId);
+        logger.info(getHandlerPhase(), "parent_runtime_id={}", parentRuntimeId);
         if (parentRuntimeId != -1) {
             RuntimeInfo rti = runtimeInfoStore.getById(Integer.valueOf(parentRuntimeId));
-            logger.debug(getHandlerPhase(), "runtimeRecordStatus={}", rti.getStatus());
+            logger.debug(getHandlerPhase(), "runtime_record_status={}", rti.getStatus());
             return (rti.getStatus() == RuntimeInfoStore.Status.PENDING);
         }
-        logger.debug(getHandlerPhase(), "runtimeRecordStatus is valid, by default");
+        logger.debug(getHandlerPhase(), "runtime_record_status is valid, by default");
         return true;
     }
 
@@ -471,15 +471,15 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
                 }
             } else {
                 logger.info(getHandlerPhase(),
-                        "_message=\"ready file is not present\" waitForFileName={} parentRecordValid={}",
+                        "_message=\"ready file is not present\" wait_for_file_name={} parent_record_valid={}",
                         getWaitForFileName(), parentRecordValid);
             }
         } catch (WebHdfsException e) {
             if (e.getStatusCode() == 404)
-                logger.info(getHandlerPhase(), "_message=\"path not found\" directoryPath={} error_message={}",
+                logger.warn(getHandlerPhase(), "_message=\"path not found\" directory_path={} error_message={}",
                         directoryPath, e.getMessage());
             else if (e.getStatusCode() == 401 || e.getStatusCode() == 403) {
-                logger.warn(getHandlerPhase(), "_message=\"auth error\" directoryPath={} error_message={}",
+                logger.warn(getHandlerPhase(), "_message=\"auth error\" directory_path={} error_message={}",
                         directoryPath, e.getMessage());
             }
         }
@@ -512,7 +512,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
         } catch (IOException | WebHdfsException e) {
             runtimeInfo.getProperties().put("error", e.getMessage());
             try {
-                logger.debug(getHandlerPhase(), "_message=\"deleting record from runtime info\" runtimeInfo={}",
+                logger.debug(getHandlerPhase(), "_message=\"deleting record from runtime info\" runtime_info={}",
                         runtimeInfo);
                 runtimeInfoStore.delete(runtimeInfo);
             } catch (RuntimeInfoStoreException e1) {
