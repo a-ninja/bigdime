@@ -462,7 +462,7 @@ public class WebHDFSWriterHandlerTest {
 		try {
 			WebHDFSWriterHandler webHDFSWriterHandler = mockWebHDFSWriterHandler();
 			ReflectionTestUtils.setField(webHDFSWriterHandler, "webHdfs", null);
-			ReflectionTestUtils.setField(webHDFSWriterHandler, "hostNames", "unit-testProcessWithWebhdfsNull");
+			ReflectionTestUtils.setField(webHDFSWriterHandler, "hostNames", "https://unit-testProcessWithWebhdfsNull");
 			ReflectionTestUtils.setField(webHDFSWriterHandler, "port", 0);
 			ActionEvent actionEvent = mockActionEventWithHeaders();
 			HandlerContext.get().createSingleItemEventList(actionEvent);

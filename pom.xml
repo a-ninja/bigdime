@@ -242,7 +242,7 @@
             <!-- Kafka -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
-                <artifactId>kafka_2.10</artifactId>
+                <artifactId>kafka_2.11</artifactId>
                 <version>${org.apache.kafka.kafka_2.10.version}</version>
             </dependency>
             <!-- Apache others -->
