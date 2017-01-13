@@ -67,6 +67,7 @@ public class WebHdfs {
     protected RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
     private List<Header> headers;
 
+
     public WebHdfs setParameters(ObjectNode jsonParameters) {
         Iterator<String> keys = jsonParameters.getFieldNames();
         while (keys.hasNext()) {
@@ -464,6 +465,10 @@ public class WebHdfs {
                     } else if (statusCode == 401) {
                         logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
                         releaseConnection();
+                    } else if (statusCode == 403) {
+                        logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName(), args);
+                        rotateHost();
+                        releaseConnection();
                     } else {
                         logResponse(response, method.getName(), attempts, args);
                         releaseConnection();
@@ -487,6 +492,10 @@ public class WebHdfs {
             }
         }
         return null;
+    }
+
+    protected String rotateHost() {
+        return host;
     }
 
     private void logResponse(HttpResponse response, String message, int attempts, String... args) {

@@ -7,7 +7,11 @@ package io.bigdime.libs.hdfs;
 import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import io.bigdime.core.commons.HostNameUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -27,14 +31,24 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Neeraj Jain
  */
+
 public class WebHdfsWithKerberosAuth extends WebHdfs {
     private static Logger logger = LoggerFactory.getLogger(WebHdfsWithKerberosAuth.class);
+    protected String activeHost = null;
 
     private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
     private static String DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf";
 
     protected WebHdfsWithKerberosAuth(String host, int port) {
         super(host, port);
+    }
+
+    @Override
+    protected String rotateHost() {
+        logger.warn("_message=\"rotating host\" hosts={} current_active_host={}", host, activeHost);
+        activeHost = HostNameUtils.rotateHost(host, activeHost);
+        logger.warn("_message=\"rotated host\" hosts={} new_active_host={}", host, activeHost);
+        return activeHost;
     }
 
     protected void initConnection() {
@@ -57,7 +71,10 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
                 .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
 
         try {
-            final URI uri = new URI(host);
+            if (activeHost == null) {
+                rotateHost();
+            }
+            final URI uri = new URI(activeHost);
             if (uri.getScheme().equalsIgnoreCase("https")) {
 
                 setHttpClient(HttpClientBuilder.create().setConnectionManager(getConnectionManagerWithDefaultSSL())
@@ -65,10 +82,13 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
             } else {
                 setHttpClient(HttpClientBuilder.create().setDefaultAuthSchemeRegistry(authSchemeRegistry).build());
             }
+            roundRobinStrategy.setHosts(activeHost);
         } catch (Exception e) {
             logger.warn("_message=\"{} failed to create httpClient\" ", e);
         }
-        roundRobinStrategy.setHosts(host);
+    }
+
+    protected void rotateNameNode() {
 
     }
 
