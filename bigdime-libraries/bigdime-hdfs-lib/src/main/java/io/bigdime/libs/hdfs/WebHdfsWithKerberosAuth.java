@@ -4,14 +4,6 @@
 
 package io.bigdime.libs.hdfs;
 
-import java.io.IOException;
-import java.net.URI;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.bigdime.core.commons.HostNameUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
@@ -28,13 +20,17 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.URI;
+import java.security.Principal;
+
 /**
  * @author Neeraj Jain
  */
 
 public class WebHdfsWithKerberosAuth extends WebHdfs {
     private static Logger logger = LoggerFactory.getLogger(WebHdfsWithKerberosAuth.class);
-    protected String activeHost = null;
+    private String activeHost = null;
 
     private static String DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf";
     private static String DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf";
@@ -45,9 +41,9 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
 
     @Override
     protected String rotateHost() {
-        logger.warn("_message=\"rotating host\" hosts={} current_active_host={}", host, activeHost);
-        activeHost = HostNameUtils.rotateHost(host, activeHost);
-        logger.warn("_message=\"rotated host\" hosts={} new_active_host={}", host, activeHost);
+        logger.info("_message=\"rotating host\" hosts={} current_active_host={}", host, activeHost);
+        activeHost = ActiveNameNodeResolver.rotateHost(host, activeHost);
+        logger.info("_message=\"rotated host\" hosts={} new_active_host={}", host, activeHost);
         return activeHost;
     }
 
@@ -69,7 +65,6 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
         System.setProperty("java.security.auth.login.config", loginConfigPath);
         Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider>create()
                 .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(skipPortAtKerberosDatabaseLookup)).build();
-
         try {
             if (activeHost == null) {
                 rotateHost();
@@ -86,10 +81,6 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
         } catch (Exception e) {
             logger.warn("_message=\"{} failed to create httpClient\" ", e);
         }
-    }
-
-    protected void rotateNameNode() {
-
     }
 
     public static WebHdfsWithKerberosAuth getInstance(String host, int port) {
