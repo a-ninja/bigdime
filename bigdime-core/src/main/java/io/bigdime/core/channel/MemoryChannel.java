@@ -46,7 +46,7 @@ public class MemoryChannel extends AbstractChannel {
     private List<Event> eventList = Collections.synchronizedList(new ArrayList<Event>());
     // private List<Event> eventList = new ArrayList<Event>();
     /*
-	 * Maintains a mapping between the consumer and the last index it fetched.
+     * Maintains a mapping between the consumer and the last index it fetched.
 	 * The take request will return the data from the next index.
 	 */
     private Map<String, Integer> consumerToTakenIndexMap = new HashMap<>();
@@ -340,7 +340,7 @@ public class MemoryChannel extends AbstractChannel {
         new Thread() {
             @Override
             public void run() {
-                Thread.currentThread().setName("healthcheck-" + getName());
+                Thread.currentThread().setName("healthcheck-" + MemoryChannel.this.getName());
                 while (!channelStopped) {
                     try {
                         logger.info("heathcheck thread for MemoryChannel", "printing stats, printStatsDuration=\"{}\"",

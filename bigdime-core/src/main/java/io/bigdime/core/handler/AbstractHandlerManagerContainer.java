@@ -57,7 +57,7 @@ public abstract class AbstractHandlerManagerContainer implements NamedComponent,
 			@Override
 			public void run() {
 				try {
-					Thread.currentThread().setName("healthcheck for " + AbstractHandlerManagerContainer.this.getName());
+					Thread.currentThread().setName("healthcheck-" + AbstractHandlerManagerContainer.this.getName());
 					logger.info("heathcheck thread for handlerManagerContainer",
 							"{}_name=\"{}\" handlerManager=\"{}\" thread_id={}", getContainerType(),
 							AbstractHandlerManagerContainer.this.getName(), getHandlerManager(),

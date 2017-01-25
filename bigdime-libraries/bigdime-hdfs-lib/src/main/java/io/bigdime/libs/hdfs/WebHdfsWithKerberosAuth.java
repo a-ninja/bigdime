@@ -60,7 +60,7 @@ public class WebHdfsWithKerberosAuth extends WebHdfs {
         logger.debug("krb5ConfigPath={} loginConfigPath={}", krb5ConfigPath, loginConfigPath);
         boolean skipPortAtKerberosDatabaseLookup = true;
         System.setProperty("java.security.krb5.conf", krb5ConfigPath);
-        System.setProperty("sun.security.krb5.debug", "true");
+//        System.setProperty("sun.security.krb5.debug", "true");
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
         System.setProperty("java.security.auth.login.config", loginConfigPath);
         Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider>create()
