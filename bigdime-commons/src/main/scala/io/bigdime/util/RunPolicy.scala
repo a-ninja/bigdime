@@ -36,10 +36,12 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
     while (true) {
       attempt += 1
       try {
-        return Some(block())
+        val ret = Some(block())
+        if (attempt > 2) logger.info("ran successfully, recovered from a prev error. attempt={}", attempt)
+        return ret
       } catch {
         case e: Exception =>
-          logger.warn("code block executed with Exception", e)
+          logger.warn("code block executed with Exception, attempt={}", attempt, e)
           causes += e
           if (attempt < maxAttempts) {
             for (r <- retriables if (e.getClass.isInstanceOf[r.type])) {

@@ -205,20 +205,15 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
               logger.info(getHandlerPhase, "Got the callback...inputDescriptor.getFullDescriptor={}", inputDescriptor.getFullDescriptor)
               val innerEvent = new ActionEvent
               eventList += innerEvent
-              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_NAME)
+              logger.debug(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_NAME)
               innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_NAME, inputDescriptor.getCurrentFilePath)
 
-              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.INPUT_DESCRIPTOR)
+              logger.debug(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.INPUT_DESCRIPTOR)
               innerEvent.getHeaders.put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, inputDescriptor.getCurrentFilePath)
-              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.FULL_DESCRIPTOR)
+              logger.debug(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.FULL_DESCRIPTOR)
               innerEvent.getHeaders.put(ActionEventHeaderConstants.FULL_DESCRIPTOR, inputDescriptor.getFullDescriptor)
-              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.ENTITY_NAME)
+              logger.debug(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.ENTITY_NAME)
               innerEvent.getHeaders.put(ActionEventHeaderConstants.ENTITY_NAME, entityName)
-              //              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_TOTAL_SIZE)
-              //              innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_SIZE, inputDescriptor.getCurrentFileStatus.getLength.toString)
-              //              logger.info(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.SOURCE_FILE_TOTAL_READ)
-              //              innerEvent.getHeaders.put(ActionEventHeaderConstants.SOURCE_FILE_TOTAL_READ, inputDescriptor.getCurrentFileStatus.getLength.toString)
-              //              logger.info(getHandlerPhase, "headers={}", innerEvent.getHeaders)
               logger.info(getHandlerPhase, "submitting to channel={}")
               processChannelSubmission(innerEvent)
             }
