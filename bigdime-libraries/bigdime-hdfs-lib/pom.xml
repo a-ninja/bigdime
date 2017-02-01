@@ -87,5 +87,13 @@
 			<groupId>org.apache.hadoop</groupId>
 			<artifactId>hadoop-yarn-client</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.typesafe.scala-logging</groupId>
+			<artifactId>scala-logging_2.11</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.javaswift</groupId>
+			<artifactId>joss</artifactId>
+		</dependency>
 	</dependencies>
 </project>

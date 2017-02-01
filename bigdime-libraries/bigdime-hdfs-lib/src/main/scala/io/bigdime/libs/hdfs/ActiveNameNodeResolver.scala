@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
   * Created by neejain on 1/13/17.
   */
 object ActiveNameNodeResolver {
+
   val logger = LoggerFactory.getLogger(getClass)
   var activeHostName: String = null
 
@@ -18,6 +19,13 @@ object ActiveNameNodeResolver {
     }
   }
 
+  /**
+    * If activeHost is null or if the cachec activeHostName is different from the activeHost arg, a new activeHost is picked from the hosts arg
+    *
+    * @param hosts      available host names, separated by some delimiter(default is comma)
+    * @param activeHost current activeHost
+    * @return
+    */
   def rotateHost(hosts: String, activeHost: String): String = {
     this.synchronized {
 

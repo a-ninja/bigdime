@@ -97,7 +97,7 @@ public class MemoryChannel extends AbstractChannel {
      */
     @Override
     public void put(Event arg0) {
-		/*
+        /*
 		 * Put the data in the eventList and notifyAll.
 		 *
 		 */
@@ -343,7 +343,7 @@ public class MemoryChannel extends AbstractChannel {
                 Thread.currentThread().setName("healthcheck-" + MemoryChannel.this.getName());
                 while (!channelStopped) {
                     try {
-                        logger.info("heathcheck thread for MemoryChannel", "printing stats, printStatsDuration=\"{}\"",
+                        logger.debug("heathcheck thread for MemoryChannel", "printing stats, printStatsDuration=\"{}\"",
                                 printStatsDurationInSeconds);
                         printStats();
                         sleep(printStatsDurationInSeconds);
