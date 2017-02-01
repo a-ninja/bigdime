@@ -456,22 +456,23 @@ public class WebHdfs {
                         initConnection();
                     HttpResponse response = (HttpResponse) method.invoke(this, args);
                     statusCode = response.getStatusLine().getStatusCode();
-                    switch (statusCode) {
-                        case HttpStatus.SC_OK:
-                        case HttpStatus.SC_CREATED:
-                            isSuccess = true;
-                            return response;
-                        case HttpStatus.SC_FORBIDDEN:
-                            rotateHost();
-                        case HttpStatus.SC_UNAUTHORIZED:
-                        case HttpStatus.SC_NOT_FOUND:
-                            exceptionReason = response.getStatusLine().getReasonPhrase();
-                            logResponse(response, method.getName(), attempts, args);
-                            releaseConnection();
-                            break;
-                        default:
-                            logResponse(response, method.getName(), attempts, args);
-                            releaseConnection();
+                    if (statusCode == 200 || statusCode == 201) {
+                        isSuccess = true;
+                        return response;
+                    } else if (statusCode == 404) {
+                        logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
+                        exceptionReason = response.getStatusLine().getReasonPhrase();
+                        releaseConnection();
+                    } else if (statusCode == 401) {
+                        logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
+                        releaseConnection();
+                    } else if (statusCode == 403) {
+                        logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName(), args);
+                        rotateHost();
+                        releaseConnection();
+                    } else {
+                        logResponse(response, method.getName(), attempts, args);
+                        releaseConnection();
                     }
                 } catch (Exception e) {
                     exceptionReason = e.getMessage();
