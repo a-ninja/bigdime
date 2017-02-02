@@ -371,8 +371,8 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     }
     catch {
       case e: WebHdfsException => {
-        if (e.getStatusCode == 404) logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
-        else if (e.getStatusCode == 401 || e.getStatusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directory_path={} error_message={}", directoryPath, e.getMessage)
+        if (e.statusCode == 404) logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
+        else if (e.statusCode == 401 || e.statusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directory_path={} error_message={}", directoryPath, e.getMessage)
       }
     }
     recordsFound
