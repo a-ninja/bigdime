@@ -37,7 +37,7 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
       attempt += 1
       try {
         val ret = Some(block())
-        if (attempt > 2) logger.info("ran successfully, recovered from a prev error. attempt={}", attempt)
+        if (attempt > 1) logger.info("ran successfully, recovered from a prev error. attempt={}", attempt)
         return ret
       } catch {
         case e: Exception =>
