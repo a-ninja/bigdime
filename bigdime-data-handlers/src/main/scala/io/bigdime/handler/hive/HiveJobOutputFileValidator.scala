@@ -6,6 +6,8 @@ import io.bigdime.alert.LoggerFactory
 import io.bigdime.core.commons.AdaptorLogger
 import io.bigdime.libs.hdfs.{WebHdfsException, WebHdfsReader}
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Scope
+import org.springframework.stereotype.Component
 
 /**
   * Created by neejain on 2/1/17.
@@ -14,6 +16,8 @@ object HiveJobOutputFileValidator {
   val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[HiveJobOutputFileValidator]))
 }
 
+@Component
+@Scope("prototype")
 class HiveJobOutputFileValidator {
 
   import HiveJobOutputFileValidator.logger

@@ -98,7 +98,8 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader) extends AbstractNextRu
     }
     catch {
       case e: Any => {
-        logger.info("getDateTimeInMillisForNextRun", "file not found, failed with exception={}", e.getMessage)
+        if (now > touchFileDate && now - touchFileDate > intervalInMillis && now - touchFileDate < 2 * intervalInMillis) logger.warn("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
+        else logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" exception={}", e.getMessage)
         0l
       }
     }

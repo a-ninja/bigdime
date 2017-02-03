@@ -3,6 +3,7 @@ package io.bigdime.util
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by neejain on 12/12/16.
@@ -74,3 +75,40 @@ case class RetryAndGiveUp(maxAttempts: Int, retriables: List[Class[_ <: Throwabl
 }
 
 case class RetriesExhaustedException(causes: List[Throwable]) extends Throwable
+
+
+object TryWithResources {
+  val logger = LoggerFactory.getLogger("TryWithResources")
+
+  def apply[A, B](resource: A)(clean: A => Unit)(code: A => B): Try[B] = {
+    try {
+      Success(code(resource))
+    } catch {
+      case e: Exception => Failure(e)
+    } finally {
+      try {
+        if (resource != null)
+          clean(resource)
+      } catch {
+        case e: Exception => TryWithResources.logger.warn("error while trying to cleanup the resource", e)
+      }
+    }
+  }
+}
+
+object TryWithCloseable {
+  def apply[A <: AutoCloseable, B](resource: A)(code: A => B): Try[B] = {
+    try {
+      Success(code(resource))
+    } catch {
+      case e: Exception => Failure(e)
+    } finally {
+      try {
+        if (resource != null)
+          resource.close()
+      } catch {
+        case e: Exception => TryWithResources.logger.warn("error while trying to close the resource", e)
+      }
+    }
+  }
+}
