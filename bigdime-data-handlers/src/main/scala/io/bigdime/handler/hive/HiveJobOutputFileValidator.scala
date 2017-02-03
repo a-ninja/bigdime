@@ -38,7 +38,6 @@ class HiveJobOutputFileValidator {
     webHdfsReader.getFileStatus(filePath) != null
   } catch {
     case ex: WebHdfsException => {
-      logger.warn("validateOutputFile", "_message=\"unable to get file status\" filePath={} error={}", filePath, ex.getMessage, ex)
       if (ex.statusCode == 404) {
         logger.info("validateOutputFile", "_message=\"file not found in hdfs, returning false\" filePath={} error={}", filePath, ex.getMessage)
         false
