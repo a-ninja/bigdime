@@ -15,11 +15,13 @@ object TouchFileChecker {
   private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[TouchFileChecker]))
 }
 
-case class TouchFileChecker(webHdfsReader: WebHdfsReader) extends AbstractNextRunChecker {
+case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long) extends AbstractNextRunChecker {
 
   import TouchFileChecker.logger
 
-  private val intervalInMillis = TimeUnit.DAYS.toMillis(1)
+  def this(webHdfsReader: WebHdfsReader) {
+    this(webHdfsReader, TimeUnit.DAYS.toMillis(1))
+  }
 
   def getDateTimeInMillisForNextRun(lastRunDateTime: Long, handlerConfig: HiveJdbcReaderHandlerConfig, properties: util.Map[_ <: String, _]): Long = {
     val now = getAdjustedCurrentTime
@@ -52,7 +54,7 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader) extends AbstractNextRu
     val nextRunDateTime = lastRunDateTime + intervalInMillis
     var time: Long = 0
     var tempNextRunDateTime = nextRunDateTime
-    while (time == 0 && tempNextRunDateTime < now) {
+    while (time == 0 && getTouchFileDate(tempNextRunDateTime) < now) {
       time = getDateTimeInMillis(handlerConfig, now, lastRunDateTime, tempNextRunDateTime, properties)
       logger.info("getDateTimeInMillisForSubsequentRun", "_message=\"subsequent run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime: java.lang.Long, time: java.lang.Long)
       tempNextRunDateTime = tempNextRunDateTime + intervalInMillis
@@ -98,8 +100,13 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader) extends AbstractNextRu
     }
     catch {
       case e: Any => {
-        if (now > touchFileDate && now - touchFileDate > intervalInMillis && now - touchFileDate < 2 * intervalInMillis) logger.warn("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
-        else logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" exception={}", e.getMessage)
+        //log a warning if we are mot able to find a touchfile for yesterday's records.
+        //Dont worry about 2 days' old records, as the warning should've been logeed already for that.
+        //Dont worry about todays' records, as the touch file might not be ready for it yet.
+        if (now > touchFileDate && now - touchFileDate > 2 * intervalInMillis && now - touchFileDate < 3 * intervalInMillis)
+          logger.warn("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
+        else
+          logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" exception={}", e.getMessage)
         0l
       }
     }

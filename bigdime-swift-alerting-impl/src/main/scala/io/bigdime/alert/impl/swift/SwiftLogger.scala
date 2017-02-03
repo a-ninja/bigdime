@@ -282,6 +282,7 @@ case class SwiftLogger() extends Logger {
     argArray
     //    val ft = MessageFormatter.arrayFormat(sb.toString, argArray)
     //    ft.getMessage
+  }
 
   protected def startHealthcheckThread() {
     new Thread() {
