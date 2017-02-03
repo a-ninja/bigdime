@@ -103,10 +103,10 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
         //log a warning if we are mot able to find a touchfile for yesterday's records.
         //Dont worry about 2 days' old records, as the warning should've been logeed already for that.
         //Dont worry about todays' records, as the touch file might not be ready for it yet.
-        if (now > touchFileDate && now - touchFileDate > 2 * intervalInMillis && now - touchFileDate < 3 * intervalInMillis)
+        if (now > touchFileDate && now - touchFileDate > intervalInMillis && now - touchFileDate < 2 * intervalInMillis)
           logger.warn("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
         else
-          logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" exception={}", e.getMessage)
+          logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
         0l
       }
     }
