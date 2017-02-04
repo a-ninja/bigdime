@@ -5,7 +5,6 @@ import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
-import io.bigdime.alert.Logger.{ALERT_CAUSE, ALERT_SEVERITY, ALERT_TYPE}
 import io.bigdime.alert.LoggerFactory
 import io.bigdime.core.ActionEvent.Status
 import io.bigdime.core._
@@ -214,7 +213,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
               innerEvent.getHeaders.put(ActionEventHeaderConstants.FULL_DESCRIPTOR, inputDescriptor.getFullDescriptor)
               logger.debug(getHandlerPhase, "setting header...{}", ActionEventHeaderConstants.ENTITY_NAME)
               innerEvent.getHeaders.put(ActionEventHeaderConstants.ENTITY_NAME, entityName)
-              logger.info(getHandlerPhase, "submitting to channel={}")
+              logger.info(getHandlerPhase, "submitting to channel={}", getOutputChannel.getName)
               processChannelSubmission(innerEvent)
             }
             case Failure(e) => logger.warn(getHandlerPhase, "future failed", e)

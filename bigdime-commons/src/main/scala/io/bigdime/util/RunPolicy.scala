@@ -45,7 +45,7 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
           logger.warn("code block executed with Exception, attempt={}", attempt, e)
           causes += e
           if (attempt < maxAttempts) {
-            for (r <- retriables if (e.getClass.isInstanceOf[r.type])) {
+            for (r <- retriables if (r.isInstance(e))) {
               Thread.sleep(attempt * delay)
             }
           } else throw RetriesExhaustedException(causes.toList)

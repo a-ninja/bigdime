@@ -28,7 +28,7 @@
         <module>bigdime-commons</module>
         <module>bigdime-alerting-api</module>
         <module>bigdime-alerting-impl</module>
-        <module>bigdime-swift-alerting-impl</module>
+        <!--<module>bigdime-swift-alerting-impl</module>-->
         <module>bigdime-composite-alerting-impl</module>
         <module>bigdime-common-test-utils</module>
         <module>bigdime-libraries</module>
