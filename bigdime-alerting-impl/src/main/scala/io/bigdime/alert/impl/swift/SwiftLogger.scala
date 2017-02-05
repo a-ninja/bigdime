@@ -2,9 +2,10 @@ package io.bigdime.alert.impl.swift
 
 import java.io.{ByteArrayOutputStream, PrintStream}
 import java.net.{InetAddress, NetworkInterface, SocketException, UnknownHostException}
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors, FutureTask}
 
-import io.bigdime.alert.impl.{AbstractLogger, LogEntry}
+import io.bigdime.alert.impl.{AbstractLogger, LogEntry, LogMessageBuilder}
 import io.bigdime.alert.{AlertMessage, Logger}
 import io.bigdime.util.{LRUCache, TryWithCloseable}
 import org.javaswift.joss.client.factory.{AccountConfig, AccountFactory}
@@ -14,6 +15,8 @@ import org.slf4j.helpers.MessageFormatter
 import org.springframework.context.support.ClassPathXmlApplicationContext
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success}
 
 /**
   * Created by neejain on 2/2/17.
@@ -33,7 +36,9 @@ object SwiftLogger {
   val SWIFT_BUFFER_SIZE_PROPERTY = "${swift.debugInfo.bufferSize}"
   val IP_INIT_VAL = "10"
   private var hostName = "UNKNOWN"
-  private var hostIp: String = null
+  private var hostIp: String = _
+  private val msgIdCounter = new AtomicLong(System.currentTimeMillis())
+
   try {
     hostName = InetAddress.getLocalHost.getHostName
     NetworkInterface.getNetworkInterfaces.foreach(nwInterface => {
@@ -59,7 +64,7 @@ object SwiftLogger {
       logger = SwiftLogger()
       loggerMap.put(loggerName, logger)
 
-      TryWithCloseable[ClassPathXmlApplicationContext, Unit](new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH))((context) => {
+      val resp = TryWithCloseable[ClassPathXmlApplicationContext, Unit](new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH))((context) => {
         val config = new AccountConfig
         val beanFactory = context.getBeanFactory
         val containerName = context.getBeanFactory.resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY)
@@ -88,8 +93,10 @@ object SwiftLogger {
         logger.executorService = Executors.newFixedThreadPool(1)
         System.out.println("swiftAlertContainerName=" + containerName + ", swiftAlertLevel=" + logger.swiftAlertLevel + ", capacity=" + logger.capacity)
       })
-
-
+      resp match {
+        case Success(_) =>
+        case Failure(f) => f.printStackTrace(System.err)
+      }
     }
     logger
   }
@@ -97,9 +104,11 @@ object SwiftLogger {
 
 case class SwiftLogger() extends AbstractLogger with Logger {
 
-  private var swiftAlertLevel: String = null
-  private var executorService: ExecutorService = null
-  private var container: Container = null
+  import SwiftLogger.msgIdCounter
+
+  private var swiftAlertLevel: String = _
+  private var executorService: ExecutorService = _
+  private var container: Container = _
   private var capacity: Long = 10 * 1024
   private[swift] val logDtf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
@@ -196,44 +205,61 @@ case class SwiftLogger() extends AbstractLogger with Logger {
 
   private def logDebugInfoToSwift(source: String, shortMessage: String, message: String, level: String) {
 
-    val tsSb = new StringBuilder("{} ")
-    val tsArgArray = Array[AnyRef](logDtf.print(System.currentTimeMillis))
+    val messageKey = new LogMessageBuilder().withKV("level={}", level).withKV("message_context={}", shortMessage).withKV("{}", message).build()
+    val timestamp = System.currentTimeMillis
 
-    val sb = new StringBuilder("{} {} adaptor_name=\"{}\" message_context=\"{}\"").append(" ").append(message).append("\n")
-    val argArray = buildArgArray(level, source, shortMessage, message, "")
+    println("messageKey=" + messageKey)
+    val puts = if (cache.contains(messageKey)) {
+      //Get the id and write to logs
+      val messageId = cache.get(messageKey).get.id
+      val newMessage = new LogMessageBuilder()
+        .withKV("{}", logDtf.print(timestamp))
+        .withKV("msg_id={}", msgIdCounter.get().toString)
+        .build()
+      cache.get(messageKey).get.timestamps.append(timestamp)
+      newMessage
+    } else {
+      val messageId = msgIdCounter.incrementAndGet()
+      val newMessage = new LogMessageBuilder()
+        .withKV("{}", logDtf.print(timestamp))
+        .withKV("level={}", level)
+        .withKV("thread={}", Thread.currentThread.getName)
+        .withKV("msg_id={}", messageId.toString)
+        .withKV("adaptor_name={}", source)
+        .withKV("message_context={}", shortMessage)
+        .withKV("{}", message).build()
+      cache.put(messageKey, LogEntry(messageId, ListBuffer(timestamp)))
+      newMessage
+    }
+    val put = puts.getBytes()
 
+    println("put=" + puts)
+    println("cache=" + cache.map.mkString(","))
 
-    val messageWithTs = MessageFormatter.arrayFormat(tsSb.toString() + sb.toString, tsArgArray ++ argArray).getMessage
-    if (messageWithTs != null) {
-      val messageWithoutTs = MessageFormatter.arrayFormat(tsSb.toString, tsArgArray).getMessage
-      if (shallWriteToSwift(argArray, messageWithoutTs)) {
-        val put = messageWithTs.getBytes
-        val dataTowrite = baos synchronized {
-          baos.write(put, 0, put.length)
-          if (baos.size >= capacity) {
-            val dataTowrite = baos.toByteArray
-            baos.reset()
-            dataTowrite
-          } else null
-        }
-        if (dataTowrite != null) {
-          writeToSwift(source, dataTowrite)
-        }
-      }
+    val dataTowrite = baos synchronized {
+      baos.write(put, 0, put.length)
+      if (baos.size >= capacity) {
+        val dataTowrite = baos.toByteArray
+        baos.reset()
+        dataTowrite
+      } else null
+    }
+    if (dataTowrite != null) {
+      writeToSwift(source, dataTowrite)
     }
   }
 
-  private def logWarnSwift(source: String, shortMessage: String, message: String, level: String) {
-    val sb = new StringBuilder("{} {} {} adaptor_name=\"{}\" message_context=\"{}\"").append(" ").append(message).append("\n")
-    val argArray = buildArgArray(level, source, shortMessage, message, "")
-
-    val putStr = MessageFormatter.arrayFormat(sb.toString, argArray).getMessage
-    if (putStr != null) {
-      if (shallWriteToSwift(argArray, putStr)) {
-        writeToSwift(source, putStr.getBytes())
-      }
-    }
-  }
+  //  private def logWarnSwift(source: String, shortMessage: String, message: String, level: String) {
+  //    val sb = new StringBuilder("{} {} {} adaptor_name=\"{}\" message_context=\"{}\"").append(" ").append(message).append("\n")
+  //    val argArray = buildArgArray(level, source, shortMessage, message, "")
+  //
+  //    val putStr = MessageFormatter.arrayFormat(sb.toString, argArray).getMessage
+  //    if (putStr != null) {
+  //      if (shallWriteToSwift(argArray, putStr)) {
+  //        writeToSwift(source, putStr.getBytes())
+  //      }
+  //    }
+  //  }
 
   var futureTask: FutureTask[Any] = null
 
@@ -244,38 +270,24 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     startHealthcheckThread()
   }
 
-
-  //  val messgageMap = mutable.Map[String, LogEntry]()
-
   val cache = LRUCache[String, LogEntry](1000)
 
-
-  private def shallWriteToSwift(args: Array[AnyRef], message: String) = {
-    //    val exists = cache.contains(message)
-    //    LogEntry.insertUpdate(message, cache)
-    //
-    //    !exists
-    true
-  }
-
-  private def buildArgArray(level: String, source: String, shortMessage: String, format: String, o: Any*) = {
-    //    sb.append("{} {} {} adaptor_name=\"{}\" message_context=\"{}\"").append(" ").append(format).append("\n")
-    val argArray = new Array[AnyRef](2 + 2 + o.length)
-    //    assignToArrayAndIncrementIndex(argArray, 0, logDtf.print(System.currentTimeMillis))
-    var j = assignToArrayAndIncrementIndex(argArray, 0, level)
-    j = assignToArrayAndIncrementIndex(argArray, j, Thread.currentThread.getName)
-    j = assignToArrayAndIncrementIndex(argArray, j, source)
-    j = assignToArrayAndIncrementIndex(argArray, j, shortMessage)
-
-    var i = j
-    for (o1 <- o) {
-      argArray(i) = o1.toString
-      i += 1
-    }
-    argArray
-    //    val ft = MessageFormatter.arrayFormat(sb.toString, argArray)
-    //    ft.getMessage
-  }
+  //  private def buildArgArray1(level: String, source: String, shortMessage: String, format: String, o: Any*) = {
+  //    //    sb.append("{} {} {} adaptor_name=\"{}\" message_context=\"{}\"").append(" ").append(format).append("\n")
+  //    val argArray = new Array[AnyRef](2 + 2 + o.length)
+  //    //    assignToArrayAndIncrementIndex(argArray, 0, logDtf.print(System.currentTimeMillis))
+  //    var j = assignToArrayAndIncrementIndex(argArray, 0, level)
+  //    j = assignToArrayAndIncrementIndex(argArray, j, Thread.currentThread.getName)
+  //    j = assignToArrayAndIncrementIndex(argArray, j, source)
+  //    j = assignToArrayAndIncrementIndex(argArray, j, shortMessage)
+  //
+  //    var i = j
+  //    for (o1 <- o) {
+  //      argArray(i) = o1.toString
+  //      i += 1
+  //    }
+  //    argArray
+  //  }
 
   protected def startHealthcheckThread() {
     new Thread() {

@@ -36,14 +36,6 @@ case class LRUCache[K, V](capacity: Int) {
     if (head != null) head.pre = node
   }
 
-  //  def makeKeyRecent(key: K) = {
-  //    list.remove(key)
-  //    list.add(key)
-  //  }
-  //
-  //  def resizeList(key: K) = {
-  //  }
-
   /**
     *
     */
@@ -72,8 +64,8 @@ case class LRUCache[K, V](capacity: Int) {
         val keyToRemove = tail.key
         map - keyToRemove
         removeNode(n)
-        map.put(key, n)
       }
+      map.put(key, n)
       n
     }
     insertNodeOnHead(node)
