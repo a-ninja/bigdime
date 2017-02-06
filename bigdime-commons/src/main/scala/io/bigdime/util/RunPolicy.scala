@@ -38,17 +38,19 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
       attempt += 1
       try {
         val ret = Some(block())
-        if (attempt > 1) logger.info("ran successfully, recovered from a prev error. attempt={}", attempt)
-
+        if (attempt > 1) logger.warn("ran successfully, recovered from a prev error. attempt={}", attempt)
         return ret
       } catch {
         case e: Exception =>
           logger.warn("code block executed with Exception, attempt={}/{}", attempt.toString, maxAttempts.toString, e)
           causes += e
           if (retriables.filter(r => r.isInstance(e)).nonEmpty) {
-            if (attempt < maxAttempts) Thread.sleep(attempt * delay)
-            else throw RetriesExhaustedException(causes.toList)
-          } else throw new UnretriableException(e)
+            if (attempt < maxAttempts)
+              Thread.sleep(attempt * delay)
+            else
+              throw RetriesExhaustedException(causes.toList)
+          } else
+            throw new UnretriableException(e)
       }
     }
 
