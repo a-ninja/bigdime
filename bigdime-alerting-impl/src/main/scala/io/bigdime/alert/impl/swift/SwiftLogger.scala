@@ -48,14 +48,12 @@ object SwiftLogger {
     })
   }
   catch {
-    case e: UnknownHostException => {
-      System.err.print("The host name is " + hostName)
-    }
-    case e1: SocketException => {
-      System.err.print("Error while connecting to " + hostName + " host" + ", hostIp=" + hostIp)
-    }
-    case e: Exception => System.err.print("Error while connecting to " + hostName + " host" + ", hostIp=" + hostIp)
-      e.printStackTrace()
+    case e: UnknownHostException => System.err.print("UnknownHostException: The host name is " + hostName + ", exception=" + e.toString)
+      e.printStackTrace(System.err)
+    case e1: SocketException => System.err.print("SocketException: Error while connecting to " + hostName + " host" + ", hostIp=" + hostIp + ", exception=" + e1.toString)
+      e1.printStackTrace(System.err)
+    case e: Exception => System.err.print("Error while connecting to " + hostName + " host" + ", hostIp=" + hostIp + ", exception=" + e.toString)
+      e.printStackTrace(System.err)
   }
 
   def getLogger(loggerName: String): SwiftLogger = {
@@ -82,10 +80,9 @@ object SwiftLogger {
           System.out.println("setting buffer size from property as:" + logger.capacity)
 
         } catch {
-          case ex: Exception => {
+          case ex: Exception =>
             logger.capacity = 4 * 1024
-            System.out.println("setting default buffer size as:" + logger.capacity)
-          }
+            System.out.println("setting default buffer size as:" + logger.capacity + ", due to " + ex.toString)
         }
         if (logger.swiftAlertLevel != null) if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) logger.setDebugEnabled()
         else if (logger.swiftAlertLevel.equalsIgnoreCase("info")) logger.setInfoEnabled()
@@ -112,57 +109,62 @@ case class SwiftLogger() extends AbstractLogger with Logger {
   private var capacity: Long = 10 * 1024
   private[swift] val logDtf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
-  def debug(source: String, shortMessage: String, message: String) {
+
+  private def formatter(format: String, o: Object*) = {
+    def toNotNull(o: Object*) = {
+      if (o != null) o.toArray else Array.emptyObjectArray
+    }
+
+    MessageFormatter.arrayFormat(format, toNotNull(o)).getMessage
+  }
+
+  def debug(source: String, shortMessage: String, message: String): Unit = {
     if (isDebugEnabled) logDebugInfoToSwift(source, shortMessage, message, "debug")
   }
 
-  def debug(source: String, shortMessage: String, format: String, o: Object*) {
+  def debug(source: String, shortMessage: String, format: String, o: Object*): Unit = {
     if (isDebugEnabled) {
-      val ft = MessageFormatter.arrayFormat(format, o.map(o1 => o1.toString).toArray)
-      debug(source, shortMessage, ft.getMessage)
+      debug(source, shortMessage, formatter(format, o))
     }
   }
 
-  def info(source: String, shortMessage: String, message: String) {
+  def info(source: String, shortMessage: String, message: String): Unit = {
     if (isInfoEnabled) logDebugInfoToSwift(source, shortMessage, message, "info")
   }
 
-  def info(source: String, shortMessage: String, format: String, o: Object*) {
+  def info(source: String, shortMessage: String, format: String, o: Object*): Unit = {
     if (isInfoEnabled) {
-      val ft = MessageFormatter.arrayFormat(format, o.map(o1 => o1.toString).toArray)
-      info(source, shortMessage, ft.getMessage)
+      info(source, shortMessage, formatter(format, o))
     }
   }
 
-  def warn(source: String, shortMessage: String, format: String, o: Object*) {
+  def warn(source: String, shortMessage: String, format: String, o: Object*): Unit = {
     if (isWarnEnabled) {
-      val ft = MessageFormatter.arrayFormat(format, o.map(o1 => o1.toString).toArray)
-      warn(source, shortMessage, ft.getMessage)
+      warn(source, shortMessage, formatter(format, o))
     }
   }
 
-  def warn(source: String, shortMessage: String, message: String) {
+  def warn(source: String, shortMessage: String, message: String): Unit = {
     if (isWarnEnabled) warn(source, shortMessage, message, null.asInstanceOf[Throwable])
   }
 
-  def warn(source: String, shortMessage: String, message: String, t: Throwable) {
+  def warn(source: String, shortMessage: String, message: String, t: Throwable): Unit = {
     if (isWarnEnabled) logToSwift(source, shortMessage, message, "warn", t)
   }
 
-  def alert(message: AlertMessage) {
+  def alert(message: AlertMessage): Unit = {
     alert(message.getAdaptorName, message.getType, message.getCause, message.getSeverity, message.getMessage)
   }
 
-  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, message: String) {
+  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, message: String): Unit = {
     alert(source, alertType, alertCause, alertSeverity, message, null.asInstanceOf[Throwable])
   }
 
-  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: Object*) {
-    val ft = MessageFormatter.arrayFormat(format, o.map(o1 => o1.toString).toArray)
-    alert(source, alertType, alertCause, alertSeverity, ft.getMessage, null.asInstanceOf[Throwable])
+  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: Object*): Unit = {
+    alert(source, alertType, alertCause, alertSeverity, formatter(format, o), null.asInstanceOf[Throwable])
   }
 
-  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, _message: String, t: Throwable) {
+  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, _message: String, t: Throwable): Unit = {
     val b = getExceptionByteArray(t)
     val message = if (b != null) _message + " " + new String(b) else _message
 
@@ -177,7 +179,7 @@ case class SwiftLogger() extends AbstractLogger with Logger {
       .withKV("alert_name=\"{}\"", alertType.getDescription)
       .withKV("alert_cause=\"{}\"", alertType.getDescription)
       .withKV("{}", message).build()
-    writeToSwift(source, newMessage.getBytes)
+    //    writeToSwift(source, newMessage.getBytes)
   }
 
   private val baos = new ByteArrayOutputStream
@@ -191,13 +193,13 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     } else null
   }
 
-  private def logToSwift(source: String, shortMessage: String, message: String, level: String, t: Throwable) {
+  private def logToSwift(source: String, shortMessage: String, message: String, level: String, t: Throwable) = {
     val b = getExceptionByteArray(t)
     val msg = if (b != null) message + " " + new String(b) else message
     logDebugInfoToSwift(source, shortMessage, msg, level)
   }
 
-  private def logDebugInfoToSwift(source: String, shortMessage: String, message: String, level: String) {
+  private def logDebugInfoToSwift(source: String, shortMessage: String, message: String, level: String): Unit = {
 
     val messageKey = new LogMessageBuilder().withKV("level={}", level).withKV("message_context={}", shortMessage).withKV("{}", message).build()
     val timestamp = System.currentTimeMillis
@@ -226,7 +228,7 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     }
 
     if (level.equalsIgnoreCase("warn")) {
-      writeToSwift(source, put)
+      //      writeToSwift(source, put)
     } else {
       val dataTowrite = baos synchronized {
         baos.write(put, 0, put.length)
@@ -242,18 +244,18 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     }
   }
 
-  var futureTask: FutureTask[Any] = null
+  var futureTask: FutureTask[Any] = _
 
-  private def writeToSwift(source: String, dataTowrite: Array[Byte]) {
-    val logTask = new SwiftLogTask(container, source, dataTowrite)
+  private def writeToSwift(source: String, dataTowrite: Array[Byte]): Unit = {
+    val logTask = SwiftLogTask(container, source, dataTowrite)
     futureTask = new FutureTask[Any](logTask)
     executorService.execute(futureTask)
     startHealthcheckThread()
   }
 
-  val cache = LRUCache[String, LogEntry](1000)
+  private val cache = LRUCache[String, LogEntry](1000)
 
-  protected def startHealthcheckThread() {
+  protected def startHealthcheckThread(): Unit = {
     new Thread() {
       override def run() {
         try {
@@ -262,9 +264,8 @@ case class SwiftLogger() extends AbstractLogger with Logger {
           System.out.print("heathcheck thread for swiftLogger, future task completed")
 
         } catch {
-          case e: Exception => {
+          case e: Exception =>
             e.printStackTrace(System.err)
-          }
         }
       }
     }.start()

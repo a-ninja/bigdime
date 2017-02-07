@@ -17,7 +17,7 @@ import io.bigdime.handler.SwiftClient
 import io.bigdime.handler.swift.SwiftWriterHandlerConstants
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
 import io.bigdime.libs.hdfs.{HDFS_AUTH_OPTION, WebHdfsException, WebHdfsReader}
-import io.bigdime.util.Retry
+import io.bigdime.util.{LRUCache, Retry}
 import org.apache.commons.lang3.StringUtils
 import org.javaswift.joss.exception.CommandException
 import org.javaswift.joss.model.StoredObject
@@ -53,8 +53,8 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   import WebhdfsReaderAndSink._
 
   private val hdfsFileName: String = null
-  private var entityName: String = null
-  private var webHDFSPathParser: WebHDFSPathParser = null
+  private var entityName: String = _
+  private var webHDFSPathParser: WebHDFSPathParser = _
   /**
     * CONFIG or HEADERS
     */
@@ -62,16 +62,15 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   private var processingDirty = false
 
   private val handlerConfig = new WebHDFSReaderHandlerConfig
-  protected var inputFilePathPattern: String = null
-  protected var outputFilePathPattern: String = null
-  protected var inputPattern: Pattern = null
+  protected var inputFilePathPattern: String = _
+  protected var outputFilePathPattern: String = _
+  protected var inputPattern: Pattern = _
   @Autowired private val webHdfsReader: WebHdfsReader = null
   @Autowired private val context: ApplicationContext = null
 
   @Autowired private val swiftClient: SwiftClient = null
   private var recordList: mutable.Buffer[RuntimeInfo] = _
-
-  //  private var parDoSize = THREAD_POOL_SIZE
+  private var goBackDays = 3
 
   @throws[AdaptorConfigurationException]
   override def build() {
@@ -101,6 +100,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val authOption = HDFS_AUTH_OPTION.getByName(authChoice)
 
       //      parDoSize = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderAndSinkConstants.THREAD_POOL_SIZE, THREAD_POOL_SIZE)
+      goBackDays = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderHandlerConstants.GO_BACK_DAYS, 3)
 
       logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}",
         hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName)
@@ -348,6 +348,8 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     true
   }
 
+  val cache = LRUCache[String, Boolean](goBackDays)
+
   @throws[RuntimeInfoStoreException]
   @throws[IOException]
   @throws[WebHdfsException]
@@ -370,7 +372,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     }
     catch {
       case e: WebHdfsException => {
-        if (e.statusCode == 404) logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
+        if (e.statusCode == 404) {
+          if (!cache.contains(directoryPath)) {
+            cache.put(directoryPath, true)
+            logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
+          }
+        }
         else if (e.statusCode == 401 || e.statusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directory_path={} error_message={}", directoryPath, e.getMessage)
       }
     }

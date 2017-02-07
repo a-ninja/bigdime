@@ -4,35 +4,12 @@
 
 package io.bigdime.libs.hdfs;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.net.ssl.SSLContext;
-
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.*;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -53,6 +30,23 @@ import org.codehaus.jackson.map.ObjectWriter;
 import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLContext;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * @author adwang, Neeraj Jain, mnamburi
@@ -458,16 +452,19 @@ public class WebHdfs {
                     statusCode = response.getStatusLine().getStatusCode();
                     if (statusCode == 200 || statusCode == 201) {
                         isSuccess = true;
+                        if (attempts > 1) {
+                            logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
+                        }
                         return response;
                     } else if (statusCode == 404) {
-                        logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
+                        logger.debug("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
                         exceptionReason = response.getStatusLine().getReasonPhrase();
                         releaseConnection();
                     } else if (statusCode == 401) {
-                        logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
+                        logger.debug("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
                         releaseConnection();
                     } else if (statusCode == 403) {
-                        logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName(), args);
+                        logger.debug("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName(), args);
                         rotateHost();
                         releaseConnection();
                     } else {
@@ -487,10 +484,6 @@ public class WebHdfs {
             logger.warn("_message=\"{} failed After {} retries :\", statusCode={} exceptionReason={} args={}",
                     method.getName(), maxAttempts, statusCode, exceptionReason, args);
             throw new WebHdfsException(statusCode, exceptionReason);
-        } else {
-            if (attempts > 1) {
-                logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
-            }
         }
         return null;
     }
