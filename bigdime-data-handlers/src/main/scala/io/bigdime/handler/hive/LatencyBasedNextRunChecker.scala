@@ -30,9 +30,9 @@ case class LatencyBasedNextRunChecker() extends AbstractNextRunChecker {
     var nextRunDateTime = 0l
     if (now - lastRunDateTime > handlerConfig.getMinGoBack) {
       nextRunDateTime = lastRunDateTime + intervalInMillis
-      logger.info("getDateTimeInMillisForNextRun", "_message=\"time to set hiveConfDateTime.\" now={} lastRunDateTime={} hiveConfDateTime={} intervalInMillis={}", now, lastRunDateTime, nextRunDateTime, intervalInMillis)
+      logger.info("getDateTimeInMillisForNextRun", "_message=\"time to set hiveConfDateTime.\" now={} lastRunDateTime={} hiveConfDateTime={} intervalInMillis={}", now: java.lang.Long, lastRunDateTime: java.lang.Long, nextRunDateTime: java.lang.Long, intervalInMillis: java.lang.Long)
     }
-    else logger.info("nothing to do", "now={} hiveConfDateTime={} intervalInMillis={} time_until_next_run={}", now, lastRunDateTime, intervalInMillis, handlerConfig.getMinGoBack - (now - lastRunDateTime))
+    else logger.info("nothing to do", "now={} hiveConfDateTime={} intervalInMillis={} time_until_next_run={}", now: java.lang.Long, lastRunDateTime: java.lang.Long, intervalInMillis: java.lang.Long, (handlerConfig.getMinGoBack - (now - lastRunDateTime)): java.lang.Long)
     nextRunDateTime
   }
 }

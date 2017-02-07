@@ -3,21 +3,17 @@
  */
 package io.bigidme.hbase.test.client;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.hbase.client.DataDeletionSpecification;
-import io.bigdime.hbase.client.DataDeletionSpecification.Builder;
-
 import org.apache.hadoop.hbase.client.Delete;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.bigdime.constants.TestConstants.TEST;
 /**
@@ -26,8 +22,7 @@ import static io.bigdime.constants.TestConstants.TEST;
  *
  */
 public class DataDeletionSpecificationTest extends PowerMockTestCase{
-	private static final Logger logger = LoggerFactory.getLogger(DataDeletionSpecificationTest.class);
-	
+
 	DataDeletionSpecification dataDeletionSpecification;
 	DataDeletionSpecification.Builder dataDeletionSpecificationBuilder;
 	

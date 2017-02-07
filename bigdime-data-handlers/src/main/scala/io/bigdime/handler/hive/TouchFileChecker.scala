@@ -38,15 +38,15 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
 	 */
   protected def getDateTimeInMillisForFirstRun(handlerConfig: HiveJdbcReaderHandlerConfig, now: Long, properties: util.Map[_ <: String, _]): Long = {
     val nextRunDateTime = now - handlerConfig.getGoBackDays * TimeUnit.DAYS.toMillis(1)
-    logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" attempted nextRunDateTime={}", nextRunDateTime)
+    logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" attempted nextRunDateTime={}", nextRunDateTime.toString)
     var time = nextRunDateTime
     var tempNextRunDateTime = nextRunDateTime
     while (time == 0 && tempNextRunDateTime < now) {
       time = getDateTimeInMillis(handlerConfig, now, 0, tempNextRunDateTime, properties)
-      logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime: java.lang.Long, time: java.lang.Long)
+      logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime.toString, time.toString)
       tempNextRunDateTime = tempNextRunDateTime + intervalInMillis
     }
-    logger.info("getDateTimeInMillisForFirstRun", "_message=\"returning value\" nextRunDateTime={}", nextRunDateTime)
+    logger.info("getDateTimeInMillisForFirstRun", "_message=\"returning value\" nextRunDateTime={}", nextRunDateTime.toString)
     nextRunDateTime
   }
 
@@ -56,7 +56,7 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
     var tempNextRunDateTime = nextRunDateTime
     while (time == 0 && getTouchFileDate(tempNextRunDateTime) < now) {
       time = getDateTimeInMillis(handlerConfig, now, lastRunDateTime, tempNextRunDateTime, properties)
-      logger.info("getDateTimeInMillisForSubsequentRun", "_message=\"subsequent run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime: java.lang.Long, time: java.lang.Long)
+      logger.info("getDateTimeInMillisForSubsequentRun", "_message=\"subsequent run.\" tempNextRunDateTime={} output={}", tempNextRunDateTime.toString, time.toString)
       tempNextRunDateTime = tempNextRunDateTime + intervalInMillis
     }
     if (time == 0) time
@@ -66,7 +66,7 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
   private def getTouchFileDate(nextRunDateTime: Long) = nextRunDateTime + intervalInMillis
 
   private def getDateTimeInMillis(handlerConfig: HiveJdbcReaderHandlerConfig, now: Long, lastRunDateTime: Long, nextRunDateTime: Long, properties: util.Map[_ <: String, _]) = {
-    logger.info("getDateTimeInMillis", "_message=\"will check touchfile.\" now={} nextRunDateTime={} intervalInMillis={}", now: java.lang.Long, nextRunDateTime: java.lang.Long, intervalInMillis: java.lang.Long)
+    logger.info("getDateTimeInMillis", "_message=\"will check touchfile.\" now={} nextRunDateTime={} intervalInMillis={}", now.toString, nextRunDateTime.toString, intervalInMillis.toString)
     val tokenizedPath = handlerConfig.getTouchFile
     val yearDtf = DateTimeFormat.forPattern("yyyy")
     val monthDtf = DateTimeFormat.forPattern("MM")
@@ -94,7 +94,7 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
         nextRunDateTime
       }
       else {
-        logger.info("nothing to do, touchfile not found", "now={} lastRunDateTime={} attempted_nextRunDateTime={} intervalInMillis={} file_to_check={}", now: java.lang.Long, lastRunDateTime: java.lang.Long, nextRunDateTime: java.lang.Long, intervalInMillis: java.lang.Long, detokString)
+        logger.info("nothing to do, touchfile not found", "now={} lastRunDateTime={} attempted_nextRunDateTime={} intervalInMillis={} file_to_check={}", now.toString, lastRunDateTime.toString, nextRunDateTime.toString, intervalInMillis.toString, detokString)
         0l
       }
     }

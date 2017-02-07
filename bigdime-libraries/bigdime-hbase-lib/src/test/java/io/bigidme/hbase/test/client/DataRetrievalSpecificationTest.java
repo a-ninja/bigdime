@@ -3,12 +3,7 @@
  */
 package io.bigidme.hbase.test.client;
 
-import java.nio.charset.StandardCharsets;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.hbase.client.DataRetrievalSpecification;
-
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -17,6 +12,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static io.bigdime.constants.TestConstants.TEST;
 /**
  * 
@@ -24,8 +21,7 @@ import static io.bigdime.constants.TestConstants.TEST;
  *
  */
 public class DataRetrievalSpecificationTest extends PowerMockTestCase{
-	private static final Logger logger = LoggerFactory.getLogger(DataRetrievalSpecificationTest.class);
-	
+
 	DataRetrievalSpecification dataRetrievalSpecification;
 	DataRetrievalSpecification.Builder dataRetrievalSpecificationBuilder;
 	

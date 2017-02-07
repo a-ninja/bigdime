@@ -26,13 +26,13 @@ abstract class AbstractNextRunChecker extends HiveNextRunChecker {
   protected def getAdjustedCurrentTime(latency: Long): Long = {
     val systemTime: Long = System.currentTimeMillis
     val nowPacific = DateTime.now(dateTimeZone).getMillis - latency
-    logger.info("getAdjustedCurrentTime", "systemTime={} latency={} now={}", systemTime, latency, nowPacific)
+    logger.info("getAdjustedCurrentTime", "systemTime={} latency={} now={}", systemTime: java.lang.Long, latency: java.lang.Long, nowPacific: java.lang.Long)
     nowPacific
   }
 
   protected def getDateTimeInMillisForFirstRun(handlerConfig: HiveJdbcReaderHandlerConfig, now: Long): Long = {
     val nextRunDateTime: Long = now - handlerConfig.getGoBackDays * TimeUnit.DAYS.toMillis(1)
-    logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run, set hiveConfDateTime done. no need to check for the touchFile, it may not even be present.\" hiveConfDateTime={}", nextRunDateTime)
+    logger.info("getDateTimeInMillisForFirstRun", "_message=\"first run, set hiveConfDateTime done. no need to check for the touchFile, it may not even be present.\" hiveConfDateTime={}", nextRunDateTime: java.lang.Long)
     nextRunDateTime
   }
 }

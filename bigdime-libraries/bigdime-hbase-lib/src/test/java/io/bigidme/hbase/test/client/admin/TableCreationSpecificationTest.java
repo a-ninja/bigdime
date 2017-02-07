@@ -3,19 +3,16 @@
  */
 package io.bigidme.hbase.test.client.admin;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.hbase.client.admin.TableCreationSpecification;
-
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.bigdime.constants.TestConstants.TEST;
 /**
@@ -24,8 +21,7 @@ import static io.bigdime.constants.TestConstants.TEST;
  *
  */
 public class TableCreationSpecificationTest extends PowerMockTestCase{
-	private static final Logger logger = LoggerFactory.getLogger(TableCreationSpecificationTest.class);
-	
+
 	TableCreationSpecification tableCreationSpecification;
 	TableCreationSpecification.Builder tableCreationSpecificationBuilder;
 	

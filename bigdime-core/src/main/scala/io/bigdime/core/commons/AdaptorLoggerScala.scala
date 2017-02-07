@@ -8,19 +8,17 @@ import io.bigdime.core.AdaptorContextImpl
   */
 case class AdaptorLoggerScala(logger: Logger) {
 
-  import collection.JavaConversions._
-
   implicit def anyRefToSeqAny(x: AnyRef) = Seq[java.lang.Object](x)
 
-  def debug(shortMessage: String, format: String, o: Any*) {
-    logger.debug(getAdaptorName, shortMessage, format, o)
+  def debug(shortMessage: String, format: String, o: AnyRef*) {
+    logger.debug(getAdaptorName, shortMessage, format, o: _*)
   }
 
-  def info(shortMessage: String, format: String, o: Any*) {
-    logger.info(getAdaptorName, shortMessage, format, o)
+  def info(shortMessage: String, format: String, o: AnyRef*) {
+    logger.info(getAdaptorName, shortMessage, format, o: _*)
   }
 
-  def warn(shortMessage: String, format: String, o: Any*) {
+  def warn(shortMessage: String, format: String, o: AnyRef*) {
     logger.warn(getAdaptorName, shortMessage, format, o)
   }
 

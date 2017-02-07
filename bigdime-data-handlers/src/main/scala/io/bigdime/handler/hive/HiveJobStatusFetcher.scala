@@ -79,7 +79,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
         UserGroupInformation.loginUserFromKeytab(userName, password)
       }
       val jobStatus = jobClient.getAllJobs
-      logger.debug("getStatusForAllJobs", "status={} length={}", jobStatus.toString, jobStatus.length)
+      logger.debug("getStatusForAllJobs", "status={} length={}", jobStatus.toString, jobStatus.length: java.lang.Integer)
       jobStatus
 
     } catch {
@@ -102,7 +102,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
     val statuses = ListBuffer[JobStatus]()
     try {
       val jobStatus = getStatusForAllJobs
-      logger.debug("getAllStatusesForJob", "status={} length={} jobName={}", jobStatus.toString, jobStatus.length, jobName)
+      logger.debug("getAllStatusesForJob", "status={} length={} jobName={}", jobStatus.toString, jobStatus.length: java.lang.Integer, jobName)
       for (js <- jobStatus) {
         if (js.getJobName.contains(jobName)) statuses.append(js)
       }
@@ -131,17 +131,17 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
 
       } catch {
         case ex: JobStatusException => {
-          logger.info("getStatusForJobWithRetry", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt, ex.toString)
+          logger.info("getStatusForJobWithRetry", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt: java.lang.Integer, ex.toString)
           jobEx = ex
         }
       }
       if (hiveJobStatus == null) try {
-        logger.info("getStatusForJobWithRetry", "_message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall, attempt)
+        logger.info("getStatusForJobWithRetry", "_message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall: java.lang.Long, attempt: java.lang.Integer)
         Thread.sleep(sleepTimeBetweenStatusCall)
 
       } catch {
         case ex: Exception => {
-          logger.info("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt, ex)
+          logger.info("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt: java.lang.Integer, ex)
         }
       }
       endTime = System.currentTimeMillis
@@ -161,7 +161,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
     var hiveJobStatus: HiveJobStatus = null
     var jobStatuses = getAllStatusesForJob(jobName)
     for (js <- jobStatuses) {
-      logger.info("getStatusForJob", "jobId={} jobName={} runState={}", js.getJobID, js.getJobName, js.getRunState)
+      logger.info("getStatusForJob", "jobId={} jobName={} runState={}", js.getJobID, js.getJobName, js.getRunState: java.lang.Integer)
       jobStatusList.append(js)
       val stageState = js.getState
       if (newestJob == null) {
