@@ -179,7 +179,7 @@ case class SwiftLogger() extends AbstractLogger with Logger {
       .withKV("alert_name=\"{}\"", alertType.getDescription)
       .withKV("alert_cause=\"{}\"", alertType.getDescription)
       .withKV("{}", message).build()
-    //    writeToSwift(source, newMessage.getBytes)
+    writeToSwift(source, newMessage.getBytes)
   }
 
   private val baos = new ByteArrayOutputStream
@@ -228,7 +228,7 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     }
 
     if (level.equalsIgnoreCase("warn")) {
-      //      writeToSwift(source, put)
+      writeToSwift(source, put)
     } else {
       val dataTowrite = baos synchronized {
         baos.write(put, 0, put.length)
