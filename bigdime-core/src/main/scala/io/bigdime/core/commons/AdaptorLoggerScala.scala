@@ -19,7 +19,7 @@ case class AdaptorLoggerScala(logger: Logger) {
   }
 
   def warn(shortMessage: String, format: String, o: AnyRef*) {
-    logger.warn(getAdaptorName, shortMessage, format, o)
+    logger.warn(getAdaptorName, shortMessage, format, o: _*)
   }
 
   def alert(alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, message: String) {
@@ -30,8 +30,12 @@ case class AdaptorLoggerScala(logger: Logger) {
     logger.alert(getAdaptorName, alertType, alertCause, alertSeverity, message, e)
   }
 
-  def alert(alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: Any*) {
-    logger.alert(getAdaptorName, alertType, alertCause, alertSeverity, format, o)
+  def alert(alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: AnyRef*) {
+    logger.alert(getAdaptorName, alertType, alertCause, alertSeverity, null.asInstanceOf[Throwable], format, o: _*)
+  }
+
+  def alert(alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, t: Throwable, format: String, o: AnyRef*) {
+    logger.alert(getAdaptorName, alertType, alertCause, alertSeverity, t, format, o: _*)
   }
 
   def alert(alertMessage: AlertMessage) {

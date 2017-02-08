@@ -3,6 +3,12 @@
  */
 package io.bigdime.alert.impl;
 
+import io.bigdime.alert.AlertMessage;
+import io.bigdime.alert.Logger;
+import io.bigdime.alert.spi.AlertLoggerFactory;
+import io.bigdime.core.commons.PropertyLoader;
+import io.bigdime.core.commons.StringHelper;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -11,12 +17,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import io.bigdime.alert.AlertMessage;
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.spi.AlertLoggerFactory;
-import io.bigdime.core.commons.PropertyLoader;
-import io.bigdime.core.commons.StringHelper;
 
 /**
  * Default implementation of the alerting system, uses slf4j-log4j to log.
@@ -160,10 +160,10 @@ public class AlertLoggerFactoryImpl implements AlertLoggerFactory {
         }
 
         @Override
-        public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity,
+        public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, Throwable e,
                           String format, Object... o) {
             for (Logger l : loggers) {
-                l.alert(source, alertType, alertCause, alertSeverity, format, o);
+                l.alert(source, alertType, alertCause, alertSeverity, e, format, o);
             }
         }
 

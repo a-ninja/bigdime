@@ -1,42 +1,13 @@
 package io.bigdime.handler.hive;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.mapred.JobStatus;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
 import com.google.common.base.Preconditions;
-
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.InvalidValueConfigurationException;
-import io.bigdime.core.commons.AdaptorLogger;
-import io.bigdime.core.commons.DateNaturalLanguageExpressionParser;
-import io.bigdime.core.commons.ProcessHelper;
-import io.bigdime.core.commons.PropertyHelper;
-import io.bigdime.core.commons.StringHelper;
+import io.bigdime.core.commons.*;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
@@ -48,6 +19,25 @@ import io.bigdime.handler.JobStatusFetcher;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
 import io.bigdime.libs.hdfs.WebHdfsReader;
 import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
+import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.*;
 
 /**
  * HiveReaderHandler reads data from a hive table/query and outputs each row as

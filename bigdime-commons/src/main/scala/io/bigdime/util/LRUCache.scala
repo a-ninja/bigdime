@@ -18,7 +18,19 @@ object LRUCache {
 
 case class LRUCache[K, V](capacity: Int) {
 
-  case class Node(var pre: Node, var next: Node, var key: K, var value: V)
+  case class Node(var pre: Node, var next: Node, var key: K, var value: V) {
+    override def toString: String = "key=" + key + "value=" + value
+
+    override def equals(obj: scala.Any): Boolean = {
+      if (this == obj) return true
+      if (obj == null || (getClass ne obj.getClass)) return false
+      val nodeObj: Node = obj.asInstanceOf[Node]
+      if (key != null) key == nodeObj.key
+      else nodeObj.key == null
+    }
+
+    override def hashCode(): Int = key.hashCode()
+  }
 
   val map = mutable.Map[K, Node]()
 
@@ -27,13 +39,22 @@ case class LRUCache[K, V](capacity: Int) {
   var tail: Node = null
 
   def removeNode(node: Node) = {
-    if (node.pre != null) node.pre.next = node.next
-    if (node.next != null) node.next.pre = node.pre
+    if (node.pre == null && node.next == null) {
+      head = null
+      tail = null
+    } else {
+      if (node.pre != null) node.pre.next = node.next else head = node.next
+      if (node.next != null) node.next.pre = node.pre
+      else if (node.next == null) tail = node.pre
+    }
   }
 
   def insertNodeOnHead(node: Node) = {
     node.next = head
+    node.pre = null
     if (head != null) head.pre = node
+    if (tail == null) tail = node
+    head = node
   }
 
   /**
@@ -59,11 +80,11 @@ case class LRUCache[K, V](capacity: Int) {
       removeNode(n)
       n
     } else {
-      val n = Node(null, head, key, value)
+      val n = Node(null, null, key, value)
       if (map.size >= capacity) {
         val keyToRemove = tail.key
-        map - keyToRemove
-        removeNode(n)
+        map.remove(keyToRemove)
+        removeNode(tail)
       }
       map.put(key, n)
       n

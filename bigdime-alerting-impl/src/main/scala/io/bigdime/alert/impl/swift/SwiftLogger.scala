@@ -115,7 +115,7 @@ case class SwiftLogger() extends AbstractLogger with Logger {
       if (o != null) o.toArray else Array.emptyObjectArray
     }
 
-    MessageFormatter.arrayFormat(format, toNotNull(o)).getMessage
+    MessageFormatter.arrayFormat(format, toNotNull(o: _*)).getMessage
   }
 
   def debug(source: String, shortMessage: String, message: String): Unit = {
@@ -160,8 +160,8 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     alert(source, alertType, alertCause, alertSeverity, message, null.asInstanceOf[Throwable])
   }
 
-  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: Object*): Unit = {
-    alert(source, alertType, alertCause, alertSeverity, formatter(format, o), null.asInstanceOf[Throwable])
+  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, t: Throwable, format: String, o: Object*): Unit = {
+    alert(source, alertType, alertCause, alertSeverity, formatter(format, o: _*), null.asInstanceOf[Throwable])
   }
 
   def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, _message: String, t: Throwable): Unit = {

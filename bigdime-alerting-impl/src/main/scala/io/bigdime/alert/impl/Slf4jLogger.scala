@@ -72,10 +72,10 @@ class Slf4jLogger private() extends AbstractLogger with Logger {
     slf4jLogger.error("adaptor_name=\"{}\" alert_severity=\"{}\" message_context=\"{}\" alert_code=\"{}\" alert_name=\"{}\" alert_cause=\"{}\" detail_message=\"{}\"", source, alertSeverity, "TODO:set context", alertType.getMessageCode, alertType.getDescription, alertCause.getDescription, message, t)
   }
 
-  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, format: String, o: Object*) {
+  def alert(source: String, alertType: Logger.ALERT_TYPE, alertCause: Logger.ALERT_CAUSE, alertSeverity: Logger.ALERT_SEVERITY, t: Throwable, format: String, o: Object*) {
     val sb: StringBuilder = new StringBuilder
     sb.append("adaptor_name=\"{}\" alert_severity=\"{}\" message_context=\"{}\" alert_code=\"{}\" alert_name=\"{}\" alert_cause=\"{}\"").append(" ").append(format)
-    val argArray: Array[AnyRef] = new Array[AnyRef](6 + o.length)
+    val argArray: Array[AnyRef] = new Array[AnyRef](6 + o.length + 1)
     argArray(0) = source
     argArray(1) = alertSeverity
     argArray(2) = "todo: set context"
@@ -87,7 +87,9 @@ class Slf4jLogger private() extends AbstractLogger with Logger {
       i += 1
       argArray(i) = o1
     }
-    slf4jLogger.error(sb.toString, argArray)
+    i += 1
+    argArray(i) = t
+    slf4jLogger.error(sb.toString, argArray: _*)
   }
 
   def alert(message: AlertMessage) {

@@ -5,10 +5,11 @@ import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
+import io.bigdime.alert.Logger.{ALERT_CAUSE, ALERT_SEVERITY, ALERT_TYPE}
 import io.bigdime.alert.LoggerFactory
 import io.bigdime.core.ActionEvent.Status
 import io.bigdime.core._
-import io.bigdime.core.commons.{AdaptorLogger, CollectionUtil, PropertyHelper, StringHelper}
+import io.bigdime.core.commons._
 import io.bigdime.core.config.AdaptorConfigConstants
 import io.bigdime.core.constants.ActionEventHeaderConstants
 import io.bigdime.core.handler.AbstractSourceHandler
@@ -38,7 +39,7 @@ import scala.util.{Failure, Success}
   * Created by neejain on 12/9/16.
   */
 object WebhdfsReaderAndSink {
-  private val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[WebhdfsReaderAndSink]))
+  private val logger = new AdaptorLoggerScala(LoggerFactory.getLogger(classOf[WebhdfsReaderAndSink]))
   private val INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:"
   private val THREAD_POOL_SIZE = 25
   private val executors = Executors.newFixedThreadPool(THREAD_POOL_SIZE)
@@ -71,6 +72,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @Autowired private val swiftClient: SwiftClient = null
   private var recordList: mutable.Buffer[RuntimeInfo] = _
   private var goBackDays = 3
+  var cache: LRUCache[String, Boolean] = _
 
   @throws[AdaptorConfigurationException]
   override def build() {
@@ -101,9 +103,9 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
       //      parDoSize = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderAndSinkConstants.THREAD_POOL_SIZE, THREAD_POOL_SIZE)
       goBackDays = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderHandlerConstants.GO_BACK_DAYS, 3)
-
-      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}",
-        hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName)
+      cache = LRUCache[String, Boolean](goBackDays)
+      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={} goBackDays={}",
+        hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName, goBackDays: java.lang.Integer)
       handlerConfig.setAuthOption(authOption)
       handlerConfig.setEntityName(entityName)
       //      handlerConfig.setHdfsPath(hdfsPath)
@@ -314,12 +316,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
         }
         catch {
           case e: Any => {
-            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" records_found={}", recordsFound, e.getMessage)
+            logger.warn(getHandlerPhase, "_message=\"could not initialized runtime info records\" records_found={}", recordsFound: java.lang.Boolean, e.getMessage)
             throw new HandlerException(e)
           }
         }
       }
-      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" records_found={}", recordsFound)
+      logger.info(getHandlerPhase, "_message=\"initialized runtime info records\" records_found={}", recordsFound: java.lang.Boolean)
       recordsFound
     }
     finally logger.debug(getHandlerPhase, "releasing webhdfs connection")
@@ -348,8 +350,6 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     true
   }
 
-  val cache = LRUCache[String, Boolean](goBackDays)
-
   @throws[RuntimeInfoStoreException]
   @throws[IOException]
   @throws[WebHdfsException]
@@ -371,15 +371,14 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       else logger.info(getHandlerPhase, "_message=\"ready file is not present\" wait_for_file_name={} parent_record_valid={}", waitForFileName, parentRecordValid)
     }
     catch {
-      case e: WebHdfsException => {
+      case e: WebHdfsException =>
         if (e.statusCode == 404) {
           if (!cache.contains(directoryPath)) {
             cache.put(directoryPath, true)
-            logger.warn(getHandlerPhase, "_message=\"path not found\" directory_path={} error_message={}", directoryPath, e.getMessage)
+            logger.alert(ALERT_TYPE.INGESTION_DID_NOT_RUN, ALERT_CAUSE.MISSING_DATA, ALERT_SEVERITY.NORMAL, e, "handler_phase={} file_path={} error_message={}", getHandlerPhase, directoryPath, e.getMessage)
           }
         }
         else if (e.statusCode == 401 || e.statusCode == 403) logger.warn(getHandlerPhase, "_message=\"auth error\" directory_path={} error_message={}", directoryPath, e.getMessage)
-      }
     }
     recordsFound
   }

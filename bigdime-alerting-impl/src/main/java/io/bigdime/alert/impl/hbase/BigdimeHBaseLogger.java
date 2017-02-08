@@ -217,7 +217,7 @@ public class BigdimeHBaseLogger implements Logger {
 	}
 
 	@Override
-	public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity,
+	public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, Throwable e,
 			String format, Object... o) {
 
 		FormattingTuple ft = MessageFormatter.arrayFormat(format, o);

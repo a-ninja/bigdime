@@ -28,8 +28,13 @@ public class AdaptorLogger extends AdaptorLoggerScala {
         logger.warn(getAdaptorName(), shortMessage, format, o);
     }
 
+    public void alert(ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, Throwable t, String format,
+                      Object... o) {
+        logger.alert(getAdaptorName(), alertType, alertCause, alertSeverity, t, format, o);
+    }
+
     public void alert(ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, String format,
                       Object... o) {
-        logger.alert(getAdaptorName(), alertType, alertCause, alertSeverity, format, o);
+        logger.alert(getAdaptorName(), alertType, alertCause, alertSeverity, null, format, o);
     }
 }

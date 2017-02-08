@@ -3,9 +3,11 @@ package io.bigdime.handler.hive
 import java.util
 import java.util.concurrent.TimeUnit
 
+import io.bigdime.alert.Logger.{ALERT_CAUSE, ALERT_SEVERITY, ALERT_TYPE}
 import io.bigdime.alert.LoggerFactory
 import io.bigdime.core.commons.{AdaptorLogger, StringHelper}
 import io.bigdime.libs.hdfs.WebHdfsReader
+import io.bigdime.util.LRUCache
 import org.joda.time.format.DateTimeFormat
 
 /**
@@ -18,6 +20,8 @@ object TouchFileChecker {
 case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long) extends AbstractNextRunChecker {
 
   import TouchFileChecker.logger
+
+  val cache = LRUCache[String, Boolean](50)
 
   def this(webHdfsReader: WebHdfsReader) {
     this(webHdfsReader, TimeUnit.DAYS.toMillis(1))
@@ -103,9 +107,12 @@ case class TouchFileChecker(webHdfsReader: WebHdfsReader, intervalInMillis: Long
         //log a warning if we are mot able to find a touchfile for yesterday's records.
         //Dont worry about 2 days' old records, as the warning should've been logeed already for that.
         //Dont worry about todays' records, as the touch file might not be ready for it yet.
-        if (now > touchFileDate && now - touchFileDate > intervalInMillis && now - touchFileDate < 2 * intervalInMillis)
-          logger.warn("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
-        else
+        if (now > touchFileDate && now - touchFileDate > intervalInMillis && now - touchFileDate < 2 * intervalInMillis) {
+          if (!cache.contains(detokString)) {
+            cache.put(detokString, true)
+            logger.alert(ALERT_TYPE.INGESTION_DID_NOT_RUN, ALERT_CAUSE.MISSING_DATA, ALERT_SEVERITY.NORMAL, "file_path={} error_message={}", detokString, e.getMessage)
+          }
+        } else
           logger.info("getDateTimeInMillisForNextRun", "_message=\"file not found\" file_path=\"{}\" exception={}", detokString, e.getMessage)
         0l
       }
