@@ -21,6 +21,10 @@ import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.handler.file.FileInputStreamReaderHandlerConstants;
+import io.bigdime.handler.hive.NextRunTimeRecordLoader;
+import io.bigdime.handler.hive.TouchFileLookupConfig;
+import io.bigdime.handler.hive.WebhdfsDirectoryListConfigBased;
+import io.bigdime.handler.hive.WebhdfsDirectoryListHeaderBased;
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM;
 import io.bigdime.libs.hdfs.FileStatus;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
@@ -68,7 +72,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
     private static int DEFAULT_BUFFER_SIZE = 1024 * 1024;
     private String hdfsFileName;
     private String entityName;
-    private WebHDFSPathParser webHDFSPathParser;
+    private NextRunTimeRecordLoader<java.util.List<ActionEvent>, List<String>> nextRunTimeRecordLoader = null;
     /**
      * CONFIG or HEADERS
      */
@@ -181,8 +185,6 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
                 getPropertyMap().put(WebHDFSReaderHandlerConstants.ENTITY_NAME, entityName);
             }
 
-            webHDFSPathParser = WebHDFSPathParserFactory.getWebHDFSPathParser(readHdfsPathFrom);
-
             hostNames = PropertyHelper.getStringProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.HOST_NAMES);
             port = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.PORT);
 
@@ -195,12 +197,13 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
             final String authChoice = PropertyHelper.getStringProperty(getPropertyMap(),
                     WebHDFSReaderHandlerConstants.AUTH_CHOICE, HDFS_AUTH_OPTION.KERBEROS.toString());
 
+            int goBackDays = PropertyHelper.getIntProperty(getPropertyMap(), WebHDFSReaderHandlerConstants.GO_BACK_DAYS, 3);
             authOption = HDFS_AUTH_OPTION.getByName(authChoice);
 
             logger.info(getHandlerPhase(),
-                    "hostNames={} port={} hdfsUser={} hdfsPath={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={}",
+                    "hostNames={} port={} hdfsUser={} hdfsPath={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} waitForFileName={}",
                     hostNames, port, hdfsUser, hdfsPath, hdfsFileName, readHdfsPathFrom, authChoice, authOption,
-                    entityName, webHDFSPathParser, waitForFileName);
+                    entityName, waitForFileName);
 
             handlerConfig.setAuthOption(authOption);
             handlerConfig.setBufferSize(bufferSize);
@@ -215,8 +218,12 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
                 throw new InvalidValueConfigurationException("Invalid value for readHdfsPathFrom: \"" + readHdfsPathFrom
                         + "\" not supported. Supported values are:" + READ_HDFS_PATH_FROM.values());
             }
-            // webHdfsReader = new WebHdfsReader(hostNames, port, hdfsUser,
-            // authOption);
+            if (readHdfsPathFrom.equals("headers")) {
+                nextRunTimeRecordLoader = new WebhdfsDirectoryListHeaderBased(ActionEventHeaderConstants.HDFS_PATH);
+            } else {
+                nextRunTimeRecordLoader = new WebhdfsDirectoryListConfigBased(webHdfsReader, new TouchFileLookupConfig(goBackDays, getHdfsPath()), getPropertyMap());
+            }
+
         } catch (final Exception ex) {
             throw new AdaptorConfigurationException(ex);
         }
@@ -401,8 +408,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
         boolean recordsFound = false;
 
         try {
-            List<String> availableHdfsDirectories = webHDFSPathParser.parse(getHdfsPath(), getPropertyMap(),
-                    getHandlerContext().getEventList(), ActionEventHeaderConstants.HDFS_PATH);
+            final List<String> availableHdfsDirectories = nextRunTimeRecordLoader.getRecords(getHandlerContext().getEventList());
             for (final String directoryPath : availableHdfsDirectories) {
 
                 try {

@@ -81,7 +81,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
     @Qualifier("hiveJobStatusFether")
     private JobStatusFetcher<HiveJobSpec, HiveJobStatus> hiveJobStatusFetcher;
 
-    private HiveNextRunChecker hiveNextRunDateTime;
+    private NextRunTimeRecordLoader<Long, Long> nextRunTimeRecordLoader;
     private HiveReaderDescriptor inputDescriptor;
     private long hiveConfDateTime;
 
@@ -225,11 +225,15 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
         String touchFile = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(properties, srcDescValueMap,
                 HiveJdbcReaderHandlerConstants.TOUCH_FILE, null);
 
-        if (touchFile == null) {
-            hiveNextRunDateTime = new LatencyBasedNextRunChecker();
-        } else {
-            hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
-        }
+//        if (touchFile == null) {
+////            hiveNextRunDateTime = new LatencyBasedNextRunChecker();
+//            nextRunTimeRecordLoader = new LatencyNextRunTimeRecordLoader(new TouchFileLookupConfig(handlerConfig), getPropertyMap());
+//        } else {
+////            hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
+//            nextRunTimeRecordLoader = new TouchFileNextRunTimeRecordLoader(webHdfsReader, new TouchFileLookupConfig(handlerConfig), getPropertyMap());
+//        }
+
+
         logger.info(getHandlerPhase(),
                 "jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={} hiveQueryDateFormat={} touchFile={}",
                 jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
@@ -246,6 +250,13 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
         handlerConfig.setMinGoBack(minGoBackMillis);
         handlerConfig.setLatency(latencyInMillis);
         handlerConfig.setTouchFile(touchFile);
+
+        if (touchFile == null) {
+            nextRunTimeRecordLoader = new LatencyNextRunTimeRecordLoader(new TouchFileLookupConfig(handlerConfig), getPropertyMap());
+        } else {
+            nextRunTimeRecordLoader = new TouchFileNextRunTimeRecordLoader(webHdfsReader, new TouchFileLookupConfig(handlerConfig), getPropertyMap());
+        }
+
         logger.info(getHandlerPhase(), "handlerConfig={}", handlerConfig);
     }
 
@@ -326,8 +337,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
     }
 
     protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
-        long nextRunDateTime = hiveNextRunDateTime.getDateTimeInMillisForNextRun(hiveConfDateTime, handlerConfig,
-                getPropertyMap());
+        long nextRunDateTime = nextRunTimeRecordLoader.getRecords(hiveConfDateTime);
+//        new TouchFileNextRunTimeRecordLoader(webHdfsReader, new TouchFileLookupConfig(handlerConfig), getPropertyMap()).getRecords(hiveConfDateTime);
         if (nextRunDateTime == 0) {
             logger.info("nothing to do", "hiveConfDateTime={}", hiveConfDateTime);
             return false;

@@ -15,6 +15,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants
 import io.bigdime.core.handler.AbstractSourceHandler
 import io.bigdime.core.runtimeinfo.{RuntimeInfo, RuntimeInfoStore, RuntimeInfoStoreException}
 import io.bigdime.handler.SwiftClient
+import io.bigdime.handler.hive.{NextRunTimeRecordLoader, TouchFileLookupConfig, WebhdfsDirectoryListConfigBased, WebhdfsDirectoryListHeaderBased}
 import io.bigdime.handler.swift.SwiftWriterHandlerConstants
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
 import io.bigdime.libs.hdfs.{HDFS_AUTH_OPTION, WebHdfsException, WebHdfsReader}
@@ -55,7 +56,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
   private val hdfsFileName: String = null
   private var entityName: String = _
-  private var webHDFSPathParser: WebHDFSPathParser = _
+  private var nextRunTimeRecordLoader: NextRunTimeRecordLoader[java.util.List[ActionEvent], java.util.List[String]] = _
   /**
     * CONFIG or HEADERS
     */
@@ -93,7 +94,6 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
         getPropertyMap.put(WebHDFSReaderHandlerConstants.ENTITY_NAME, entityName)
         handlerConfig.setHdfsPath(hdfsPath)
       }
-      webHDFSPathParser = WebHDFSPathParserFactory.getWebHDFSPathParser(readHdfsPathFrom)
       val hostNames = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.HOST_NAMES)
       port = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderHandlerConstants.PORT)
       val hdfsUser = PropertyHelper.getStringProperty(getPropertyMap, WebHDFSReaderHandlerConstants.HDFS_USER)
@@ -104,8 +104,8 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       //      parDoSize = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderAndSinkConstants.THREAD_POOL_SIZE, THREAD_POOL_SIZE)
       goBackDays = PropertyHelper.getIntProperty(getPropertyMap, WebHDFSReaderHandlerConstants.GO_BACK_DAYS, 3)
       cache = LRUCache[String, Boolean](goBackDays)
-      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} webHDFSPathParser={} waitForFileName={} goBackDays={}",
-        hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, webHDFSPathParser, waitForFileName, goBackDays: java.lang.Integer)
+      logger.info(getHandlerPhase, "hostNames={} port={} hdfsUser={} hdfsFileName={} readHdfsPathFrom={}  authChoice={} authOption={} entityName={} waitForFileName={} goBackDays={}",
+        hostNames, port, hdfsUser, hdfsFileName, readHdfsPathFrom, authChoice, authOption, entityName, waitForFileName, goBackDays: java.lang.Integer)
       handlerConfig.setAuthOption(authOption)
       handlerConfig.setEntityName(entityName)
       //      handlerConfig.setHdfsPath(hdfsPath)
@@ -120,6 +120,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
       if (readHdfsPathFrom == null) throw new InvalidValueConfigurationException("Invalid value for readHdfsPathFrom: \"" + readHdfsPathFrom + "\" not supported. Supported values are:" + READ_HDFS_PATH_FROM.values)
       logger.info("swiftWriter=", Option(swiftClient).getOrElse("null swiftWriter").toString)
+      if (readHdfsPathFrom.equals("headers")) {
+        nextRunTimeRecordLoader = WebhdfsDirectoryListHeaderBased(ActionEventHeaderConstants.HDFS_PATH)
+      } else {
+        nextRunTimeRecordLoader = WebhdfsDirectoryListConfigBased(webHdfsReader, new TouchFileLookupConfig(goBackDays, getHdfsPath), getPropertyMap)
+      }
+
     }
     catch {
       case ex: Exception => {
@@ -309,7 +315,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   override protected def findAndAddRuntimeInfoRecords: Boolean = {
     var recordsFound: java.lang.Boolean = false
     try {
-      val availableHdfsDirectories = webHDFSPathParser.parse(getHdfsPath, getPropertyMap, getHandlerContext.getEventList, ActionEventHeaderConstants.HDFS_PATH)
+      val availableHdfsDirectories = nextRunTimeRecordLoader.getRecords(getHandlerContext.getEventList)
       for (directoryPath <- availableHdfsDirectories) {
         try {
           recordsFound |= initializeRuntimeInfoRecords(directoryPath)
