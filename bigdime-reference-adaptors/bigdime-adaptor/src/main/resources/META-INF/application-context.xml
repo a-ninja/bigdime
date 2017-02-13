@@ -40,7 +40,7 @@
 </bean>
 
 
-	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource">
+	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource" primary="true">
 		<property name="driverClassName" value="${metastore.database.driverClassName}" />
 		<property name="url" value="${metastore.database.url}" />
 		<property name="username" value="${metastore.database.username}" />

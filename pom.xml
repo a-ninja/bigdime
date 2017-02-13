@@ -66,15 +66,17 @@
         <!-- mysql/hibernate -->
         <hamcrest.version>1.3</hamcrest.version>
         <mysql.mysql-connector-java.version>5.1.9</mysql.mysql-connector-java.version>
-        <!--<org.hibernate.hibernate-entitymanager.version>5.2.4.Final</org.hibernate.hibernate-entitymanager.version>-->
-        <!--<org.hibernate.hibernate-core.version>5.2.4.Final</org.hibernate.hibernate-core.version>-->
-        <!--<org.hibernate.hibernate-validator.version>5.2.4.Final</org.hibernate.hibernate-validator.version>-->
-        <!--<org.hibernate.hibernate-validator-annotation-processor>5.2.4.Final-->
-        <!--</org.hibernate.hibernate-validator-annotation-processor>-->
-        <org.hibernate.hibernate-entitymanager.version>4.1.9.Final</org.hibernate.hibernate-entitymanager.version>
-        <org.hibernate.hibernate-core.version>4.1.9.Final</org.hibernate.hibernate-core.version>
-        <org.hibernate.hibernate-validator-annotation-processor>4.1.0.Final
+        <!--Spring 4.3.6 works with hibernate 5.1.3. 4.3.6 does NOT work well with hibernate-5.2.4-->
+        <org.hibernate.hibernate-entitymanager.version>5.1.3.Final</org.hibernate.hibernate-entitymanager.version>
+        <org.hibernate.hibernate-core.version>5.1.3.Final</org.hibernate.hibernate-core.version>
+        <org.hibernate.hibernate-validator.version>5.1.3.Final</org.hibernate.hibernate-validator.version>
+        <org.hibernate.hibernate-validator-annotation-processor>5.1.3.Final
         </org.hibernate.hibernate-validator-annotation-processor>
+        <!--<org.hibernate.hibernate-entitymanager.version>4.1.9.Final</org.hibernate.hibernate-entitymanager.version>-->
+        <!--<org.hibernate.hibernate-core.version>4.1.9.Final</org.hibernate.hibernate-core.version>-->
+        <!--<org.hibernate.hibernate-validator.version>4.1.0.Final</org.hibernate.hibernate-validator.version>-->
+        <!--<org.hibernate.hibernate-validator-annotation-processor>4.1.0.Final-->
+        <!--</org.hibernate.hibernate-validator-annotation-processor>-->
 
         <com.h2database.h2>1.3.170</com.h2database.h2>
 
@@ -358,11 +360,11 @@
                 <artifactId>hibernate-core</artifactId>
                 <version>${org.hibernate.hibernate-core.version}</version>
             </dependency>
-            <!--<dependency>-->
-            <!--<groupId>org.hibernate</groupId>-->
-            <!--<artifactId>hibernate-validator</artifactId>-->
-            <!--<version>${org.hibernate.hibernate-validator.version}</version>-->
-            <!--</dependency>-->
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>${org.hibernate.hibernate-validator.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-entitymanager</artifactId>
@@ -587,6 +589,7 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.11</artifactId>
+            <scope>test</scope>
         </dependency>
         <!--End - scala-->
         <!--Start - spring-->
