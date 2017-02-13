@@ -12,21 +12,9 @@
         <artifactId>bigdime</artifactId>
         <version>0.9.2-SNAPSHOT</version>
     </parent>
-    <properties>
-        <joda.time>2.1</joda.time>
-    </properties>
     <!-- <build> <plugins> <plugin> <groupId>org.scala-tools</groupId> <artifactId>maven-scala-plugin</artifactId>
         <executions> <execution> <goals> <goal>compile</goal> <goal>testCompile</goal>
         </goals> </execution> </executions> </plugin> </plugins> </build> -->
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>${joda.time}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>

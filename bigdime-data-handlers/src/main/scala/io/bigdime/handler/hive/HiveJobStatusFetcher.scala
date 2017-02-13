@@ -131,19 +131,20 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
 
       } catch {
         case ex: JobStatusException => {
-          logger.info("getStatusForJobWithRetry", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt: java.lang.Integer, ex.toString)
+          logger.warn("getStatusForJobWithRetry", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt: java.lang.Integer, ex.toString)
           jobEx = ex
         }
       }
-      if (hiveJobStatus == null) try {
-        logger.info("getStatusForJobWithRetry", "_message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall: java.lang.Long, attempt: java.lang.Integer)
-        Thread.sleep(sleepTimeBetweenStatusCall)
+      if (hiveJobStatus == null)
+        try {
+          logger.info("getStatusForJobWithRetry", "_message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall: java.lang.Long, attempt: java.lang.Integer)
+          Thread.sleep(sleepTimeBetweenStatusCall)
 
-      } catch {
-        case ex: Exception => {
-          logger.info("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt: java.lang.Integer, ex)
+        } catch {
+          case ex: Exception => {
+            logger.warn("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt: java.lang.Integer, ex)
+          }
         }
-      }
       endTime = System.currentTimeMillis
     } while (hiveJobStatus == null && (endTime - startTime) < maxWait)
     if (jobEx != null) throw jobEx
@@ -211,7 +212,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
           }
         }
     }
-    else logger.info("getStatusForJob", "found a null jobStatus")
+    else logger.warn("getStatusForJob", "found a null jobStatus")
     hiveJobStatus
   }
 }

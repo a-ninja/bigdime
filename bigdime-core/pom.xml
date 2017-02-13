@@ -30,12 +30,6 @@
         </dependency>
         <dependency>
             <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-alerting-impl</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.bigdime</groupId>
             <artifactId>bigdime-common-test-utils</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
