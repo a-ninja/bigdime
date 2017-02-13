@@ -565,6 +565,16 @@
     </dependencyManagement>
 
     <dependencies>
+        <!--Start logging-->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+        </dependency>
+        <!--End loggin-->
         <!--Start - scala-->
         <dependency>
             <groupId>org.scala-lang</groupId>

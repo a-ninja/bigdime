@@ -16,14 +16,6 @@
         <executions> <execution> <goals> <goal>compile</goal> <goal>testCompile</goal>
         </goals> </execution> </executions> </plugin> </plugins> </build> -->
     <dependencies>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-        </dependency>
         <!-- Json -->
         <!-- 		<dependency>
                     <groupId>org.apache.spark</groupId>
