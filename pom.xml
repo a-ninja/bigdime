@@ -79,7 +79,6 @@
         <commons-dbcp>1.4</commons-dbcp>
 
         <!-- Spring -->
-        <!--<org.springframework.version>4.3.6.RELEASE</org.springframework.version>-->
         <org.springframework.data.spring-data-jpa>1.11.0.RELEASE</org.springframework.data.spring-data-jpa>
         <org.springframework.boot.spring-boot-starter-web.version>1.5.1.RELEASE
         </org.springframework.boot.spring-boot-starter-web.version>
@@ -213,12 +212,6 @@
                 <version>${org.mockito.mockito-all.version}</version>
                 <scope>test</scope>
             </dependency>
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-test</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--<scope>test</scope>-->
-            <!--</dependency>-->
             <!-- power mockito -->
             <dependency>
                 <groupId>org.powermock</groupId>
@@ -296,41 +289,16 @@
                 <type>jar</type>
             </dependency>
             <!-- Spring -->
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-core</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--</dependency>-->
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-context</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--</dependency>-->
             <dependency>
                 <groupId>org.springframework.data</groupId>
                 <artifactId>spring-data-jpa</artifactId>
                 <version>${org.springframework.data.spring-data-jpa}</version>
             </dependency>
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-beans</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--</dependency>-->
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-web</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--</dependency>-->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-actuator</artifactId>
                 <version>${org.springframework.boot.spring-boot-actuator}</version>
             </dependency>
-            <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-jdbc</artifactId>-->
-            <!--<version>${org.springframework.version}</version>-->
-            <!--</dependency>-->
             <!-- spring-boot -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -342,8 +310,6 @@
                 <artifactId>spring-boot-starter-test</artifactId>
                 <version>${org.springframework.boot.spring-boot-starter-web.version}</version>
             </dependency>
-
-
             <dependency>
                 <groupId>org.quartz-scheduler</groupId>
                 <artifactId>quartz</artifactId>
@@ -606,24 +572,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
-
-        <!--<dependency>-->
-        <!--<groupId>org.springframework</groupId>-->
-        <!--<artifactId>spring-core</artifactId>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-        <!--<groupId>org.springframework</groupId>-->
-        <!--<artifactId>spring-context</artifactId>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-jpa</artifactId>
         </dependency>
-        <!--<dependency>-->
-        <!--<groupId>org.springframework</groupId>-->
-        <!--<artifactId>spring-beans</artifactId>-->
-        <!--</dependency>-->
-
         <!--End - spring-->
         <!--Start-Jackson-->
         <dependency>
@@ -689,11 +641,6 @@
             <artifactId>mockito-all</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--<dependency>-->
-        <!--<groupId>org.springframework</groupId>-->
-        <!--<artifactId>spring-test</artifactId>-->
-        <!--<scope>test</scope>-->
-        <!--</dependency>-->
         <!-- power mockito -->
         <dependency>
             <groupId>org.powermock</groupId>

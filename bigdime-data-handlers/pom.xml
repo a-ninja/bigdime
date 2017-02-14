@@ -13,10 +13,6 @@
         <version>0.9.2-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <powermock.version>1.6.2</powermock.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.bigdime</groupId>
@@ -79,10 +75,6 @@
             <artifactId>bigdime-kafka-lib</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.springframework</groupId>-->
-            <!--<artifactId>spring-jdbc</artifactId>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-jdbc</artifactId>
