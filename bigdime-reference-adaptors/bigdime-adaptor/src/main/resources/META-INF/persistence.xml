@@ -15,6 +15,7 @@
 			<property name="hibernate.hbm2ddl.auto" value="${metastore.hibernate.hbm2ddl.auto}" />
 			<property name="hibernate.show_sql" value="update"/>
 			<property name="hibernate.connection.autocommit" value="${metastore.hibernate.connection.autocommit}" />
+			<property name="hibernate.id.new_generator_mappings" value="false"/>
 		</properties>
 	</persistence-unit>
 	

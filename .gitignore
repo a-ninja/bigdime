@@ -45,3 +45,7 @@ r.sh
 *.cache-main
 *.cache-tests
 .idea
+*.java.1
+*.scala.1
+pom.*
+bigdime-swift-alerting-impl/
