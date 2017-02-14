@@ -3,57 +3,63 @@
     Copyright (C) 2015 Stubhub.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<artifactId>bigdime-adaptor</artifactId>
-	<packaging>jar</packaging>
-	<name>bigdime adaptor</name>
-	<url>http://www.bigdime.io</url>
-	<parent>
-		<groupId>io.bigdime</groupId>
-		<artifactId>bigdime-reference-adaptors</artifactId>
-		<version>0.9.2-SNAPSHOT</version>
-	</parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>bigdime-adaptor</artifactId>
+    <packaging>jar</packaging>
+    <name>bigdime adaptor</name>
+    <url>http://www.bigdime.io</url>
+    <parent>
+        <groupId>io.bigdime</groupId>
+        <artifactId>bigdime-reference-adaptors</artifactId>
+        <version>0.9.2-SNAPSHOT</version>
+    </parent>
 
-	<dependencies>
-		<dependency>
-			<groupId>io.bigdime</groupId>
-			<artifactId>bigdime-runtimeinfo-management</artifactId>
-			<version>0.9.2-SNAPSHOT</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>jackson-core-asl</artifactId>
-					<groupId>org.codehaus.jackson</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jackson-mapper-asl</artifactId>
-					<groupId>org.codehaus.jackson</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>io.bigdime</groupId>
-			<artifactId>bigdime-data-handlers</artifactId>
-			<version>0.9.2-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>io.bigdime</groupId>
-			<artifactId>bigdime-validators</artifactId>
-			<version>0.9.2-SNAPSHOT</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>jackson-core-asl</artifactId>
-					<groupId>org.codehaus.jackson</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jersey-json</artifactId>
-					<groupId>com.sun.jersey</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>jackson-mapper-asl</artifactId>
-					<groupId>org.codehaus.jackson</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-	</dependencies>
+    <dependencies>
+        <dependency>
+            <groupId>io.bigdime</groupId>
+            <artifactId>bigdime-runtimeinfo-management</artifactId>
+            <version>0.9.2-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jackson-core-asl</artifactId>
+                    <groupId>org.codehaus.jackson</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>jackson-mapper-asl</artifactId>
+                    <groupId>org.codehaus.jackson</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.bigdime</groupId>
+            <artifactId>bigdime-data-handlers</artifactId>
+            <version>0.9.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.bigdime</groupId>
+            <artifactId>bigdime-validators</artifactId>
+            <version>0.9.2-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>jackson-core-asl</artifactId>
+                    <groupId>org.codehaus.jackson</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>jersey-json</artifactId>
+                    <groupId>com.sun.jersey</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>jackson-mapper-asl</artifactId>
+                    <groupId>org.codehaus.jackson</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>
