@@ -4,14 +4,15 @@ import java.io.{FileInputStream, IOException}
 import java.util.concurrent.TimeUnit
 import javax.annotation.PostConstruct
 
-import io.bigdime.alert.LoggerFactory
-import io.bigdime.core.commons.AdaptorLogger
+import com.typesafe.scalalogging.LazyLogging
 import io.bigdime.handler.{JobStatusException, JobStatusFetcher}
 import io.bigdime.libs.hdfs.WebHdfsException
+import io.bigdime.libs.hive.job.{HiveJobSpec, HiveJobStatus}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.{JobClient, JobConf, JobStatus}
 import org.apache.hadoop.mapreduce.JobStatus.State
 import org.apache.hadoop.security.UserGroupInformation
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -22,14 +23,12 @@ import scala.collection.mutable.ListBuffer
   * Created by neejain on 2/3/17.
   */
 object HiveJobStatusFetcher {
-  private val logger: AdaptorLogger = new AdaptorLogger(LoggerFactory.getLogger(classOf[HiveJobStatusFetcher]))
+  private val logger = LoggerFactory.getLogger(classOf[HiveJobStatusFetcher])
 }
 
 @Component("hiveJobStatusFether")
 @Scope("prototype")
-class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] {
-
-  import HiveJobStatusFetcher.logger
+class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] with LazyLogging {
 
   @Value("${hive.job.status.sleep.seconds:60}") private val sleepTimeBetweenStatusCallSeconds: Long = 0L
   private var sleepTimeBetweenStatusCall: Long = 0L
@@ -37,13 +36,13 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
   @Value("${mapreduce.framework.name:yarn}") private val mapreduceFrameworkName: String = null
   @Value("${hadoop.security.authentication:kerberos}") private val hadoopSecurityAuthentication: String = null
   private var maxWait: Long = 0L
-  private var jobClient: JobClient = null
+  private var jobClient: JobClient = _
   @Autowired private val jobClientFactory: JobClientFactory = null
   @Value("${yarn.site.xml.path}") private val yarnSiteXml: String = null
   @Value("${hive.jdbc.user.name}") private val userName: String = null
   @Value("${hive.jdbc.secret}") private val password: String = null
   @Autowired private val hiveJobOutputFileValidator: HiveJobOutputFileValidator = null
-  private var conf: Configuration = null
+  private var conf: Configuration = _
 
   @PostConstruct
   @throws[Exception]
@@ -117,7 +116,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
 
   @throws[JobStatusException]
   def getStatusForJobWithRetry(jobSpec: HiveJobSpec): HiveJobStatus = {
-    val jobName = jobSpec.getJobName
+    val jobName = jobSpec.jobName
     val startTime = System.currentTimeMillis
     var endTime = startTime
     var hiveJobStatus: HiveJobStatus = null
@@ -154,7 +153,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
   @throws[JobStatusException]
   def getStatusForJob(jobSpec: HiveJobSpec): HiveJobStatus = {
 
-    val jobName = jobSpec.getJobName
+    val jobName = jobSpec.jobName
     var overallJobStatus: JobStatus = null
     var newestJob: JobStatus = null
     var state: State = null
@@ -194,21 +193,21 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
       hiveJobStatus = HiveJobStatus(overallJobStatus, newestJob, jobStatusList.toList)
       if (hiveJobStatus.overallStatus.getState == State.SUCCEEDED)
         try {
-          val validated = hiveJobOutputFileValidator.validateOutputFile(jobSpec.getOutputDirectoryPath)
-          if (validated) logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus and validated outputDirectory.\" jobName={} outputDirectoryPath={}", jobName, jobSpec.getOutputDirectoryPath)
+          val validated = hiveJobOutputFileValidator.validateOutputFile(jobSpec.outputDirectoryPath)
+          if (validated) logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus and validated outputDirectory.\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
           else {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but outputDirectory not found\" jobName={} outputDirectoryPath={}", jobName, jobSpec.getOutputDirectoryPath)
+            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but outputDirectory not found\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
             hiveJobStatus = null
           }
 
         } catch {
           case ex: IOException => {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.getOutputDirectoryPath, ex.toString)
-            throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.getOutputDirectoryPath + ":", ex)
+            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
+            throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.outputDirectoryPath + ":", ex)
           }
           case ex: WebHdfsException => {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.getOutputDirectoryPath, ex.toString)
-            throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.getOutputDirectoryPath + ":", ex)
+            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
+            throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.outputDirectoryPath + ":", ex)
           }
         }
     }

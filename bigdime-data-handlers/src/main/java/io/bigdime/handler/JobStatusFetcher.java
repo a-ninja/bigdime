@@ -1,5 +1,7 @@
 package io.bigdime.handler;
 
+import io.bigdime.libs.hive.job.JobStatus;
+
 /**
  * This component fetches status of a job that might have been fired by one of
  * the handlers; e.g., one of the handlers may run a map reduce job and it then

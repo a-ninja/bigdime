@@ -214,7 +214,7 @@ case class WebhdfsDirectoryListConfigBased(webHdfsReader: WebHdfsReader, handler
     val localProperties = new util.HashMap[String, String]
     val tokenSet = tokenToTokenName.keySet
     var i = 0
-    for (i <- 0 to goBackDays - 1) {
+    for (i <- 0 to goBackDays) {
       val time = oldTime + TimeUnit.DAYS.toMillis(i)
       logger.debug("detokenizing string:", "currentTime={} time={} tokenizedPath={}", currentTime: java.lang.Long, time: java.lang.Long, tokenizedPath)
       val localProperties = localPropertiesWithDateTokens(time)

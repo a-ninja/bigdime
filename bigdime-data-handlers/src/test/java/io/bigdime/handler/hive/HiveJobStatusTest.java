@@ -2,6 +2,7 @@ package io.bigdime.handler.hive;
 
 import java.util.ArrayList;
 
+import io.bigdime.libs.hive.job.HiveJobStatus;
 import org.apache.hadoop.mapred.JobStatus;
 import org.testng.annotations.Test;
 

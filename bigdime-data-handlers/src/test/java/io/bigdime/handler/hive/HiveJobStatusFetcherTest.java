@@ -1,7 +1,9 @@
 package io.bigdime.handler.hive;
 
-import java.io.IOException;
-
+import io.bigdime.handler.JobStatusException;
+import io.bigdime.libs.hdfs.WebHdfsException;
+import io.bigdime.libs.hive.job.HiveJobSpec;
+import io.bigdime.libs.hive.job.HiveJobStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -20,8 +22,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import io.bigdime.handler.JobStatusException;
-import io.bigdime.libs.hdfs.WebHdfsException;
+import java.io.IOException;
 
 @ContextConfiguration(classes = HiveJobStatusFetcherTestConfig.class)
 public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
@@ -139,8 +140,7 @@ public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
 		ReflectionTestUtils.setField(hiveJobStatusFetcher, "maxWait", 5);
 		jsArray[0] = getJobWithStatus(State.SUCCEEDED, "unit-job-id-0", "unit-invalid-job");
 		Mockito.when(mockJobClient.getAllJobs()).thenReturn(jsArray);
-		HiveJobSpec hiveJobSpec = new HiveJobSpec();
-		hiveJobSpec.setJobName("unit-job");
+		HiveJobSpec hiveJobSpec = new HiveJobSpec("unit-job", null);
 
 		HiveJobStatus actualJsArray = hiveJobStatusFetcher.getStatusForJob(hiveJobSpec);
 		Assert.assertNull(actualJsArray);
@@ -154,8 +154,7 @@ public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
 		ReflectionTestUtils.setField(hiveJobStatusFetcher, "maxWait", 5);
 		jsArray[0] = getJobWithStatus(State.SUCCEEDED, "unit-job-id-0", "unit-invalid-job");
 		Mockito.when(mockJobClient.getAllJobs()).thenReturn(jsArray);
-		HiveJobSpec hiveJobSpec = new HiveJobSpec();
-		hiveJobSpec.setJobName("unit-job");
+		HiveJobSpec hiveJobSpec = new HiveJobSpec("unit-job", null);
 
 		HiveJobStatus actualJsArray = hiveJobStatusFetcher.getStatusForJobWithRetry(hiveJobSpec);
 		Assert.assertNull(actualJsArray);
@@ -175,8 +174,7 @@ public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
 		ReflectionTestUtils.setField(hiveJobStatusFetcher, "maxWait", 5);
 		jsArray[0] = getJobWithStatus(State.SUCCEEDED, "unit-job-id-0", "unit-invalid-job");
 		Mockito.when(mockJobClient.getAllJobs()).thenThrow(new IOException());
-		HiveJobSpec hiveJobSpec = new HiveJobSpec();
-		hiveJobSpec.setJobName("unit-job");
+		HiveJobSpec hiveJobSpec = new HiveJobSpec("unit-job", null);
 		HiveJobStatus actualJsArray = hiveJobStatusFetcher.getStatusForJob(hiveJobSpec);
 		Assert.assertNull(actualJsArray);
 		Mockito.verify(mockJobClient, Mockito.atLeast(1)).getAllJobs();
@@ -302,8 +300,7 @@ public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
 	public void testGetJobStatus0(JobStatus[] jsArray, State expectedState, String expectedJobId)
 			throws JobStatusException, IOException {
 		Mockito.when(mockJobClient.getAllJobs()).thenReturn(jsArray);
-		HiveJobSpec hiveJobSpec = new HiveJobSpec();
-		hiveJobSpec.setJobName("unit-job");
+		HiveJobSpec hiveJobSpec = new HiveJobSpec("unit-job", null);
 		HiveJobStatus actualJsArray = hiveJobStatusFetcher.getStatusForJob(hiveJobSpec);
 		Assert.assertEquals(actualJsArray.getOverallStatus().getState(), expectedState);
 		Assert.assertEquals(actualJsArray.getOverallStatus().getJobID().toString(), expectedJobId);
