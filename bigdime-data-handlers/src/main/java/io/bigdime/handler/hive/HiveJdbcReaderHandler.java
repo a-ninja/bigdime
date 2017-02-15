@@ -18,8 +18,9 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.handler.JobStatusException;
 import io.bigdime.handler.JobStatusFetcher;
 import io.bigdime.libs.hdfs.HDFS_AUTH_OPTION;
+import io.bigdime.libs.hdfs.HiveConnectionParam;
 import io.bigdime.libs.hdfs.WebHdfsReader;
-import io.bigdime.libs.hdfs.jdbc.HiveJdbcConnectionFactory;
+import io.bigdime.libs.hdfs.HiveJdbcConnectionFactory;
 import io.bigdime.libs.hive.job.HiveJobSpec;
 import io.bigdime.libs.hive.job.HiveJobStatus;
 import org.apache.hadoop.mapred.JobStatus;
@@ -112,6 +113,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
   private org.apache.hadoop.conf.Configuration conf;
 
   final private String DEFAULT_MIN_GO_BACK = "1 day";
+  private HiveConnectionParam hiveConnectionParam = null;
 
   @Override
   public void build() throws AdaptorConfigurationException {
@@ -214,6 +216,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
             HiveJdbcReaderHandlerConstants.HIVE_JDBC_USER_NAME);
     password = PropertyHelper.getStringProperty(getPropertyMap(), HiveJdbcReaderHandlerConstants.HIVE_JDBC_SECRET);
 
+    hiveConnectionParam = new HiveConnectionParam(authOption, driverClassName, jdbcUrl, userName, password, hiveConfigurations);
     baseOutputDirectory = PropertyHelper.getStringProperty(getPropertyMap(),
             HiveJdbcReaderHandlerConstants.BASE_OUTPUT_DIRECTORY, "/");
     String outputDirectoryPattern = PropertyHelper.getStringProperty(getPropertyMap(),
@@ -228,28 +231,14 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
     String touchFile = PropertyHelper.getStringPropertyFromPropertiesOrSrcDesc(properties, srcDescValueMap,
             HiveJdbcReaderHandlerConstants.TOUCH_FILE, null);
 
-//        if (touchFile == null) {
-////            hiveNextRunDateTime = new LatencyBasedNextRunChecker();
-//            nextRunTimeRecordLoader = new LatencyNextRunTimeRecordLoader(new TouchFileLookupConfig(handlerConfig), getPropertyMap());
-//        } else {
-////            hiveNextRunDateTime = new TouchFileChecker(webHdfsReader);
-//            nextRunTimeRecordLoader = new TouchFileNextRunTimeRecordLoader(webHdfsReader, new TouchFileLookupConfig(handlerConfig), getPropertyMap());
-//        }
-
-
     logger.info(getHandlerPhase(),
             "jdbcUrl=\"{}\" driverClassName=\"{}\" authChoice={} authOption={} userName=\"{}\" password=\"****\" baseOutputDirectory={} outputDirectoryPattern={} hiveQueryDateFormat={} touchFile={}",
             jdbcUrl, driverClassName, authChoice, authOption, userName, baseOutputDirectory, outputDirectoryPattern,
             hiveQueryDateFormat, touchFile);
-    handlerConfig.setAuthOption(authOption);
     handlerConfig.setBaseOutputDirectory(baseOutputDirectory);
-    handlerConfig.setDriverClassName(driverClassName);
     handlerConfig.setEntityName(entityName);
     handlerConfig.setGoBackDays(goBackDays);
     handlerConfig.setHiveQuery(hiveQuery);
-    handlerConfig.setJdbcUrl(jdbcUrl);
-    handlerConfig.setPassword(password);
-    handlerConfig.setUserName(userName);
     handlerConfig.setMinGoBack(minGoBackMillis);
     handlerConfig.setLatency(latencyInMillis);
     handlerConfig.setTouchFile(touchFile);
@@ -294,18 +283,8 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
           for (Entry<String, String> entry : yarnConfs.entrySet()) {
             conf.set(entry.getKey(), entry.getValue());
           }
-          // final String yarnSiteXmlPath =
-          // PropertyHelper.getStringProperty(getPropertyMap(),
-          // HiveJdbcReaderHandlerConstants.YARN_SITE_XML_PATH);
-          // logger.info(getHandlerPhase(), "yarnSiteXmlPath={}",
-          // yarnSiteXmlPath);
-          // if (yarnSiteXmlPath != null) {
-          // InputStream yarnSiteXmlInputStream = new
-          // FileInputStream(yarnSiteXmlPath);
-          // conf.addResource(yarnSiteXmlInputStream);
-          // }
           UserGroupInformation.setConfiguration(conf);
-          UserGroupInformation.loginUserFromKeytab(handlerConfig.getUserName(), handlerConfig.getPassword());
+          UserGroupInformation.loginUserFromKeytab(hiveConnectionParam.userName(), hiveConnectionParam.password());
           logger.info(getHandlerPhase(), "initialized yarn JobClient instance");
         }
       } catch (Exception e) {
@@ -335,13 +314,10 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
     hiveConfigurations.put("DIRECTORY", outputDirectory);
     hiveConfigurations.put("DATE", hiveConfDate);
-    // setHdfsOutputDirectory();
-    // return inputDescriptor;
   }
 
   protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
     long nextRunDateTime = nextRunTimeRecordLoader.getRecords(hiveConfDateTime);
-//        new TouchFileNextRunTimeRecordLoader(webHdfsReader, new TouchFileLookupConfig(handlerConfig), getPropertyMap()).getRecords(hiveConfDateTime);
     if (nextRunDateTime == 0) {
       logger.info("nothing to do", "hiveConfDateTime={}", hiveConfDateTime);
       return false;
@@ -402,7 +378,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
   @Override
   public Status doProcess() throws HandlerException {
     logger.info(getHandlerPhase(), "_messagge=\"entering doProcess\" invocation_count={}", getInvocationCount());
-    Status returnStatus = Status.READY;
+    Status returnStatus;
     try {
       ActionEvent outputEvent = new ActionEvent();
       outputEvent.getHeaders().put(ActionEventHeaderConstants.ENTITY_NAME, getEntityName());
@@ -466,19 +442,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
   }
 
   private Connection setupConnection() throws SQLException, IOException, ClassNotFoundException {
-    Connection connection = null;
-    if (connection == null) {
-      if (getAuthOption() == HDFS_AUTH_OPTION.KERBEROS) {
-        connection = hiveJdbcConnectionFactory.getConnectionWithKerberosAuthentication(getDriverClassName(),
-                getJdbcUrl(), getUserName(), getPassword(), hiveConfigurations);
-        logger.info(getHandlerPhase(), "connected to db using kerberos");
-      } else if (getAuthOption() == HDFS_AUTH_OPTION.PASSWORD) {
-        connection = hiveJdbcConnectionFactory.getConnection(getDriverClassName(), getJdbcUrl(), getUserName(),
-                getPassword(), hiveConfigurations);
-        logger.info(getHandlerPhase(), "connected to db using password");
-      }
-    }
-    return connection;
+    return hiveJdbcConnectionFactory.getConnection(hiveConnectionParam);
   }
 
   private void runHiveConfs(final Statement stmt) throws SQLException {
@@ -502,19 +466,19 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
   }
 
   public String getJdbcUrl() {
-    return handlerConfig.getJdbcUrl();
+    return hiveConnectionParam.jdbcUrl();
   }
 
   public String getDriverClassName() {
-    return handlerConfig.getDriverClassName();
+    return hiveConnectionParam.driverClassName();
   }
 
   public HDFS_AUTH_OPTION getAuthOption() {
-    return handlerConfig.getAuthOption();
+    return hiveConnectionParam.hdfsAuthOption();
   }
 
   public String getUserName() {
-    return handlerConfig.getUserName();
+    return hiveConnectionParam.userName();
   }
 
   public String getBaseOutputDirectory() {
@@ -567,10 +531,6 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
 
   public long getIntervalInMillis() {
     return intervalInMillis;
-  }
-
-  public String getPassword() {
-    return handlerConfig.getPassword();
   }
 
   public String getOutputDirectoryPattern() {
