@@ -29,6 +29,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.bigdime</groupId>
+            <artifactId>bigdime-hdfs-lib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>
             <exclusions>

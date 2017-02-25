@@ -2,7 +2,7 @@ package io.bigdime.handler.webhdfs
 
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.regex.Pattern
 
 import io.bigdime.alert.Logger.{ALERT_CAUSE, ALERT_SEVERITY, ALERT_TYPE}
@@ -14,10 +14,10 @@ import io.bigdime.core.config.AdaptorConfigConstants
 import io.bigdime.core.constants.ActionEventHeaderConstants
 import io.bigdime.core.handler.AbstractSourceHandler
 import io.bigdime.core.runtimeinfo.{RuntimeInfo, RuntimeInfoStore, RuntimeInfoStoreException}
-import io.bigdime.handler.SwiftClient
 import io.bigdime.handler.hive.{NextRunTimeRecordLoader, TouchFileLookupConfig, WebhdfsDirectoryListConfigBased, WebhdfsDirectoryListHeaderBased}
 import io.bigdime.handler.swift.SwiftWriterHandlerConstants
 import io.bigdime.handler.webhdfs.WebHDFSReaderHandlerConfig.READ_HDFS_PATH_FROM
+import io.bigdime.libs.client.SwiftClient
 import io.bigdime.libs.hdfs.{HDFS_AUTH_OPTION, WebHdfsException, WebHdfsReader}
 import io.bigdime.util.{LRUCache, Retry}
 import org.apache.commons.lang3.StringUtils
@@ -74,6 +74,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   private var recordList: mutable.Buffer[RuntimeInfo] = _
   private var goBackDays = 3
   var cache: LRUCache[String, Boolean] = _
+  val SLEEP_BETWEEN_RETRIES = TimeUnit.MINUTES.toMillis(1)
 
   @throws[AdaptorConfigurationException]
   override def build() {
@@ -244,7 +245,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
     val ts = List[Class[_ <: Throwable]](classOf[HandlerException], classOf[CommandException], classOf[java.sql.SQLException], classOf[IOException], classOf[InvocationTargetException])
 
-    Retry(5, ts)(() => {
+    Retry(5, ts, SLEEP_BETWEEN_RETRIES)(() => {
       val inputDescriptor = new WebHDFSInputDescriptor("handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:")
       inputDescriptor.parseDescriptor(rec.getInputDescriptor)
       val webHdfsPathToProcess = inputDescriptor.getWebhdfsPath

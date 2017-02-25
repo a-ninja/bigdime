@@ -1,30 +1,19 @@
 package io.bigdime.handler.swift
 
-import java.util.ArrayList
-import java.util.Collection
 import java.util
-import java.util.List
-import java.util.Map
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.FutureTask
-import io.bigdime.handler.SwiftClient
-import org.javaswift.joss.model.Container
-import org.javaswift.joss.model.DirectoryOrObject
-import org.javaswift.joss.model.StoredObject
+import java.util.concurrent.{Callable, ExecutionException, Executors, FutureTask}
+
+import io.bigdime.core.ActionEvent.Status
+import io.bigdime.core.{ActionEvent, AdaptorConfigurationException}
+import io.bigdime.core.constants.ActionEventHeaderConstants
+import io.bigdime.core.handler.HandlerContext
+import io.bigdime.libs.client.SwiftClient
+import org.javaswift.joss.model.{Container, DirectoryOrObject, StoredObject}
+import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.springframework.test.util.ReflectionTestUtils
 import org.testng.Assert
 import org.testng.annotations.Test
-import io.bigdime.core.ActionEvent
-import io.bigdime.core.ActionEvent.Status
-import io.bigdime.core.AdaptorConfigurationException
-import io.bigdime.core.constants.ActionEventHeaderConstants
-import io.bigdime.core.handler.HandlerContext
-import io.bigdime.core.handler.HandlerJournal
-import org.mockito.Matchers._
 
 class SwiftTouchFileWriterHandlerScalaTest {
   @Test

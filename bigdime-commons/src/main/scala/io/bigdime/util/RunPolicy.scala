@@ -2,7 +2,6 @@ package io.bigdime.util
 
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -22,6 +21,30 @@ case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]]) extends
   }
 }
 
+//not tested
+case class RetryUntilElapsed(maxElapsed: Long, retriables: List[Class[_ <: Throwable]]) extends RunPolicy {
+  override def apply[T](block: () => T): Option[T] = {
+    val startTime = System.currentTimeMillis()
+    var endTime = 0l
+    var causes = List[Throwable]()
+
+    do {
+      try {
+        var elapsed = 0l
+        return Retry(1, retriables)(block)
+      } catch {
+        case e: RetriesExhaustedException =>
+          endTime = System.currentTimeMillis()
+          causes = e :: causes
+          if (endTime - startTime > maxElapsed)
+            throw RetriesExhaustedException(causes.toList)
+      }
+
+    } while (endTime - startTime < maxElapsed)
+    throw RetriesExhaustedException(causes.toList)
+  }
+}
+
 object Retry {
   val logger = LoggerFactory.getLogger("Retry")
 }
@@ -33,7 +56,8 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
   override def apply[T](block: () => T): Option[T] = {
     var attempt = 0
 
-    var causes = new ListBuffer[Throwable]
+    var causesHash = Set[String]()
+    var causes = List[Throwable]()
     while (true) {
       attempt += 1
       try {
@@ -43,14 +67,17 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
       } catch {
         case e: Exception =>
           logger.warn("code block executed with Exception, attempt={}/{}", attempt.toString, maxAttempts.toString, e)
-          causes += e
+          if (!causesHash.contains(e.toString)) {
+            causesHash = causesHash + e.toString
+            causes = e :: causes
+          }
           if (retriables.filter(r => r.isInstance(e)).nonEmpty) {
             if (attempt < maxAttempts)
               Thread.sleep(attempt * delay)
             else
               throw RetriesExhaustedException(causes.toList)
           } else
-            throw new UnretriableException(e)
+            throw UnretriableException(e)
       }
     }
 

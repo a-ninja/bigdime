@@ -7,9 +7,8 @@ import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors, Futu
 
 import io.bigdime.alert.impl.{AbstractLogger, LogEntry, LogMessageBuilder}
 import io.bigdime.alert.{AlertMessage, Logger}
-import io.bigdime.util.{LRUCache, TryWithCloseable}
+import io.bigdime.util.{LRUCache, RetryUntilSuccessful, TryWithCloseable}
 import org.javaswift.joss.client.factory.{AccountConfig, AccountFactory}
-import org.javaswift.joss.model.Container
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.helpers.MessageFormatter
 import org.springframework.context.support.ClassPathXmlApplicationContext
@@ -31,6 +30,7 @@ object SwiftLogger {
   val SWIFT_AUTH_URL_PROPERTY = "${swift.auth.url}"
   val SWIFT_TENANT_ID_PROPERTY = "${swift.tenant.id}"
   val SWIFT_TENANT_NAME_PROPERTY = "${swift.tenant.name}"
+  val SWIFT_PREFERRED_REGION = "${swift.preferred.region}"
   val SWIFT_ALERT_CONTAINER_NAME_PROPERTY = "${swift.alert.container.name}"
   val SWIFT_ALERT_LEVEL_PROPERTY = "${swift.alert.level}"
   val SWIFT_BUFFER_SIZE_PROPERTY = "${swift.debugInfo.bufferSize}"
@@ -38,7 +38,9 @@ object SwiftLogger {
   private var hostName = "UNKNOWN"
   private var hostIp: String = _
   private val msgIdCounter = new AtomicLong(System.currentTimeMillis())
+  private var executorService: ExecutorService = Executors.newFixedThreadPool(1)
 
+  //  logger.executorService = Executors.newFixedThreadPool(1)
   try {
     hostName = InetAddress.getLocalHost.getHostName
     NetworkInterface.getNetworkInterfaces.foreach(nwInterface => {
@@ -62,34 +64,38 @@ object SwiftLogger {
       logger = SwiftLogger()
       loggerMap.put(loggerName, logger)
 
-      val resp = TryWithCloseable[ClassPathXmlApplicationContext, Unit](new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH))((context) => {
-        val config = new AccountConfig
-        val beanFactory = context.getBeanFactory
-        val containerName = context.getBeanFactory.resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY)
-        config.setUsername(context.getBeanFactory.resolveEmbeddedValue(SWIFT_USER_NAME_PROPERTY))
-        config.setPassword(context.getBeanFactory.resolveEmbeddedValue(SWIFT_PASSWORD_PROPERTY))
-        config.setAuthUrl(context.getBeanFactory.resolveEmbeddedValue(SWIFT_AUTH_URL_PROPERTY))
-        config.setTenantId(context.getBeanFactory.resolveEmbeddedValue(SWIFT_TENANT_ID_PROPERTY))
-        config.setTenantName(context.getBeanFactory.resolveEmbeddedValue(SWIFT_TENANT_NAME_PROPERTY))
-        val account = new AccountFactory(config).createAccount
-        logger.container = account.getContainer(containerName)
-        logger.swiftAlertLevel = context.getBeanFactory.resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY)
-        try {
-          val bufferSize = beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY).toLong
-          logger.capacity = bufferSize.toLong
-          System.out.println("setting buffer size from property as:" + logger.capacity)
+      val resp = TryWithCloseable[ClassPathXmlApplicationContext, Unit](new ClassPathXmlApplicationContext(APPLICATION_CONTEXT_PATH))(
+        (context) => {
+          val ts = List[Class[_ <: Throwable]](classOf[Throwable])
+          RetryUntilSuccessful(ts)(() => {
+            val config = new AccountConfig
+            val beanFactory = context.getBeanFactory
+            val _containerName = context.getBeanFactory.resolveEmbeddedValue(SWIFT_ALERT_CONTAINER_NAME_PROPERTY)
+            config.setPreferredRegion(context.getBeanFactory.resolveEmbeddedValue(SWIFT_PREFERRED_REGION))
+            config.setUsername(context.getBeanFactory.resolveEmbeddedValue(SWIFT_USER_NAME_PROPERTY))
+            config.setPassword(context.getBeanFactory.resolveEmbeddedValue(SWIFT_PASSWORD_PROPERTY))
+            config.setAuthUrl(context.getBeanFactory.resolveEmbeddedValue(SWIFT_AUTH_URL_PROPERTY))
+            config.setTenantId(context.getBeanFactory.resolveEmbeddedValue(SWIFT_TENANT_ID_PROPERTY))
+            config.setTenantName(context.getBeanFactory.resolveEmbeddedValue(SWIFT_TENANT_NAME_PROPERTY))
+            logger.containerName = _containerName
+            logger.accountFactory = new AccountFactory(config)
+            logger.swiftAlertLevel = context.getBeanFactory.resolveEmbeddedValue(SWIFT_ALERT_LEVEL_PROPERTY)
+            try {
+              val bufferSize = beanFactory.resolveEmbeddedValue(SWIFT_BUFFER_SIZE_PROPERTY).toLong
+              logger.capacity = bufferSize.toLong
+              System.out.println("setting buffer size from property as:" + logger.capacity)
 
-        } catch {
-          case ex: Exception =>
-            logger.capacity = 4 * 1024
-            System.out.println("setting default buffer size as:" + logger.capacity + ", due to " + ex.toString)
-        }
-        if (logger.swiftAlertLevel != null) if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) logger.setDebugEnabled()
-        else if (logger.swiftAlertLevel.equalsIgnoreCase("info")) logger.setInfoEnabled()
-        else if (logger.swiftAlertLevel.equalsIgnoreCase("warn")) logger.setWarnEnabled()
-        logger.executorService = Executors.newFixedThreadPool(1)
-        System.out.println("swiftAlertContainerName=" + containerName + ", swiftAlertLevel=" + logger.swiftAlertLevel + ", capacity=" + logger.capacity)
-      })
+            } catch {
+              case ex: Exception =>
+                logger.capacity = 4 * 1024
+                System.out.println("setting default buffer size as:" + logger.capacity + ", due to " + ex.toString)
+            }
+            if (logger.swiftAlertLevel != null) if (logger.swiftAlertLevel.equalsIgnoreCase("debug")) logger.setDebugEnabled()
+            else if (logger.swiftAlertLevel.equalsIgnoreCase("info")) logger.setInfoEnabled()
+            else if (logger.swiftAlertLevel.equalsIgnoreCase("warn")) logger.setWarnEnabled()
+            System.out.println("swiftAlertContainerName=" + _containerName + ", swiftAlertLevel=" + logger.swiftAlertLevel + ", capacity=" + logger.capacity)
+          })
+        })
       resp match {
         case Success(_) =>
         case Failure(f) => f.printStackTrace(System.err)
@@ -101,13 +107,14 @@ object SwiftLogger {
 
 case class SwiftLogger() extends AbstractLogger with Logger {
 
-  import SwiftLogger.msgIdCounter
+  import SwiftLogger.{executorService, msgIdCounter}
 
   private var swiftAlertLevel: String = _
-  private var executorService: ExecutorService = _
-  private var container: Container = _
+
+  private var containerName: String = _
   private var capacity: Long = 10 * 1024
   private[swift] val logDtf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS")
+  private var accountFactory: AccountFactory = _
 
 
   private def formatter(format: String, o: Object*) = {
@@ -244,30 +251,29 @@ case class SwiftLogger() extends AbstractLogger with Logger {
     }
   }
 
-  var futureTask: FutureTask[Any] = _
+  //  var futureTask: FutureTask[Any] = _
 
   private def writeToSwift(source: String, dataTowrite: Array[Byte]): Unit = {
-    val logTask = SwiftLogTask(container, source, dataTowrite)
-    futureTask = new FutureTask[Any](logTask)
+    val logTask = SwiftLogTask(accountFactory, containerName, source, dataTowrite)
+    val futureTask = new FutureTask[Any](logTask)
     executorService.execute(futureTask)
-    startHealthcheckThread()
+    //    startHealthcheckThread(futureTask)
   }
 
   private val cache = LRUCache[String, LogEntry](1000)
 
-  protected def startHealthcheckThread(): Unit = {
-    new Thread() {
-      override def run() {
-        try {
-          System.out.print("heathcheck thread for swiftLogger")
-          futureTask.get
-          System.out.print("heathcheck thread for swiftLogger, future task completed")
-
-        } catch {
-          case e: Exception =>
-            e.printStackTrace(System.err)
-        }
-      }
-    }.start()
-  }
+  //  protected def startHealthcheckThread(futureTask: FutureTask[Any]): Unit = {
+  //    new Thread() {
+  //      override def run() {
+  //        try {
+  //          System.out.println("heathcheck thread for swiftLogger-start")
+  //          futureTask.get
+  //          System.out.println("heathcheck thread for swiftLogger-end")
+  //        } catch {
+  //          case e: Exception =>
+  //            e.printStackTrace(System.err)
+  //        }
+  //      }
+  //    }.start()
+  //  }
 }
