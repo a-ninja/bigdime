@@ -13,43 +13,51 @@ trait RunPolicy {
 
 object RunPolicy {
   val MAX_ATTEMPTS: Int = 100
+
+  def noop(): Unit = {}
 }
 
-case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]]) extends RunPolicy {
+//final case class RetryAndHandleUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit) extends RunPolicy {
+//  override def apply[T](block: () => T): Option[T] = {
+//    Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = handle)(block)
+//  }
+//}
+
+final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit=RunPolicy.noop) extends RunPolicy {
   override def apply[T](block: () => T): Option[T] = {
-    Retry(RunPolicy.MAX_ATTEMPTS, retriables)(block)
+    Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = RunPolicy.noop)(block)
   }
 }
 
 //not tested
-case class RetryUntilElapsed(maxElapsed: Long, retriables: List[Class[_ <: Throwable]]) extends RunPolicy {
-  override def apply[T](block: () => T): Option[T] = {
-    val startTime = System.currentTimeMillis()
-    var endTime = 0l
-    var causes = List[Throwable]()
-
-    do {
-      try {
-        var elapsed = 0l
-        return Retry(1, retriables)(block)
-      } catch {
-        case e: RetriesExhaustedException =>
-          endTime = System.currentTimeMillis()
-          causes = e :: causes
-          if (endTime - startTime > maxElapsed)
-            throw RetriesExhaustedException(causes.toList)
-      }
-
-    } while (endTime - startTime < maxElapsed)
-    throw RetriesExhaustedException(causes.toList)
-  }
-}
+//final case class RetryUntilElapsed(maxElapsed: Long, retriables: List[Class[_ <: Throwable]]) extends RunPolicy {
+//  override def apply[T](block: () => T): Option[T] = {
+//    val startTime = System.currentTimeMillis()
+//    var endTime = 0l
+//    var causes = List[Throwable]()
+//
+//    do {
+//      try {
+//        var elapsed = 0l
+//        return Retry(1, retriables, noop)(block)
+//      } catch {
+//        case e: RetriesExhaustedException =>
+//          endTime = System.currentTimeMillis()
+//          causes = e :: causes
+//          if (endTime - startTime > maxElapsed)
+//            throw RetriesExhaustedException(causes.toList)
+//      }
+//
+//    } while (endTime - startTime < maxElapsed)
+//    throw RetriesExhaustedException(causes.toList)
+//  }
+//}
 
 object Retry {
   val logger = LoggerFactory.getLogger("Retry")
 }
 
-case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000) extends RunPolicy {
+final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000, handle: () => Unit = RunPolicy.noop) extends RunPolicy {
 
   import Retry.logger
 
@@ -72,8 +80,10 @@ case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], dela
             causes = e :: causes
           }
           if (retriables.filter(r => r.isInstance(e)).nonEmpty) {
-            if (attempt < maxAttempts)
+            if (attempt < maxAttempts) {
               Thread.sleep(attempt * delay)
+              handle()
+            }
             else
               throw RetriesExhaustedException(causes.toList)
           } else
@@ -91,7 +101,7 @@ case class RetryAndGiveUp(maxAttempts: Int, retriables: List[Class[_ <: Throwabl
 
   override def apply[T](block: () => T): Option[T] = {
     try {
-      Retry(maxAttempts, retriables, delay)(block)
+      Retry(maxAttempts, retriables, delay, RunPolicy.noop)(block)
     } catch {
       case e: RetriesExhaustedException => e.causes.foreach(ex => {
         logger.warn("RetryAndGiveUp", ex)

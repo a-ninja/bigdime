@@ -3,7 +3,7 @@ package io.bigdime.libs.client
 import java.io.{File, InputStream}
 import java.util.concurrent.TimeUnit
 
-import io.bigdime.util.{RetryAndGiveUp, RetryUntilSuccessful}
+import io.bigdime.util.{RetryUntilSuccessful}
 import org.javaswift.joss.client.factory.{AccountConfig, AccountFactory}
 import org.javaswift.joss.exception.CommandException
 import org.javaswift.joss.headers.`object`.{DeleteAfter, ObjectManifest}
@@ -65,8 +65,9 @@ case class SwiftClient() extends Client[String, StoredObject] {
   private val containers = scala.collection.mutable.Map[Thread, Container]()
 
   private val ts = List[Class[_ <: Throwable]](classOf[CommandException])
-  private val retryUntilSuccessful = RetryUntilSuccessful(ts)
-  private val retryAndGiveUp = RetryAndGiveUp(3, ts)
+  //  private val retryUntilSuccessful = RetryUntilSuccessful(ts)
+  private val retryUntilSuccessful = RetryUntilSuccessful(ts, () => evictConnectionFromCache)
+  //  private val retryAndGiveUp = RetryAndGiveUp(3, ts)
 
   def container: Container = {
     containers.get(Thread.currentThread()) match {
@@ -94,7 +95,7 @@ case class SwiftClient() extends Client[String, StoredObject] {
     }
   }
 
-  private def removeConnectionFromCache = containers.remove(Thread.currentThread())
+  private def evictConnectionFromCache = containers.remove(Thread.currentThread())
 
   protected def uploadInstructionWithExpiration(data: InputStream) = {
     setExpiration(new UploadInstructions(data))
@@ -117,29 +118,21 @@ case class SwiftClient() extends Client[String, StoredObject] {
   }
 
   override def write(targetPath: String, data: InputStream) = {
-    try {
+    retryUntilSuccessful(() => {
       val storedObject = container.getObject(targetPath)
       storedObject.uploadObject(uploadInstructionWithExpiration(data))
       storedObject
-    } catch {
-      case e => removeConnectionFromCache
-        throw e
-    }
+    }).get
   }
 
 
   override def write(objectName: String, data: Array[Byte]): StoredObject = {
-    var storedObject: StoredObject = null
-    try
-      retryUntilSuccessful(() => {
-        storedObject = container.getObject(objectName)
-        storedObject.uploadObject(uploadInstructionWithExpiration(data))
-      })
-    catch {
-      case e: Throwable => removeConnectionFromCache
-    }
-    logger.info("swiftClient", "_message=\"wrote to swift\" swift_object_name={} object_etag={} object_public_url={}", objectName, storedObject.getEtag, storedObject.getPublicURL)
-    storedObject
+    retryUntilSuccessful(() => {
+      val storedObject = container.getObject(objectName)
+      storedObject.uploadObject(uploadInstructionWithExpiration(data))
+      logger.info("swiftClient", "_message=\"wrote to swift\" swift_object_name={} object_etag={} object_public_url={}", objectName, storedObject.getEtag, storedObject.getPublicURL)
+      storedObject
+    }).get
   }
 
   override def write(objectName: String, fileName: String) = {
@@ -152,7 +145,7 @@ case class SwiftClient() extends Client[String, StoredObject] {
 
 }
 
-class SwiftAlertClient(c:Container) extends SwiftClient {
+class SwiftAlertClient(c: Container) extends SwiftClient {
   /**
     *
     * @param segmentName
