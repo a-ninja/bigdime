@@ -72,11 +72,11 @@ case class SwiftClient() extends Client[String, StoredObject] {
   def container: Container = {
     containers.get(Thread.currentThread()) match {
       case x: Some[Container] => {
-        logger.debug("got container", "get container")
+        logger.info("container:", "retrieved from cache")
         x.get
       }
       case _ => {
-        logger.debug("Initialized container", "initialized container")
+        logger.info("container:", "initialized container")
         val tempContainer = {
           val accountConfig = new AccountConfig
           accountConfig.setUsername(username)
@@ -95,7 +95,10 @@ case class SwiftClient() extends Client[String, StoredObject] {
     }
   }
 
-  private def evictConnectionFromCache = containers.remove(Thread.currentThread())
+  private def evictConnectionFromCache = {
+    logger.info("evicting from cache: {}", Thread.currentThread())
+    containers.remove(Thread.currentThread())
+  }
 
   protected def uploadInstructionWithExpiration(data: InputStream) = {
     setExpiration(new UploadInstructions(data))
