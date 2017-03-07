@@ -2,6 +2,8 @@ package io.bigdime.handler.hive;
 
 import java.util.Properties;
 
+import io.bigdime.libs.hive.job.HiveJobStatusFetcher;
+import io.bigdime.libs.hive.job.JobClientFactory;
 import org.apache.hadoop.mapred.JobClient;
 import org.mockito.Mockito;
 import org.springframework.context.annotation.Bean;

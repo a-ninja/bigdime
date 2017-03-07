@@ -1,4 +1,4 @@
-package io.bigdime.handler;
+package io.bigdime.libs.hive.job;
 
 public class JobStatusException extends Exception {
 

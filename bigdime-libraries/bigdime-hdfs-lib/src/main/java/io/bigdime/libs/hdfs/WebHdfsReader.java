@@ -3,15 +3,7 @@
  */
 package io.bigdime.libs.hdfs;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.zip.ZipInputStream;
-
-import javax.annotation.PostConstruct;
-
+import io.bigdime.core.commons.StringHelper;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -21,7 +13,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import io.bigdime.core.commons.StringHelper;
+import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.ZipInputStream;
 
 /**
  * This component can be used to read from hdfs.
@@ -110,8 +108,8 @@ public class WebHdfsReader {
    * appear in any specific order; they are not, in particular, guaranteed to
    * appear in alphabetical order.
    *
-   * @param webHdfs
    * @param hdfsFilePath
+   * @param recursive
    * @return
    * @throws WebHdfsException
    * @throws IOException
@@ -273,8 +271,6 @@ public class WebHdfsReader {
    * Uses "OPEN" operation and returns the InputStream to read the file
    * contents.
    *
-   * @param webHdfs
-   * @param filePath
    * @return
    * @throws IOException
    * @throws WebHdfsException

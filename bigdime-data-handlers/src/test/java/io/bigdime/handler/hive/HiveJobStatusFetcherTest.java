@@ -1,9 +1,7 @@
 package io.bigdime.handler.hive;
 
-import io.bigdime.handler.JobStatusException;
+import io.bigdime.libs.hive.job.*;
 import io.bigdime.libs.hdfs.WebHdfsException;
-import io.bigdime.libs.hive.job.HiveJobSpec;
-import io.bigdime.libs.hive.job.HiveJobStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -28,7 +26,7 @@ import java.io.IOException;
 public class HiveJobStatusFetcherTest extends AbstractTestNGSpringContextTests {
 
 	@Autowired
-	HiveJobStatusFetcher hiveJobStatusFetcher;
+  HiveJobStatusFetcher hiveJobStatusFetcher;
 
 	@Autowired
 	JobClient mockJobClient;

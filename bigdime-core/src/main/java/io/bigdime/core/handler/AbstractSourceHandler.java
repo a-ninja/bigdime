@@ -1,12 +1,5 @@
 package io.bigdime.core.handler;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
@@ -18,6 +11,12 @@ import io.bigdime.core.commons.CollectionUtil;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public abstract class AbstractSourceHandler extends AbstractHandler {
     private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(AbstractSourceHandler.class));
@@ -27,7 +26,7 @@ public abstract class AbstractSourceHandler extends AbstractHandler {
     private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
     private boolean processingDirty = false;
 
-    protected String getEntityName() {
+    public String getEntityName() {
         return "";
     }
 

@@ -1,13 +1,12 @@
-package io.bigdime.handler.hive
+package io.bigdime.libs.hive.job
 
 import java.io.{FileInputStream, IOException}
 import java.util.concurrent.TimeUnit
 import javax.annotation.PostConstruct
 
 import com.typesafe.scalalogging.LazyLogging
-import io.bigdime.handler.{JobStatusException, JobStatusFetcher}
+import io.bigdime.handler.hive.HiveJobOutputFileValidator
 import io.bigdime.libs.hdfs.WebHdfsException
-import io.bigdime.libs.hive.job.{HiveJobSpec, HiveJobStatus}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.{JobClient, JobConf, JobStatus}
 import org.apache.hadoop.mapreduce.JobStatus.State
@@ -47,7 +46,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
   @PostConstruct
   @throws[Exception]
   def init() {
-    logger.info("HiveJobStatusFetcher.PostConstruct", "yarnSiteXml={} mapreduceFrameworkName={} hadoopSecurityAuthentication={} userName={} secret={}, this={}", yarnSiteXml, mapreduceFrameworkName, hadoopSecurityAuthentication, userName, password, this)
+    logger.info("HiveJobStatusFetcher.PostConstruct: yarnSiteXml={} mapreduceFrameworkName={} hadoopSecurityAuthentication={} userName={} secret={}, this={}", yarnSiteXml, mapreduceFrameworkName, hadoopSecurityAuthentication, userName, password, this)
     sleepTimeBetweenStatusCall = TimeUnit.SECONDS.toMillis(sleepTimeBetweenStatusCallSeconds)
     maxWait = TimeUnit.SECONDS.toMillis(maxWaitSeconds)
     conf = new Configuration
@@ -60,12 +59,12 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
       UserGroupInformation.loginUserFromKeytab(userName, password)
       jobClient = jobClientFactory.createJobClient(conf)
     }
-    logger.info("HiveJobStatusFetcher.PostConstruct done", "yarnSiteXml={}, this={}", yarnSiteXml, this)
+    logger.info("HiveJobStatusFetcher.PostConstruct done: yarnSiteXml={}, this={}", yarnSiteXml, this)
   }
 
   @throws[JobStatusException]
   def getStatusForAllJobs: Array[JobStatus] = {
-    logger.info("getStatusForAllJobs", "yarnSiteXml={}, this={} mapreduceFrameworkName={} hadoopSecurityAuthentication={}", yarnSiteXml, this, mapreduceFrameworkName, hadoopSecurityAuthentication)
+    logger.info("getStatusForAllJobs: yarnSiteXml={}, this={} mapreduceFrameworkName={} hadoopSecurityAuthentication={}", yarnSiteXml, this, mapreduceFrameworkName, hadoopSecurityAuthentication)
     try {
       jobClient.init(new JobConf(conf))
       val tempConf = new Configuration
@@ -78,20 +77,21 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
         UserGroupInformation.loginUserFromKeytab(userName, password)
       }
       val jobStatus = jobClient.getAllJobs
-      logger.debug("getStatusForAllJobs", "status={} length={}", jobStatus.toString, jobStatus.length: java.lang.Integer)
+      logger.debug("getStatusForAllJobs: status={} length={}", jobStatus.toString, jobStatus.length: java.lang.Integer)
       jobStatus
-
     } catch {
       case ex: IOException => {
-        logger.info("getStatusForAllJobs", "_message=\"unable to get the job status\"", ex.toString)
+        logger.info("getStatusForAllJobs: _message=\"unable to get the job status\"", ex.toString)
         throw new JobStatusException("unable to get the job status:", ex)
       }
-    } finally try
-      jobClient.close()
-
-    catch {
-      case ex: IOException => {
-        logger.warn("getStatusForAllJobs", "_message=\"exception while trying to close the jobClient...not a fatal error\"", ex)
+    } finally {
+      try {
+        jobClient.close()
+      }
+      catch {
+        case ex: IOException => {
+          logger.warn("getStatusForAllJobs: _message=\"exception while trying to close the jobClient...not a fatal error\"", ex)
+        }
       }
     }
   }
@@ -101,13 +101,13 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
     val statuses = ListBuffer[JobStatus]()
     try {
       val jobStatus = getStatusForAllJobs
-      logger.debug("getAllStatusesForJob", "status={} length={} jobName={}", jobStatus.toString, jobStatus.length: java.lang.Integer, jobName)
+      logger.debug("getAllStatusesForJob: status={} length={} jobName={}", jobStatus.toString, jobStatus.length: java.lang.Integer, jobName)
       for (js <- jobStatus) {
         if (js.getJobName.contains(jobName)) statuses.append(js)
       }
     } catch {
       case ex: JobStatusException => {
-        logger.info("getAllStatusesForJob", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, ex.toString)
+        logger.info("getAllStatusesForJob: _message=\"unable to get the job status\" jobName={} attempt={}", jobName, ex.toString)
         throw ex
       }
     }
@@ -127,23 +127,23 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
       try {
         jobEx = null
         hiveJobStatus = getStatusForJob(jobSpec)
-
       } catch {
         case ex: JobStatusException => {
-          logger.warn("getStatusForJobWithRetry", "_message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt: java.lang.Integer, ex.toString)
+          logger.warn("getStatusForJobWithRetry: _message=\"unable to get the job status\" jobName={} attempt={}", jobName, attempt: java.lang.Integer, ex.toString)
           jobEx = ex
         }
       }
-      if (hiveJobStatus == null)
+      if (hiveJobStatus == null) {
         try {
-          logger.info("getStatusForJobWithRetry", "_message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall: java.lang.Long, attempt: java.lang.Integer)
+          logger.info("getStatusForJobWithRetry: _message=\"sleeping for {} ms before retry.\"  attempt={}", sleepTimeBetweenStatusCall: java.lang.Long, attempt: java.lang.Integer)
           Thread.sleep(sleepTimeBetweenStatusCall)
 
         } catch {
           case ex: Exception => {
-            logger.warn("getStatusForJobWithRetry", "_message=\"Thread interrupted.\"  attempt={}", attempt: java.lang.Integer, ex)
+            logger.warn("getStatusForJobWithRetry: _message=\"Thread interrupted.\"  attempt={}", attempt: java.lang.Integer, ex)
           }
         }
+      }
       endTime = System.currentTimeMillis
     } while (hiveJobStatus == null && (endTime - startTime) < maxWait)
     if (jobEx != null) throw jobEx
@@ -154,14 +154,14 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
   def getStatusForJob(jobSpec: HiveJobSpec): HiveJobStatus = {
 
     val jobName = jobSpec.jobName
-    var overallJobStatus: JobStatus = null
+    var overallJobStatus: org.apache.hadoop.mapred.JobStatus = null
     var newestJob: JobStatus = null
     var state: State = null
     val jobStatusList = new ListBuffer[JobStatus]
     var hiveJobStatus: HiveJobStatus = null
     var jobStatuses = getAllStatusesForJob(jobName)
     for (js <- jobStatuses) {
-      logger.info("getStatusForJob", "jobId={} jobName={} runState={}", js.getJobID, js.getJobName, js.getRunState: java.lang.Integer)
+      logger.info("getStatusForJob: jobId={} jobName={} runState={}", js.getJobID, js.getJobName, js.getRunState: java.lang.Integer)
       jobStatusList.append(js)
       val stageState = js.getState
       if (newestJob == null) {
@@ -189,29 +189,29 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
       }
     }
     if (newestJob != null) {
-      logger.info("getStatusForJob", "found a not null jobStatus. state={}", state)
+      logger.info("getStatusForJob: found a not null jobStatus. state={}", state)
       hiveJobStatus = HiveJobStatus(overallJobStatus, newestJob, jobStatusList.toList)
       if (hiveJobStatus.overallStatus.getState == State.SUCCEEDED)
         try {
           val validated = hiveJobOutputFileValidator.validateOutputFile(jobSpec.outputDirectoryPath)
-          if (validated) logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus and validated outputDirectory.\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
+          if (validated) logger.info("getStatusForJob: _message=\"found a SUCCEEDED jobStatus and validated outputDirectory.\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
           else {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but outputDirectory not found\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
+            logger.info("getStatusForJob: _message=\"found a SUCCEEDED jobStatus, but outputDirectory not found\" jobName={} outputDirectoryPath={}", jobName, jobSpec.outputDirectoryPath)
             hiveJobStatus = null
           }
 
         } catch {
           case ex: IOException => {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
+            logger.info("getStatusForJob: _message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
             throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.outputDirectoryPath + ":", ex)
           }
           case ex: WebHdfsException => {
-            logger.info("getStatusForJob", "_message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
+            logger.info("getStatusForJob: _message=\"found a SUCCEEDED jobStatus, but unable to validate outputDirectory in hdfs.\" jobName={}", jobName, jobSpec.outputDirectoryPath, ex.toString)
             throw new JobStatusException("unable to validate outputDirectory in hdfs:" + jobSpec.outputDirectoryPath + ":", ex)
           }
         }
     }
-    else logger.warn("getStatusForJob", "found a null jobStatus")
+    else logger.warn("getStatusForJob: found a null jobStatus")
     hiveJobStatus
   }
 }

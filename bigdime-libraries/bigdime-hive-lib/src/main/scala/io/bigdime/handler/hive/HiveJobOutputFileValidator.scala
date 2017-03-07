@@ -2,9 +2,8 @@ package io.bigdime.handler.hive
 
 import java.io.IOException
 
-import io.bigdime.alert.LoggerFactory
-import io.bigdime.core.commons.AdaptorLogger
 import io.bigdime.libs.hdfs.{WebHdfsException, WebHdfsReader}
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -13,7 +12,7 @@ import org.springframework.stereotype.Component
   * Created by neejain on 2/1/17.
   */
 object HiveJobOutputFileValidator {
-  val logger = new AdaptorLogger(LoggerFactory.getLogger(classOf[HiveJobOutputFileValidator]))
+  private val logger = LoggerFactory.getLogger(classOf[HiveJobOutputFileValidator])
 }
 
 @Component

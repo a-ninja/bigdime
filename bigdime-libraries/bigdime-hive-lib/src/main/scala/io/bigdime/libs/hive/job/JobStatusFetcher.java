@@ -1,6 +1,4 @@
-package io.bigdime.handler;
-
-import io.bigdime.libs.hive.job.JobStatus;
+package io.bigdime.libs.hive.job;
 
 /**
  * This component fetches status of a job that might have been fired by one of
@@ -16,7 +14,7 @@ import io.bigdime.libs.hive.job.JobStatus;
  * @param <O>
  *            type representing the JobStatus
  */
-public interface JobStatusFetcher<I, O extends JobStatus> {
+public interface JobStatusFetcher<I, O extends HiveJobStatus> {
 
 	/**
 	 * Gets the status of the job that's identified by job.

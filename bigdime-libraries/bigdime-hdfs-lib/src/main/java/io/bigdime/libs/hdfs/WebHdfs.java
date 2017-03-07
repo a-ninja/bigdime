@@ -56,6 +56,7 @@ public class WebHdfs {
   protected String host = null;
   private int port = 0;
   protected HttpClient httpClient = null;
+  protected HttpClientConnectionManager connMgr = null;
   protected URI uri = null;
   protected HttpRequestBase httpRequest = null;
   private ObjectNode jsonParameters = null;
@@ -119,7 +120,8 @@ public class WebHdfs {
     try {
       final URI uri = new URI(host);
       if (uri.getScheme().equalsIgnoreCase("https")) {
-        this.httpClient = HttpClients.custom().setConnectionManager(getConnectionManagerWithDefaultSSL())
+        connMgr = getConnectionManagerWithDefaultSSL();
+        this.httpClient = HttpClients.custom().setConnectionManager(connMgr)
                 .build();
       } else {
         this.httpClient = HttpClientBuilder.create().build();
@@ -341,6 +343,8 @@ public class WebHdfs {
     if (httpRequest != null) {
       this.httpRequest.releaseConnection();
       httpRequest = null;
+      if (connMgr != null)
+        connMgr.shutdown();
     }
     httpClient = null;
   }
@@ -526,6 +530,11 @@ public class WebHdfs {
     Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
             .register("https", sslsf).build();
 
-    return new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+    PoolingHttpClientConnectionManager mgr = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+    mgr.setMaxTotal(1);
+    mgr.setDefaultMaxPerRoute(1);
+    logger.info("connection pool single: maxTotal={}, defaultMaxPerRoute={}", mgr.getMaxTotal(), mgr.getDefaultMaxPerRoute());
+
+    return mgr;
   }
 }

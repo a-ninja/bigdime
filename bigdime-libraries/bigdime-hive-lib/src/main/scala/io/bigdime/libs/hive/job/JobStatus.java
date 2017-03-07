@@ -1,5 +1,5 @@
-package io.bigdime.libs.hive.job;
+//package io.bigdime.libs.hive.job;
 
-public interface JobStatus {
-
-}
+//public interface JobStatus {
+//
+//}
