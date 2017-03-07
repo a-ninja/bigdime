@@ -88,8 +88,9 @@ public class WebHdfsReader {
 			return response.getEntity().getContent();
 		} catch (NoSuchMethodException | SecurityException e) {
 			logger.error("method not found", e);
-			releaseWebHdfsForInputStream();
 			throw new WebHdfsException("method not found", e);
+		} finally {
+			releaseWebHdfsForInputStream();
 		}
 	}
 
