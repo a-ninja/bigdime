@@ -25,7 +25,7 @@ object RunPolicy {
 
 final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit=RunPolicy.noop) extends RunPolicy {
   override def apply[T](block: () => T): Option[T] = {
-    Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = RunPolicy.noop)(block)
+    Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = handle)(block)
   }
 }
 

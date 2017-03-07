@@ -42,7 +42,7 @@ import scala.util.{Failure, Success}
 object WebhdfsReaderAndSink {
   private val logger = new AdaptorLoggerScala(LoggerFactory.getLogger(classOf[WebhdfsReaderAndSink]))
   private val INPUT_DESCRIPTOR_PREFIX = "handlerClass:io.bigdime.handler.webhdfs.WebhdfsReaderAndSink,webhdfsPath:"
-  private val THREAD_POOL_SIZE = 25
+  private val THREAD_POOL_SIZE = 10
   private val executors = Executors.newFixedThreadPool(THREAD_POOL_SIZE)
   private val ec = ExecutionContext.fromExecutor(executors)
 

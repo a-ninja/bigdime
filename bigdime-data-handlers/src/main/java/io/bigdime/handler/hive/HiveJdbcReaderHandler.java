@@ -695,7 +695,7 @@ public final class HiveJdbcReaderHandler extends AbstractSourceHandler {
         }
       }
       if (attempts <= maxRetries) {
-        logger.info(getHandlerPhase(), "will sleep for {} mins and retry", sleepBetweenRetriesMillis);
+        logger.info(getHandlerPhase(), "will sleep for {} secs and retry", sleepBetweenRetriesMillis);
         try {
           Thread.sleep(sleepBetweenRetriesMillis);
         } catch (Exception ex) {
