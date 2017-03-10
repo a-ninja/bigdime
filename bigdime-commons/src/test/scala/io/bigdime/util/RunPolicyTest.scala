@@ -10,6 +10,15 @@ import org.testng.annotations.Test
   * Created by neejain on 2/5/17.
   */
 class RunPolicyTest {
+  @Test(expectedExceptions = Array(classOf[RuntimeException]))
+  def testRetryWithToThrow() = {
+    val ts = List[Class[_ <: Throwable]](classOf[java.sql.SQLException], classOf[IOException], classOf[InvocationTargetException])
+    Retry(2, ts, delay = 1, toThrow = classOf[RuntimeException])(() => {
+      throw new IOException("IOException")
+    })
+    Assert.fail("should have thrown RuntimeException")
+  }
+
   @Test(expectedExceptions = Array(classOf[RetriesExhaustedException]))
   def testRetryWithAttemptsAndRetriablesWithException(): Unit = {
     val ts = List[Class[_ <: Throwable]](classOf[java.sql.SQLException], classOf[IOException], classOf[InvocationTargetException])

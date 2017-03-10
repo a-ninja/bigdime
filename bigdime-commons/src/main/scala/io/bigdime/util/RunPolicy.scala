@@ -23,7 +23,7 @@ object RunPolicy {
 //  }
 //}
 
-final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit=RunPolicy.noop) extends RunPolicy {
+final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit = RunPolicy.noop) extends RunPolicy {
   override def apply[T](block: () => T): Option[T] = {
     Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = handle)(block)
   }
@@ -57,7 +57,8 @@ object Retry {
   val logger = LoggerFactory.getLogger("Retry")
 }
 
-final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000, handle: () => Unit = RunPolicy.noop) extends RunPolicy {
+
+final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000, handle: () => Unit = RunPolicy.noop, toThrow: Class[_ <: Throwable] = classOf[RetriesExhaustedException]) extends RunPolicy {
 
   import Retry.logger
 
@@ -84,8 +85,10 @@ final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]]
               Thread.sleep(attempt * delay)
               handle()
             }
-            else
-              throw RetriesExhaustedException(causes.toList)
+            else {
+              if (toThrow.isInstanceOf[RetriesExhaustedException]) throw RetriesExhaustedException(causes.toList)
+              else throw toThrow.getConstructor(classOf[Throwable]).newInstance(e)
+            }
           } else
             throw UnretriableException(e)
       }

@@ -60,8 +60,19 @@ protected case class WebHdfsWithKerberosAuth(h: String, p: Int) extends WebHdfs(
     try {
       if (activeHost == null) rotateHost
       val uri = new URI(activeHost)
-      if (uri.getScheme.equalsIgnoreCase("https")) setHttpClient(HttpClientBuilder.create.setConnectionManager(getConnectionManagerWithDefaultSSL).setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
+
+      if (uri.getScheme.equalsIgnoreCase("https")) {
+        connMgr = getConnectionManagerWithDefaultSSL
+        setHttpClient(HttpClientBuilder.create.setConnectionManager(connMgr).setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
+      }
       else setHttpClient(HttpClientBuilder.create.setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
+
+
+      //      if (uri.getScheme.equalsIgnoreCase("https")) {
+      //        connMgr = getConnectionManagerWithDefaultSSL
+      //        setHttpClient(HttpClientBuilder.create.setConnectionManager(connMgr).setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
+      //      }
+      //      else setHttpClient(HttpClientBuilder.create.setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
       roundRobinStrategy.setHosts(activeHost)
     }
     catch {

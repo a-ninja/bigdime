@@ -1,9 +1,9 @@
 package io.bigdime.libs.client
 
-import java.io.{File, InputStream}
+import java.io.{File, IOException, InputStream}
 import java.util.concurrent.TimeUnit
 
-import io.bigdime.util.{RetryUntilSuccessful}
+import io.bigdime.util.Retry
 import org.javaswift.joss.client.factory.{AccountConfig, AccountFactory}
 import org.javaswift.joss.exception.CommandException
 import org.javaswift.joss.headers.`object`.{DeleteAfter, ObjectManifest}
@@ -66,7 +66,7 @@ case class SwiftClient() extends Client[String, StoredObject] {
 
   private val ts = List[Class[_ <: Throwable]](classOf[CommandException])
   //  private val retryUntilSuccessful = RetryUntilSuccessful(ts)
-  private val retryUntilSuccessful = RetryUntilSuccessful(ts, () => evictConnectionFromCache)
+  private val retryUntilSuccessful = Retry(5, ts, delay = 3000, () => evictConnectionFromCache, classOf[IOException])
   //  private val retryAndGiveUp = RetryAndGiveUp(3, ts)
 
   def container: Container = {
