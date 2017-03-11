@@ -66,7 +66,7 @@ case class SwiftClient() extends Client[String, StoredObject] {
 
   private val ts = List[Class[_ <: Throwable]](classOf[CommandException])
   //  private val retryUntilSuccessful = RetryUntilSuccessful(ts)
-  private val retryUntilSuccessful = Retry(5, ts, delay = 3000, () => evictConnectionFromCache, classOf[IOException])
+  private val retryUntilSuccessful = Retry(3, ts, delay = 3000, () => evictConnectionFromCache, classOf[IOException])
   //  private val retryAndGiveUp = RetryAndGiveUp(3, ts)
 
   def container: Container = {
