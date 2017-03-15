@@ -10,6 +10,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.*;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
@@ -286,13 +287,16 @@ public class WebHdfs {
     return redirectLocation;
   }
 
+  protected HttpClientContext httpContext() {
+    return null;
+  }
   // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
   protected HttpResponse get() throws ClientProtocolException, IOException {
     httpRequest = new HttpGet(uri);
     logger.debug("File status request: {}", httpRequest.getURI());
     uri = null;
 
-    return httpClient.execute(httpRequest);
+    return httpClient.execute(httpRequest, httpContext());
   }
 
   private HttpResponse delete() throws ClientProtocolException, IOException {

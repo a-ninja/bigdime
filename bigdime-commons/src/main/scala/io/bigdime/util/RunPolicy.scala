@@ -90,12 +90,16 @@ final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]]
               else throw toThrow.getConstructor(classOf[Throwable]).newInstance(e)
             }
           } else
-            throw UnretriableException(e)
+            throw e //UnretriableException(e)
       }
     }
 
     throw RetriesExhaustedException(causes.toList)
   }
+}
+
+case class TryAndGiveUp() extends RunPolicy {
+  override def apply[T](block: () => T): Option[T] = Retry(1, List(classOf[Throwable]), 0, RunPolicy.noop)(block)
 }
 
 case class RetryAndGiveUp(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000) extends RunPolicy {
@@ -118,7 +122,7 @@ case class RetryAndGiveUp(maxAttempts: Int, retriables: List[Class[_ <: Throwabl
 
 case class RetriesExhaustedException(causes: List[Throwable]) extends Throwable
 
-case class UnretriableException(cause: Throwable) extends Throwable
+//case class UnretriableException(cause: Throwable) extends Throwable
 
 object TryWithResources {
   val logger = LoggerFactory.getLogger("TryWithResources")

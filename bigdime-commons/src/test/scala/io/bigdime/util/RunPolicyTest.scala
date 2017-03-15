@@ -42,7 +42,7 @@ class RunPolicyTest {
     Assert.assertEquals(resp.get, "testRetryWithAttemptsAndRetriables ran successfully")
   }
 
-  @Test(expectedExceptions = Array(classOf[UnretriableException]))
+  @Test(expectedExceptions = Array(classOf[IOException]))
   def testRetryWithUnretriableException(): Unit = {
     val ts = List[Class[_ <: Throwable]](classOf[java.sql.SQLException], classOf[InvocationTargetException])
     var c = 0
@@ -53,6 +53,6 @@ class RunPolicyTest {
       }
       "testRetryWithAttemptsAndRetriables ran successfully"
     })
-    Assert.fail("should have thrown UnretriableException")
+    Assert.fail("should have thrown IOException")
   }
 }

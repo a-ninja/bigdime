@@ -1,13 +1,9 @@
 package io.bigdime.libs.hdfs
 
-import java.io.IOException
 import java.net.URI
 
-import org.apache.http.HttpResponse
 import org.apache.http.auth.{AuthSchemeProvider, AuthScope, Credentials}
-import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.config.AuthSchemes
-import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.impl.auth.SPNegoSchemeFactory
@@ -67,12 +63,6 @@ protected case class WebHdfsWithKerberosAuth(h: String, p: Int) extends WebHdfs(
       }
       else setHttpClient(HttpClientBuilder.create.setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
 
-
-      //      if (uri.getScheme.equalsIgnoreCase("https")) {
-      //        connMgr = getConnectionManagerWithDefaultSSL
-      //        setHttpClient(HttpClientBuilder.create.setConnectionManager(connMgr).setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
-      //      }
-      //      else setHttpClient(HttpClientBuilder.create.setDefaultAuthSchemeRegistry(authSchemeRegistry).build)
       roundRobinStrategy.setHosts(activeHost)
     }
     catch {
@@ -82,11 +72,7 @@ protected case class WebHdfsWithKerberosAuth(h: String, p: Int) extends WebHdfs(
     }
   }
 
-  // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
-  @throws[ClientProtocolException]
-  @throws[IOException]
-  override protected def get: HttpResponse = {
-    logger.debug("WebHdfsWithKerberosAuth getting")
+  override def httpContext() = {
     val context = HttpClientContext.create
     val credentialsProvider = new BasicCredentialsProvider
     val useJaasCreds = new Credentials() {
@@ -96,11 +82,6 @@ protected case class WebHdfsWithKerberosAuth(h: String, p: Int) extends WebHdfs(
     }
     credentialsProvider.setCredentials(new AuthScope(null, -1, null), useJaasCreds)
     context.setCredentialsProvider(credentialsProvider)
-    // this.addParameter("anonymous=true", "true");
-    logger.debug("WebHdfsWithKerberosAuth getting from:{}", uri)
-    httpRequest = new HttpGet(uri)
-    logger.debug("HTTP request: {}", httpRequest.getURI)
-    uri = null
-    httpClient.execute(httpRequest, context)
+    context
   }
 }

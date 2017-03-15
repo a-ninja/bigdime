@@ -4,7 +4,6 @@
 package io.bigdime.libs.hdfs;
 
 import io.bigdime.core.commons.StringHelper;
-import org.apache.http.HttpResponse;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
@@ -74,22 +73,15 @@ public class WebHdfsReader {
   public InputStream getInputStream(String hdfsFilePath) throws IOException, WebHdfsException {
     if (StringHelper.isBlank(hdfsFilePath))
       throw new IllegalArgumentException("invalid filePath: empty or null");
-
     String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath);
-
     try {
-      webHdfsForInputStream = getWebHdfs();
-      webHdfsForInputStream.addParameter("buffersize", "1048576");
-      Method method = WebHdfs.class.getMethod("openFile", String.class);
-      HttpResponse response = webHdfsForInputStream.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
-      return response.getEntity().getContent();
+      final WebhdfsFacade facade = new WebhdfsFacade(hostNames, port, authOption);
+      final Method method = WebhdfsFacade.class.getMethod("open", String.class);
+      return facade.<InputStream>invokeWithRetry(method, maxAttempts, webhdfsFilePath);
     } catch (NoSuchMethodException | SecurityException e) {
       logger.error("method not found", e);
       releaseWebHdfsForInputStream();
       throw new WebHdfsException("method not found", e);
-    } catch (WebHdfsException e) {
-      releaseWebHdfsForInputStream();
-      throw e;
     }
   }
 
@@ -127,28 +119,14 @@ public class WebHdfsReader {
       logger.debug("_message=\"processing WebHdfsReader\" webhdfsFilePath={} represents a file", webhdfsFilePath);
       return null;
     }
-    WebHdfs webHdfs = null;
     try {
-      webHdfs = getWebHdfs();
-      Method method = WebHdfs.class.getMethod("listStatus", String.class);
-      HttpResponse response = webHdfs.invokeWithRetry(method, maxAttempts, webhdfsFilePath);
-      WebHdfsListStatusResponse fss = parseJson(response.getEntity().getContent());
-      List<FileStatus> fileStatuses = fss.getFileStatuses().getFileStatus();
-
-      for (FileStatus fs : fileStatuses) {
-        if (!isEmptyFile(fs, webhdfsFilePath)) {
-          filesInDir.add(webhdfsFilePath + fs.getPathSuffix());
-        }
-        if (recursive && fs.getType().equals("DIRECTORY")) {
-          filesInDir.addAll(list(webhdfsFilePath + fs.getPathSuffix(), recursive));
-        }
-      }
-      return filesInDir;
+      final WebhdfsFacade facade = new WebhdfsFacade(hostNames, port, authOption);
+      final Method method = WebhdfsFacade.class.getMethod("listStatus", String.class);
+      List<String> fileStatuses = facade.<List<String>>invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+      return fileStatuses;
     } catch (NoSuchMethodException | SecurityException e) {
       logger.error("method not found", e);
       throw new WebHdfsException("method not found", e);
-    } finally {
-      releaseWebHdfs(webHdfs);
     }
   }
 
@@ -220,21 +198,15 @@ public class WebHdfsReader {
       throw new IllegalArgumentException("invalid filePath: empty or null");
 
     String webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath);
-
-    WebHdfs webHdfs = null;
     try {
-      webHdfs = getWebHdfs();
-      Method method = WebHdfs.class.getMethod("fileStatus", String.class);
-      HttpResponse response = webHdfs.invokeWithRetry(method, attempts, webhdfsFilePath);
-      final ObjectMapper mapper = new ObjectMapper();
-      WebHdfsGetFileStatusResponse fs = mapper.readValue(response.getEntity().getContent(),
-              WebHdfsGetFileStatusResponse.class);
-      return fs.getFileStatus();
+      final WebhdfsFacade facade = new WebhdfsFacade(hostNames, port, authOption);
+      final Method method = WebhdfsFacade.class.getMethod("getFileStatus", String.class);
+      FileStatus fileStatus = facade.<FileStatus>invokeWithRetry(method, maxAttempts, webhdfsFilePath);
+      return fileStatus;
+
     } catch (NoSuchMethodException | SecurityException e) {
       logger.error("method not found", e);
       throw new WebHdfsException("method not found", e);
-    } finally {
-      releaseWebHdfs(webHdfs);
     }
   }
 
