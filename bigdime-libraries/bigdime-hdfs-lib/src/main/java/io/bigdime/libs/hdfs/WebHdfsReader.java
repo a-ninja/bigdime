@@ -216,15 +216,6 @@ public class WebHdfsReader {
     return fs;
   }
 
-  private WebHdfs getWebHdfs() {
-    return WebHdfsFactory.getWebHdfs(hostNames, port, hdfsUser, authOption);
-  }
-
-  public void releaseWebHdfs(WebHdfs webHdfs) {
-    if (webHdfs != null)
-      webHdfs.releaseConnection();
-  }
-
   public String appendSlash(final String hdfsPath) {
     if (!StringHelper.isBlank(hdfsPath) && !hdfsPath.endsWith(FORWARD_SLASH))
       return hdfsPath + FORWARD_SLASH;

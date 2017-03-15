@@ -37,7 +37,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
@@ -442,84 +441,6 @@ public class WebHdfs {
   }
 
   private static final long SLEEP_TIME = 3000;
-
-  protected HttpResponse invokeWithRetry(Method method, int maxAttempts, String... args) throws WebHdfsException {
-
-    boolean isSuccess = false;
-    int statusCode = 0;
-    String exceptionReason = null;
-    int attempts = 0;
-    try {
-      do {
-        attempts++;
-        logger.debug("_message=\"invoking {}\" attempt={} args={} http_request_null={}", method.getName(), attempts, args, httpRequest == null);
-        try {
-          if (httpClient == null)
-            initConnection();
-          HttpResponse response = (HttpResponse) method.invoke(this, args);
-          statusCode = response.getStatusLine().getStatusCode();
-          if (statusCode == 200 || statusCode == 201) {
-            isSuccess = true;
-            if (attempts > 1) {
-              logger.info("_message=\"recovered from an earlier error after {} attempts", attempts);
-            }
-            return response;
-          } else if (statusCode == 404) {
-            logger.debug("_message=\"executed method: {}\" file not found:\"{}\"", method.getName(), args);
-            exceptionReason = response.getStatusLine().getReasonPhrase();
-            releaseConnection();
-          } else if (statusCode == 401) {
-            logger.debug("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName(), args);
-            releaseConnection();
-          } else if (statusCode == 403) {
-            logger.debug("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName(), args);
-            rotateHost();
-            releaseConnection();
-            attempts--;//keep trying until successful
-          } else if (statusCode == 500) {
-            logResponse(response, method.getName(), attempts, args);
-            releaseConnection();
-            attempts--;//keep trying until successful
-          } else {
-            logResponse(response, method.getName(), attempts, args);
-            releaseConnection();
-          }
-        } catch (Exception e) {
-          exceptionReason = e.getMessage();
-          logger.warn("_message=\"{} failed with exception:\"", method.getName(), e);
-          releaseConnection();
-          sleepUninterrupted(attempts);
-        }
-      } while (!isSuccess && attempts < maxAttempts);
-    } catch (SecurityException e1) {
-      logger.error("_message=\"{} failed:\"", method.getName(), e1);
-    }
-    if (!isSuccess) {
-      logger.warn("_message=\"{} failed After {} retries :\", statusCode={} exceptionReason={} args={}",
-              method.getName(), maxAttempts, statusCode, exceptionReason, args);
-      throw new WebHdfsException(statusCode, exceptionReason);
-    }
-    return null;
-  }
-
-  protected String rotateHost() {
-    return host;
-  }
-
-  private void sleepUninterrupted(int attempts) {
-    try {
-      Thread.sleep(SLEEP_TIME * (attempts + 1));
-    } catch (InterruptedException e) {
-      logger.warn("sleep interrupted", e);
-    }
-  }
-
-  private void logResponse(HttpResponse response, String message, int attempts, String... args) {
-    int statusCode = response.getStatusLine().getStatusCode();
-    logger.warn("_message=\"{} failed\" responseCode={} responseMessage={} attempts={} args={}", message,
-            statusCode, response.getStatusLine().getReasonPhrase(), attempts, args);
-    sleepUninterrupted(attempts);
-  }
 
   protected HttpClientConnectionManager getConnectionManagerWithDefaultSSL()
           throws URISyntaxException, KeyManagementException, NoSuchAlgorithmException, KeyStoreException {
