@@ -176,17 +176,12 @@ class HiveJobHandler extends AbstractSourceHandler {
 
 
         val webHdfsReaderForStream = context.getBean(classOf[WebHdfsReader])
-
-        try {
-          val inputStream = webHdfsReaderForStream.getInputStream("/sys/edw/dw_fdbk_mtrc_prfl_lftm/snapshot/2017/03/05/00/part-r-00000")
-          logger.debug(getHandlerPhase, "got input stream")
-          val targetPath = "2016-01-01__dw_fdbk_mtrc_prfl_lftm/00.txt"
-          logger.info(getHandlerPhase, "webhdfs_path_to_process={} target_path={}", "/sys/edw/dw_fdbk_mtrc_prfl_lftm/snapshot/2017/03/05/00/part-r-00000", targetPath)
-          val swiftObject = swiftClient.write(targetPath, inputStream)
-          logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime: targetPath={}", targetPath)
-        } finally {
-          webHdfsReaderForStream.releaseWebHdfsForInputStream()
-        }
+        val inputStream = webHdfsReaderForStream.getInputStream("/sys/edw/dw_fdbk_mtrc_prfl_lftm/snapshot/2017/03/05/00/part-r-00000")
+        logger.debug(getHandlerPhase, "got input stream")
+        val targetPath = "2016-01-01__dw_fdbk_mtrc_prfl_lftm/00.txt"
+        logger.info(getHandlerPhase, "webhdfs_path_to_process={} target_path={}", "/sys/edw/dw_fdbk_mtrc_prfl_lftm/snapshot/2017/03/05/00/part-r-00000", targetPath)
+        val swiftObject = swiftClient.write(targetPath, inputStream)
+        logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime: targetPath={}", targetPath)
       }).get
 
 

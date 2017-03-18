@@ -2,10 +2,12 @@ package io.bigdime.libs.hdfs
 
 import java.io.{IOException, InputStream}
 
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import org.apache.http.HttpResponse
 import org.apache.http.client.ResponseHandler
-import org.codehaus.jackson.map.ObjectMapper
-import org.codehaus.jackson.JsonProcessingException
 
 import scala.util.{Failure, Success, Try}
 
@@ -15,7 +17,8 @@ import scala.util.{Failure, Success, Try}
   */
 trait WebhdfsResponseProcessor[T] extends ResponseHandler[Try[T]] {
 
-  private val objectMapper = new ObjectMapper
+  private val objectMapper = new ObjectMapper() with ScalaObjectMapper
+  objectMapper.registerModule(DefaultScalaModule)
 
   @throws[JsonProcessingException]
   @throws[IOException]
@@ -52,17 +55,15 @@ trait WebhdfsResponseProcessor[T] extends ResponseHandler[Try[T]] {
   *
   * @param webhdfsFilePath
   */
-case class ListStatusResponseHandler(webhdfsFilePath: String) extends WebhdfsResponseProcessor[java.util.List[String]] {
+case class ListStatusResponseHandler(webhdfsFilePath: String) extends WebhdfsResponseProcessor[List[String]] {
   protected def isEmptyFile(fs: FileStatus): Boolean = {
-    !(fs.getType == "FILE" && fs.getLength > 0)
+    !(fs.`type` == "FILE" && fs.length > 0)
   }
 
-  override def handleSuccess(response: HttpResponse): Try[java.util.List[String]] = {
-
+  override def handleSuccess(response: HttpResponse): Try[List[String]] = {
     val fss: WebHdfsListStatusResponse = json[WebHdfsListStatusResponse](response.getEntity.getContent, classOf[WebHdfsListStatusResponse])
-    val fileStatuses = fss.getFileStatuses.getFileStatus
-    import scala.collection.JavaConversions._
-    Success((for (fs <- fileStatuses if !isEmptyFile(fs)) yield webhdfsFilePath + fs.getPathSuffix).toList)
+    val fileStatuses = fss.FileStatuses.FileStatus
+    Success((for (fs <- fileStatuses if !isEmptyFile(fs)) yield webhdfsFilePath + fs.pathSuffix).toList)
   }
 }
 
@@ -71,7 +72,7 @@ case class ListStatusResponseHandler(webhdfsFilePath: String) extends WebhdfsRes
   */
 case class FileStatusResponseHandler() extends WebhdfsResponseProcessor[FileStatus] {
   override def handleSuccess(response: HttpResponse): Try[FileStatus] = {
-    Success(json[WebHdfsGetFileStatusResponse](response.getEntity.getContent, classOf[WebHdfsGetFileStatusResponse]).getFileStatus)
+    Success(json[WebHdfsGetFileStatusResponse](response.getEntity.getContent, classOf[WebHdfsGetFileStatusResponse]).FileStatus)
   }
 }
 
@@ -84,4 +85,8 @@ case class BooleanResponseHandler() extends WebhdfsResponseProcessor[Boolean] {
 
 case class InputStreamResponseHandler() extends WebhdfsResponseProcessor[InputStream] {
   override def handleSuccess(response: HttpResponse): Try[InputStream] = Success(response.getEntity.getContent)
+}
+
+case class ChecksumResponseHandler() extends WebhdfsResponseProcessor[HdfsFileChecksum] {
+  override def handleSuccess(response: HttpResponse): Try[HdfsFileChecksum] = Success(json[WebHdfsGetFileChecksumResponse](response.getEntity.getContent, classOf[WebHdfsGetFileChecksumResponse]).FileChecksum)
 }

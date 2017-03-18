@@ -4,7 +4,9 @@
 
 package io.bigdime.libs.hdfs;
 
-import org.apache.commons.io.IOUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -25,10 +27,6 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.ssl.TrustStrategy;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.ObjectWriter;
-import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +34,6 @@ import javax.net.ssl.SSLContext;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
@@ -60,17 +57,17 @@ public class WebHdfs {
   protected URI uri = null;
   protected HttpRequestBase httpRequest = null;
   private ObjectNode jsonParameters = null;
-  protected RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
+  protected RoundRobinStrategy$ roundRobinStrategy = RoundRobinStrategy$.MODULE$;
   private List<Header> headers;
 
 
   public WebHdfs setParameters(ObjectNode jsonParameters) {
-    Iterator<String> keys = jsonParameters.getFieldNames();
+    Iterator<String> keys = jsonParameters.fieldNames();
     while (keys.hasNext()) {
       String key = keys.next();
       JsonNode value = jsonParameters.get(key);
-      if (value.getTextValue() != null) {
-        this.jsonParameters.put(key, value.getTextValue());
+      if (value.asText() != null) {
+        this.jsonParameters.put(key, value.asText());
       }
     }
     return this;
@@ -156,11 +153,11 @@ public class WebHdfs {
       final URI uri = new URI(roundRobinStrategy.getNextServiceHost());
       uriBuilder.setScheme(uri.getScheme()).setHost(uri.getHost()).setPort(this.port).setPath(HdfsPath)
               .addParameter("op", op);
-      Iterator<String> keys = jsonParameters.getFieldNames();
+      Iterator<String> keys = jsonParameters.fieldNames();
       while (keys.hasNext()) {
         String key = keys.next();
         JsonNode value = jsonParameters.get(key);
-        String valueStr = value.getTextValue();
+        String valueStr = value.asText();
         if (valueStr != null) {
           uriBuilder.addParameter(key, valueStr);
         }
@@ -289,6 +286,7 @@ public class WebHdfs {
   protected HttpClientContext httpContext() {
     return null;
   }
+
   // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
   protected HttpResponse get() throws ClientProtocolException, IOException {
     httpRequest = new HttpGet(uri);
@@ -303,43 +301,6 @@ public class WebHdfs {
     logger.info("Deleting resource: " + uri);
     uri = null;
     return httpClient.execute(httpRequest);
-  }
-
-  public void printResponseStatus(HttpResponse response) {
-    logger.info("Response is: " + response.toString());
-    logger.info("Response headers are: ");
-    Header[] headers = response.getAllHeaders();
-    boolean isJsonContent = false;
-    for (Header h : headers) {
-      if (h.getName().equals("Content-Type") && h.getValue().equals("application/json")) {
-        isJsonContent = true;
-      }
-      logger.info("   " + h.toString());
-    }
-    logger.info("Attached Stream: ");
-    InputStream responseStream;
-    try {
-      if (isJsonContent) {
-        printJsonResponse(response);
-      } else {
-        responseStream = response.getEntity().getContent();
-        StringWriter writer = new StringWriter();
-        IOUtils.copy(responseStream, writer);
-        String theString = writer.toString();
-        logger.info("   " + theString);
-      }
-    } catch (Exception e) {
-      // DO NOTHING
-    }
-  }
-
-  public static void printJsonResponse(HttpResponse response) throws IllegalStateException, IOException {
-    InputStream is = response.getEntity().getContent();
-    ObjectMapper mapper = new ObjectMapper();
-    JsonNode jsonObj = mapper.readTree(is);
-    ObjectWriter ow = mapper.writerWithDefaultPrettyPrinter();
-    logger.info(ow.writeValueAsString(jsonObj));
-    is.close();
   }
 
   public void releaseConnection() {
@@ -357,9 +318,10 @@ public class WebHdfs {
       // httpClient.clearResponseInterceptors();
       ObjectMapper mapper = new ObjectMapper();
       this.jsonParameters = mapper.createObjectNode();
-      if (roundRobinStrategy.hostList == null) {
-        roundRobinStrategy.setHosts(this.host);
-      }
+      roundRobinStrategy.setHosts(this.host);
+//      if (roundRobinStrategy.hostList == null) {
+//        roundRobinStrategy.setHosts(this.host);
+//      }
     }
   }
 
@@ -389,35 +351,42 @@ public class WebHdfs {
     return response;
   }
 
+  @Deprecated
   public HttpResponse openFile(String hdfsPath) throws ClientProtocolException, IOException {
     return buildURI("OPEN", hdfsPath).get();
   }
 
+  @Deprecated
   public HttpResponse mkdir(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("MKDIRS", hdfsPath).put();
     return response;
   }
 
+  @Deprecated
   public HttpResponse rename(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("RENAME", hdfsPath).put();
     return response;
   }
 
+  @Deprecated
   public HttpResponse deleteFile(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("DELETE", hdfsPath).delete();
     return response;
   }
 
+  @Deprecated
   public HttpResponse fileStatus(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("GETFILESTATUS", hdfsPath).get();
     return response;
   }
 
+  @Deprecated
   public HttpResponse listStatus(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("LISTSTATUS", hdfsPath).get();
     return response;
   }
 
+  @Deprecated
   public HttpResponse checksum(String hdfsPath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("GETFILECHECKSUM", hdfsPath).get();
     return response;

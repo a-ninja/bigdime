@@ -251,19 +251,14 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val webHdfsPathToProcess = inputDescriptor.getWebhdfsPath
 
       val webHdfsReaderForStream = context.getBean(classOf[WebHdfsReader])
-
-      try {
-        val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
-        logger.debug(getHandlerPhase, "got input stream")
-        val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
-        logger.info(getHandlerPhase, "webhdfs_path_to_process={} target_path={}", webHdfsPathToProcess, targetPath)
-        val swiftObject = swiftClient.write(targetPath, inputStream)
-        updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
-        logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webhdfs_path_to_process={} targetPath={}", webHdfsPathToProcess, targetPath)
-        (inputDescriptor, swiftObject)
-      } finally {
-        webHdfsReaderForStream.releaseWebHdfsForInputStream()
-      }
+      val inputStream = webHdfsReaderForStream.getInputStream(webHdfsPathToProcess)
+      logger.debug(getHandlerPhase, "got input stream")
+      val targetPath = StringHelper.replaceTokens(webHdfsPathToProcess, outputFilePathPattern, inputPattern, properties)
+      logger.info(getHandlerPhase, "webhdfs_path_to_process={} target_path={}", webHdfsPathToProcess, targetPath)
+      val swiftObject = swiftClient.write(targetPath, inputStream)
+      updateRuntimeInfo(runtimeInfoStore, getEntityName, rec.getInputDescriptor, RuntimeInfoStore.Status.VALIDATED, properties)
+      logger.info(getHandlerPhase, "wrote to swift from sink, and updated Runtime:webhdfs_path_to_process={} targetPath={}", webHdfsPathToProcess, targetPath)
+      (inputDescriptor, swiftObject)
     }).get
 
   }

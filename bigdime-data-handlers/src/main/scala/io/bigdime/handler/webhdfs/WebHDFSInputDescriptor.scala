@@ -81,7 +81,7 @@ class WebHDFSInputDescriptor(inputDescriptorPrefix: String = "handlerClass:io.bi
   }
 
   def getFileLength: Long = {
-    return getCurrentFileStatus.getLength
+    return getCurrentFileStatus.length
   }
 
   def getFileChannel: ReadableByteChannel = {

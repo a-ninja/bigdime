@@ -7,6 +7,7 @@ import java.security.cert.{CertificateException, X509Certificate}
 import java.security.{KeyManagementException, KeyStoreException, NoSuchAlgorithmException}
 import java.util.concurrent.TimeUnit
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.scalalogging.LazyLogging
 import io.bigdime.util.TryAndGiveUp
 import org.apache.http.auth.{AuthSchemeProvider, AuthScope, Credentials}
@@ -24,7 +25,6 @@ import org.apache.http.impl.client.{BasicCredentialsProvider, CloseableHttpClien
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.ssl.{SSLContexts, TrustStrategy}
 import org.apache.http.{Header, HttpResponse}
-import org.codehaus.jackson.map.ObjectMapper
 
 import scala.util.{Failure, Success, Try}
 
@@ -173,7 +173,7 @@ object WebHdfsHttpClientWithKerberos extends AbstractWebHdfsHttpClient with Lazy
 
 //not a threadsafe implementation
 case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION = HDFS_AUTH_OPTION.KERBEROS) extends LazyLogging {
-  private var jsonParameters = (new ObjectMapper).createObjectNode
+  private var jsonParameters = (new ObjectMapper()).createObjectNode
   private var httpRequest: HttpRequestBase = null
 
   private var headers: List[Header] = null
@@ -208,11 +208,11 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
       val uriBuilder = new URIBuilder
       val uri = new URI(activeHost)
       uriBuilder.setScheme(uri.getScheme).setHost(uri.getHost).setPort(this.port).setPath(HdfsPath).addParameter("op", op)
-      val keys = jsonParameters.getFieldNames
+      val keys = jsonParameters.fieldNames()
       while (keys.hasNext) {
         val key = keys.next
         val value = jsonParameters.get(key)
-        val valueStr = value.getTextValue
+        val valueStr = value.asText()
         if (valueStr != null) uriBuilder.addParameter(key, valueStr)
       }
       uriBuilder.build
@@ -222,6 +222,29 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
         null
       }
     }
+  }
+
+  /**
+    * MKDIR or RENAME
+    *
+    * @param uri
+    * @param proc
+    * @tparam R
+    * @tparam T
+    * //    * @throws
+    * //    * @throws
+    * @return
+    */
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def put[R <: WebhdfsResponseProcessor[T], T](uri: URI, proc: R) = {
+    webhdfsHttpClient.execute(scheme, new HttpPut(uri), proc)
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def delete[R <: WebhdfsResponseProcessor[T], T](uri: URI, proc: R) = {
+    webhdfsHttpClient.execute(scheme, new HttpDelete(uri), proc)
   }
 
   // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
@@ -260,14 +283,40 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
 
   @throws[ClientProtocolException]
   @throws[IOException]
+  def mkdirs(hdfsPath: String): Try[Boolean] = {
+    put[BooleanResponseHandler, Boolean](buildURI("MKDIRS", hdfsPath), BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def rename(webHdfsPath: String, toHdfsPath: String): Try[Boolean] = {
+    addParameter(WebHDFSConstants.DESTINATION, toHdfsPath)
+    put[BooleanResponseHandler, Boolean](buildURI("RENAME", webHdfsPath), BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def delete(webHdfsPath: String): Try[Boolean] = {
+    addParameter(WebHDFSConstants.DESTINATION, webHdfsPath)
+    delete[BooleanResponseHandler, Boolean](buildURI("DELETE", webHdfsPath), BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
   def getFileStatus(webhdfsPath: String): Try[FileStatus] = {
     getAndConsume[FileStatusResponseHandler, FileStatus](buildURI("GETFILESTATUS", webhdfsPath), FileStatusResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def listStatus(webhdfsPath: String): Try[java.util.List[String]] = {
-    getAndConsume[ListStatusResponseHandler, java.util.List[String]](buildURI("LISTSTATUS", webhdfsPath), ListStatusResponseHandler(webhdfsPath))
+  def listStatus(webhdfsPath: String): Try[List[String]] = {
+    getAndConsume[ListStatusResponseHandler, List[String]](buildURI("LISTSTATUS", webhdfsPath), ListStatusResponseHandler(webhdfsPath))
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def getFileChecksum(webhdfsPath: String): Try[HdfsFileChecksum] = {
+    getAndConsume[ChecksumResponseHandler, HdfsFileChecksum](buildURI("GETFILECHECKSUM", webhdfsPath), ChecksumResponseHandler())
   }
 
   @annotation.varargs
@@ -285,19 +334,22 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
           val response = method.invoke(this, args: _*).asInstanceOf[Try[T]]
           response match {
             case Success(t) => return t
-            case Failure(e: WebHdfsException) => e.statusCode match {
-              case 401 =>
-                logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName, args)
-              case 403 =>
-                logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName, args)
-                rotateHost()
-                initConnection()
-              case 404 =>
-                logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName, args)
-              case 500 =>
-                logResponse(e, method.getName, attempts, args: _*)
-                attempts -= 1
-            }
+            case Failure(e: WebHdfsException) =>
+              statusCode = e.statusCode
+              exceptionReason = e.message
+              e.statusCode match {
+                case 401 =>
+                  logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName, args)
+                case 403 =>
+                  logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName, args)
+                  rotateHost()
+                  initConnection()
+                case 404 =>
+                  logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName, args)
+                case 500 =>
+                  logResponse(e, method.getName, attempts, args: _*)
+                  attempts -= 1
+              }
           }
         }
         catch {

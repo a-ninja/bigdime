@@ -3,15 +3,15 @@
  */
 package io.bigdime.libs.hdfs;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 public class WebHdfsReaderTest {
 	WebHdfs webHdfs;
@@ -21,7 +21,7 @@ public class WebHdfsReaderTest {
 
 		gen(200, 200, 200);
 		WebHdfsReader webHdfsReader = new WebHdfsReader("", 0, "", HDFS_AUTH_OPTION.KERBEROS);
-		webHdfsReader.getFileType("/");
+		webHdfsReader.fileType("/");
 
 		Mockito.verify(webHdfs, Mockito.times(1)).fileStatus(Mockito.anyString());
 		Mockito.verify(webHdfs, Mockito.times(0)).releaseConnection();

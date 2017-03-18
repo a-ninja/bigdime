@@ -3,16 +3,16 @@
  */
 package io.bigdime.libs.hdfs;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.testng.Assert;
@@ -61,7 +61,7 @@ public class WebHdfsTest {
         ObjectNode actualObj = (ObjectNode) (mapper.readTree("{\"k1\": \"v1\", \"k\" : \"null\"}"));
         WebHdfs webHdfs = new WebHdfs("host", 0);
         webHdfs.setParameters(actualObj);
-        Assert.assertEquals(webHdfs.getJson().get("k1").getTextValue(), "v1");
+        Assert.assertEquals(webHdfs.getJson().get("k1").asText(), "v1");
     }
 
     /**
@@ -100,7 +100,7 @@ public class WebHdfsTest {
     public void testAddParameter() throws JsonProcessingException, IOException {
         WebHdfs webHdfs = new WebHdfs("host", 0);
         webHdfs.addParameter("unit-key", "unit-value");
-        Assert.assertEquals(webHdfs.getJson().get("unit-key").getTextValue(), "unit-value");
+        Assert.assertEquals(webHdfs.getJson().get("unit-key").asText(), "unit-value");
     }
 
     /**
@@ -114,11 +114,11 @@ public class WebHdfsTest {
         ObjectNode jsonParameters = Mockito.mock(ObjectNode.class);
         @SuppressWarnings("unchecked")
         Iterator<String> keys = Mockito.mock(Iterator.class);
-        Mockito.when(jsonParameters.getFieldNames()).thenReturn(keys);
+        Mockito.when(jsonParameters.fieldNames()).thenReturn(keys);
 
         JsonNode jsonNode = Mockito.mock(JsonNode.class);
         Mockito.when(jsonParameters.get(Mockito.anyString())).thenReturn(jsonNode);
-        Mockito.when(jsonNode.getTextValue()).thenReturn("v1");
+        Mockito.when(jsonNode.asText()).thenReturn("v1");
         ReflectionTestUtils.setField(webHdfs, "jsonParameters", jsonParameters);
 
         Mockito.when(keys.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
@@ -126,7 +126,7 @@ public class WebHdfsTest {
         webHdfs.buildURI("op", "path");
         Mockito.verify(jsonParameters, Mockito.times(1)).get("k1");
         Mockito.verify(jsonParameters, Mockito.times(1)).get("k2");
-        Mockito.verify(jsonNode, Mockito.times(2)).getTextValue();
+        Mockito.verify(jsonNode, Mockito.times(2)).asText();
     }
 
     /**
@@ -138,51 +138,6 @@ public class WebHdfsTest {
         WebHdfs webHdfs = new WebHdfs("host", 0);
         webHdfs.addParameter("k1", "null");
         webHdfs.buildURI("op", "path");
-    }
-
-    @Test
-    public void testPrintResponseStatus() throws IllegalStateException, IOException {
-        WebHdfs webHdfs = new WebHdfs("host", 0);
-        HttpResponse mockHttpResponse = setupJsonResponse();
-        webHdfs.printResponseStatus(mockHttpResponse);
-        Mockito.verify(mockHttpResponse, Mockito.times(1)).getEntity();
-        Mockito.verify(mockHttpResponse.getEntity(), Mockito.times(1)).getContent();
-    }
-
-    @Test
-    public void testPrintResponseStatusNoJson() throws IllegalStateException, IOException {
-        WebHdfs webHdfs = new WebHdfs("host", 0);
-        HttpResponse mockHttpResponse = Mockito.mock(HttpResponse.class);
-        HttpEntity mockEntity = Mockito.mock(HttpEntity.class);
-        InputStream is = new ByteArrayInputStream("plain text".getBytes());
-
-        Header header = Mockito.mock(Header.class);
-        Header[] headers = new Header[1];
-        headers[0] = header;
-        Mockito.when(mockHttpResponse.getAllHeaders()).thenReturn(headers);
-        Mockito.when(header.getName()).thenReturn("Content-Type");
-        Mockito.when(header.getValue()).thenReturn("application/text");
-
-        Mockito.when(mockHttpResponse.getEntity()).thenReturn(mockEntity);
-        Mockito.when(mockEntity.getContent()).thenReturn(is);
-        webHdfs.printResponseStatus(mockHttpResponse);
-        Mockito.verify(mockHttpResponse, Mockito.times(1)).getEntity();
-        Mockito.verify(mockEntity, Mockito.times(1)).getContent();
-    }
-
-    /**
-     * If the reponse contains a json entity, it can be printed.
-     *
-     * @throws IllegalStateException
-     * @throws IOException
-     */
-    @Test
-    public void testPrintJsonResponse() throws IllegalStateException, IOException {
-        WebHdfs webHdfs = new WebHdfs("host", 0);
-        HttpResponse mockHttpResponse = setupJsonResponse();
-        webHdfs.printJsonResponse(mockHttpResponse);
-        Mockito.verify(mockHttpResponse, Mockito.times(1)).getEntity();
-        Mockito.verify(mockHttpResponse.getEntity(), Mockito.times(1)).getContent();
     }
 
     private HttpResponse setupJsonResponse() throws UnsupportedOperationException, IOException {
@@ -219,29 +174,29 @@ public class WebHdfsTest {
     /**
      * openConnection setHosts if the host is not null.
      */
-    @Test
-    public void testOpenConnection() {
-        WebHdfs webHdfs = new WebHdfs("host", 0);
-        RoundRobinStrategy roundRobinStrategy = Mockito.mock(RoundRobinStrategy.class);
-        roundRobinStrategy.hostList = null;
-        ReflectionTestUtils.setField(webHdfs, "roundRobinStrategy", roundRobinStrategy);
-        webHdfs.openConnection();
-        Mockito.verify(roundRobinStrategy, Mockito.times(1)).setHosts(Mockito.anyString());
-    }
+//    @Test
+//    public void testOpenConnection() {
+//        WebHdfs webHdfs = new WebHdfs("host", 0);
+//        RoundRobinStrategy roundRobinStrategy = Mockito.mock(RoundRobinStrategy.class);
+//        roundRobinStrategy.hostList = null;
+//        ReflectionTestUtils.setField(webHdfs, "roundRobinStrategy", roundRobinStrategy);
+//        webHdfs.openConnection();
+//        Mockito.verify(roundRobinStrategy, Mockito.times(1)).setHosts(Mockito.anyString());
+//    }
 
     /**
      * openConnection does NOT setHosts if the host is null.
      */
-    @Test
-    public void testOpenConnectionWithNullHost() {
-        WebHdfs webHdfs = new WebHdfs("host", 0);
-        RoundRobinStrategy roundRobinStrategy = Mockito.mock(RoundRobinStrategy.class);
-        roundRobinStrategy.hostList = null;
-        ReflectionTestUtils.setField(webHdfs, "roundRobinStrategy", roundRobinStrategy);
-        ReflectionTestUtils.setField(webHdfs, "host", null);
-        webHdfs.openConnection();
-        Mockito.verify(roundRobinStrategy, Mockito.times(0)).setHosts(Mockito.anyString());
-    }
+//    @Test
+//    public void testOpenConnectionWithNullHost() {
+//        WebHdfs webHdfs = new WebHdfs("host", 0);
+//        RoundRobinStrategy roundRobinStrategy = Mockito.mock(RoundRobinStrategy.class);
+//        roundRobinStrategy.hostList = null;
+//        ReflectionTestUtils.setField(webHdfs, "roundRobinStrategy", roundRobinStrategy);
+//        ReflectionTestUtils.setField(webHdfs, "host", null);
+//        webHdfs.openConnection();
+//        Mockito.verify(roundRobinStrategy, Mockito.times(0)).setHosts(Mockito.anyString());
+//    }
 
     @Test
     public void testCreateAndWrite() throws ClientProtocolException, IOException {

@@ -296,7 +296,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
             }
             byte[] readBody = new byte[bytesRead];
             logger.debug(getHandlerPhase(), "handler_id={} bytes_read={} read_body.length={} file_length={} read_count={}",
-                    getId(), bytesRead, readBody.length, inputDescriptor.getCurrentFileStatus().getLength(),
+                    getId(), bytesRead, readBody.length, inputDescriptor.getCurrentFileStatus().length(),
                     getSimpleJournal().getReadCount());
 
             readInto.flip();
@@ -399,7 +399,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
             if (isInputDescriptorNull())
                 fileLength = 0;
             else
-                fileLength = inputDescriptor.getCurrentFileStatus().getLength();
+                fileLength = inputDescriptor.getCurrentFileStatus().length();
             getSimpleJournal().setTotalSize(fileLength);
         }
     }
@@ -463,7 +463,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
         try {
             boolean parentRecordValid = parentRuntimeRecordValid();
             if (parentRecordValid && isReadyFilePresent(directoryPath)) {
-                List<String> fileNames = webHdfsReader.list(directoryPath, false);
+                List<String> fileNames = scala.collection.JavaConversions.seqAsJavaList(webHdfsReader.list(directoryPath, false));
                 for (final String fileName : fileNames) {
                     Map<String, String> properties = new HashMap<>();
                     recordsFound = true;
@@ -496,7 +496,6 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
     protected void initRecordToProcess(RuntimeInfo runtimeInfo) throws HandlerException {
         String webHdfsPathToProcess = null;
         try {
-            webHdfsReader.releaseWebHdfsForInputStream();
             String fullDescriptor = runtimeInfo.getInputDescriptor();
             if (inputDescriptor == null)
                 inputDescriptor = new WebHDFSInputDescriptor();
@@ -599,7 +598,7 @@ public final class WebHDFSReaderHandler extends AbstractSourceHandler {
 
     protected boolean isInputDescriptorNull() {
         return (inputDescriptor == null || inputDescriptor.getCurrentFilePath() == null)
-                || (inputDescriptor.getCurrentFileStatus().getLength() == 0);
+                || (inputDescriptor.getCurrentFileStatus().length() == 0);
     }
 
     protected String getInputDescriptorPrefix() {
