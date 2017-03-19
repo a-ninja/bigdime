@@ -3,18 +3,17 @@
  */
 package io.bigdime.core.config;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.codehaus.jackson.JsonNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.JsonHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.HandlerConfigConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public final class HandlerConfigReader {

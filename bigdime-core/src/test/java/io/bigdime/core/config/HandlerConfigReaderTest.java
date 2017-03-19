@@ -3,21 +3,19 @@
  */
 package io.bigdime.core.config;
 
-import java.io.IOException;
-import java.util.Map;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.bigdime.core.AdaptorConfigurationException;
+import io.bigdime.core.commons.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.commons.JsonHelper;
-import io.bigdime.core.commons.PropertyHelper;
+import java.io.IOException;
+import java.util.Map;
 
 @ContextConfiguration(classes = { JsonHelper.class, HandlerConfigReader.class })
 public class HandlerConfigReaderTest extends AbstractTestNGSpringContextTests {

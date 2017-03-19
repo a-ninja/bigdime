@@ -3,8 +3,8 @@
  */
 package io.bigdime.core.config;
 
-import java.io.IOException;
-
+import io.bigdime.core.AdaptorConfigurationException;
+import io.bigdime.core.handler.HandlerFactoryTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
@@ -15,8 +15,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.handler.HandlerFactoryTest;
+import java.io.IOException;
 
 @Configuration
 @ContextConfiguration({ "classpath*:application-context.xml", "classpath*:META-INF/application-context.xml" })
@@ -38,14 +37,14 @@ public class AdaptorConfigReaderTest extends AbstractTestNGSpringContextTests {
 		HandlerFactoryTest.initHandlerFactory();
 	}
 
-	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "java.io.EOFException:.*")
+	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "com.fasterxml.jackson.databind.JsonMappingException:.*\\s*.*")
 	public void testReadConfigInvalidFile() throws AdaptorConfigurationException {
 		ReflectionTestUtils.setField(adaptorConfigReader, "CONFIG_FILE_LOCATION", "META-INF/no-file");
 		adaptorConfigReader.readConfig(AdaptorConfig.getInstance());
 		Assert.fail("This method must have thrown exception");
 	}
 
-	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "org.codehaus.jackson.JsonParseException: Unexpected end-of-input(?s).*")
+	@Test(expectedExceptions = AdaptorConfigurationException.class, expectedExceptionsMessageRegExp = "com.fasterxml.jackson.core.io.JsonEOFException:.*\\s*.*")
 	public void testReadConfigInvalidJson() throws AdaptorConfigurationException {
 		ReflectionTestUtils.setField(adaptorConfigReader, "CONFIG_FILE_LOCATION", "META-INF/adaptor-bad.json");
 		adaptorConfigReader.readConfig(AdaptorConfig.getInstance());

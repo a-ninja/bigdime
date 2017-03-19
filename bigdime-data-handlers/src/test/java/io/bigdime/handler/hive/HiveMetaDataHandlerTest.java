@@ -3,16 +3,7 @@
  */
 package io.bigdime.handler.hive;
 
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Properties;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Metasegment;
@@ -23,12 +14,10 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.libs.hive.database.HiveDBManger;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hive.hcatalog.common.HCatException;
 import org.apache.http.client.ClientProtocolException;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +27,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.when;
 
 @ContextConfiguration(classes = { MetaDataJsonUtils.class})
 public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{

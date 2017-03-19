@@ -3,6 +3,8 @@
  */
 package io.bigdime.hbase.integration.test;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import io.bigdime.hbase.client.DataDeletionSpecification;
 import io.bigdime.hbase.client.DataInsertionSpecification;
@@ -17,8 +19,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.*;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
@@ -131,15 +131,15 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		Put put = null;
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
-				Iterator<Entry<String, JsonNode>> userData = user.getFields();
+				Iterator<Entry<String, JsonNode>> userData = user.fields();
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				put = new Put(user.get(columnQualifier).getTextValue()
+						.asText());
+				put = new Put(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				while (userData.hasNext()) {
 					Map.Entry<String, JsonNode> kv = userData.next();
 					put.add(columnFamilyOne.getBytes(StandardCharsets.UTF_8), kv.getKey().getBytes(StandardCharsets.UTF_8),
-							kv.getValue().getTextValue().getBytes(StandardCharsets.UTF_8));
+							kv.getValue().asText().getBytes(StandardCharsets.UTF_8));
 				}
 			}
 		}
@@ -157,15 +157,15 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		Put put = null;
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
-				Iterator<Entry<String, JsonNode>> userData = user.getFields();
+				Iterator<Entry<String, JsonNode>> userData = user.fields();
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				put = new Put(user.get(columnQualifier).getTextValue()
+						.asText());
+				put = new Put(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				while (userData.hasNext()) {
 					Map.Entry<String, JsonNode> kv = userData.next();
 					put.add(columnFamilyOne.getBytes(StandardCharsets.UTF_8), kv.getKey().getBytes(StandardCharsets.UTF_8),
-							kv.getValue().getTextValue().getBytes(StandardCharsets.UTF_8));
+							kv.getValue().asText().getBytes(StandardCharsets.UTF_8));
 				}
 				list.add(put);
 			}
@@ -244,8 +244,8 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				delete = new Delete(user.get(columnQualifier).getTextValue()
+						.asText());
+				delete = new Delete(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				list.add(delete);
 			}

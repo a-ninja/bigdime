@@ -13,6 +13,11 @@
         <artifactId>bigdime-libraries</artifactId>
         <version>0.9.2-SNAPSHOT</version>
     </parent>
+    <properties>
+        <org.codehaus.jackson-jaxrs.version>1.9.13</org.codehaus.jackson-jaxrs.version>
+        <org.codehaus.jackson.jackson-mapper-asl.version>1.9.13</org.codehaus.jackson.jackson-mapper-asl.version>
+        <org.codehaus.jackson.jackson-core-asl.version>1.9.13</org.codehaus.jackson.jackson-core-asl.version>
+    </properties>
     <dependencies>
         <dependency>
             <artifactId>avro</artifactId>
@@ -27,6 +32,22 @@
                     <groupId>org.codehaus.jackson</groupId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-jaxrs</artifactId>
+            <version>${org.codehaus.jackson-jaxrs.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>${org.codehaus.jackson.jackson-mapper-asl.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-core-asl</artifactId>
+            <version>${org.codehaus.jackson.jackson-core-asl.version}</version>
         </dependency>
     </dependencies>
 </project>
