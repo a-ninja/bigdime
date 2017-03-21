@@ -65,9 +65,7 @@ case class SwiftClient() extends Client[String, StoredObject] {
   private val containers = scala.collection.mutable.Map[Thread, Container]()
 
   private val ts = List[Class[_ <: Throwable]](classOf[CommandException])
-  //  private val retryUntilSuccessful = RetryUntilSuccessful(ts)
   private val retryUntilSuccessful = Retry(3, ts, delay = 3000, (t) => evictConnectionFromCache, classOf[IOException])
-  //  private val retryAndGiveUp = RetryAndGiveUp(3, ts)
 
   def container: Container = {
     containers.get(Thread.currentThread()) match {

@@ -6,7 +6,7 @@ import java.net.{URI, URISyntaxException}
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.scalalogging.LazyLogging
-import io.bigdime.util.TryAndGiveUp
+import io.bigdime.util.{Retry, SleepUninterrupted}
 import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods._
 import org.apache.http.client.utils.URIBuilder
@@ -21,10 +21,10 @@ import scala.util.{Failure, Success, Try}
   */
 //not a threadsafe implementation
 case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION = HDFS_AUTH_OPTION.KERBEROS) extends LazyLogging {
-  private var jsonParameters = (new ObjectMapper()).createObjectNode
-  private var httpRequest: HttpRequestBase = null
+  private var jsonParameters = (new ObjectMapper).createObjectNode
+  private var httpRequest: HttpRequestBase = _
 
-  private var headers: List[Header] = null
+  private var headers: List[Header] = _
   private var activeHost: String = rotateHost()
   private val scheme = new URI(activeHost).getScheme
   private val webhdfsHttpClient = WebHdfsHttpClientFactory(authOption)
@@ -57,7 +57,55 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
     this
   }
 
+  /**
+    * Return a function that can accept a HttpRequestBase and execute it to return HttpRespo
+    *
+    * @param block
+    * @param req
+    * @tparam T
+    * @return
+    */
+  def executeAndHandle[T](block: (HttpRequestBase) => T)(req: HttpRequestBase) = {
+    Retry(1, List(classOf[Throwable]), 0, (t) => {
+      req.releaseConnection()
+      throw t
+    })(() => {
+      block(req)
+    }).get
+  }
 
+  /**
+    * Call the underlying method that executes the request and delegates the response to proc. The response is completely consumed.
+    *
+    * @param request
+    * @param proc
+    * //    * @tparam R
+    * @tparam T
+    * @return
+    */
+  def execute[T](request: HttpRequestBase, proc: WebhdfsResponseProcessor[T]): Try[T] = {
+    webhdfsHttpClient.execute(scheme, request, proc)
+  }
+
+  /**
+    * Call the underlying method that executes the request and returns the response. Caller must consume the reponse and release the connection.
+    *
+    * @param request
+    * @tparam R
+    * @tparam T
+    * @return
+    */
+  def execute[R <: WebhdfsResponseProcessor[T], T](request: HttpRequestBase): HttpResponse = {
+    webhdfsHttpClient.execute(scheme, request)
+  }
+
+  /**
+    * internal function to build URI from various parameters
+    *
+    * @param op
+    * @param HdfsPath
+    * @return
+    */
   protected def buildURI(op: String, HdfsPath: String): URI = {
     try {
       val uriBuilder = new URIBuilder
@@ -84,7 +132,7 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
     *
     * @param uri
     * @param proc
-    * @tparam R
+    * //    * @tparam R
     * @tparam T
     * //    * @throws
     * //    * @throws
@@ -92,74 +140,94 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
     */
   @throws[ClientProtocolException]
   @throws[IOException]
-  private def put[R <: WebhdfsResponseProcessor[T], T](uri: URI, proc: R) = {
-    webhdfsHttpClient.execute(scheme, new HttpPut(uri), proc)
+  private def put[T](uri: URI, proc: WebhdfsResponseProcessor[T]) = {
+    execute(new HttpPut(uri), proc)
   }
 
   // CREATE
   @throws[ClientProtocolException]
   @throws[IOException]
-  private def put[R <: WebhdfsResponseProcessor[T], T](uri: URI, filePath: String, proc: R) = {
-    val httpRequest = new HttpPut(uri)
-    //    val httpReq = getRedirectedRequest[HttpPut](httpRequest, new FileEntity(new File(filePath)))
-    val httpReq = getRedirectedRequest(httpRequest)(classOf[HttpPut], new FileEntity(new File(filePath)))
-    webhdfsHttpClient.execute(scheme, httpReq, proc)
-  }
-
+  private def put[T](uri: URI, filePath: String, proc: WebhdfsResponseProcessor[T]) = update(classOf[HttpPut], uri, filePath, proc)
+  
   // CREATE
   @throws[ClientProtocolException]
   @throws[IOException]
-  private def put[R <: WebhdfsResponseProcessor[T], T](uri: URI, in: InputStream, proc: R) = {
-    val httpRequest = new HttpPut(uri)
+  private def put[T](uri: URI, in: InputStream, proc: WebhdfsResponseProcessor[T]) = update(classOf[HttpPut], uri, in, proc)
+
+  // APPEND
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def post[T](uri: URI, filePath: String, proc: WebhdfsResponseProcessor[T]) = update(classOf[HttpPost], uri, filePath, proc)
+
+  // APPEND
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def post[T](uri: URI, in: InputStream, proc: WebhdfsResponseProcessor[T]) = update(classOf[HttpPost], uri, in, proc)
+
+  // APPEND
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def update[T](clazz: Class[_ <: HttpEntityEnclosingRequestBase], uri: URI, filePath: String, proc: WebhdfsResponseProcessor[T]) = {
+    val httpRequest = clazz.getConstructor(classOf[URI]).newInstance(uri)
+    val httpReq = getRedirectedRequest(httpRequest)(clazz, new FileEntity(new File(filePath)))
+    execute(httpReq, proc)
+  }
+
+  // APPEND
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  private def update[T](clazz: Class[_ <: HttpEntityEnclosingRequestBase], uri: URI, in: InputStream, proc: WebhdfsResponseProcessor[T]) = {
+    val httpRequest = clazz.getConstructor(classOf[URI]).newInstance(uri)
     val entity = new BasicHttpEntity
     entity.setContent(in)
-    //    val httpReq = getRedirectedRequest[HttpPut](httpRequest, entity)
-    val httpReq = getRedirectedRequest(httpRequest)(classOf[HttpPut], entity)
-    webhdfsHttpClient.execute(scheme, httpReq, proc)
+    val httpReq = getRedirectedRequest(httpRequest)(clazz, entity)
+    execute(httpReq, proc)
   }
 
   def getRedirectedRequest(request: HttpRequestBase) = {
     def temporaryRedirectURI(request: HttpRequestBase): String = {
-      webhdfsHttpClient.execute(scheme, request, RedirectLocationHandler()).get
+      execute[String](request, RedirectLocationHandler()).get
     }
 
-    (r: Class[_ <: HttpEntityEnclosingRequestBase], entity: AbstractHttpEntity) => {
-      val inst = r.getConstructor(classOf[String]).newInstance(temporaryRedirectURI(request))
-      inst.setEntity(entity)
-      inst
+    (httpRequestBaseCls: Class[_ <: HttpEntityEnclosingRequestBase], entity: AbstractHttpEntity) => {
+      val httpRequest = httpRequestBaseCls.getConstructor(classOf[String]).newInstance(temporaryRedirectURI(request))
+      httpRequest.setEntity(entity)
+      httpRequest
     }
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  private def delete[R <: WebhdfsResponseProcessor[T], T](uri: URI, proc: R) = {
-    webhdfsHttpClient.execute(scheme, new HttpDelete(uri), proc)
+  private def delete[T](uri: URI, proc: WebhdfsResponseProcessor[T]) = {
+    execute(new HttpDelete(uri), proc)
   }
 
   // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
   @throws[ClientProtocolException]
   @throws[IOException]
-  protected def getAndConsume[R <: WebhdfsResponseProcessor[T], T](uri: URI, proc: R): Try[T] = {
-    webhdfsHttpClient.execute(scheme, new HttpGet(uri), proc)
+  protected def getAndConsume[T](uri: URI, proc: WebhdfsResponseProcessor[T]): Try[T] = {
+    execute(new HttpGet(uri), proc)
   }
 
+
+  /**
+    * Get and do NOT release the connection
+    *
+    * @param uri
+    * @throws ClientProtocolException
+    * @throws IOException
+    * @return
+    */
   @throws[ClientProtocolException]
   @throws[IOException]
   protected def get(uri: URI): HttpResponse = {
-    val req = new HttpGet(uri)
-    try {
-      webhdfsHttpClient.execute(scheme, new HttpGet(uri))
-    } catch {
-      case ex: Throwable => req.releaseConnection()
-        throw ex
-    }
+    executeAndHandle((r) => execute(r))(new HttpGet(uri))
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def createAndWrite(webhdfsPath: String, inputStream: InputStream): Try[Boolean] = {
-    put[BooleanResponseHandler, Boolean](buildURI("CREATE", webhdfsPath), inputStream, BooleanResponseHandler())
-    //    process[BooleanResponseHandler, Boolean](buildURI)("CREATE", webhdfsPath)(put)(inputStream, BooleanResponseHandler())
+    put(buildURI("CREATE", webhdfsPath), inputStream, BooleanResponseHandler())
   }
 
   /**
@@ -180,39 +248,39 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
   @throws[ClientProtocolException]
   @throws[IOException]
   def mkdirs(hdfsPath: String): Try[Boolean] = {
-    put[BooleanResponseHandler, Boolean](buildURI("MKDIRS", hdfsPath), BooleanResponseHandler())
+    put(buildURI("MKDIRS", hdfsPath), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def rename(webHdfsPath: String, toHdfsPath: String): Try[Boolean] = {
     addParameter(WebHDFSConstants.DESTINATION, toHdfsPath)
-    put[BooleanResponseHandler, Boolean](buildURI("RENAME", webHdfsPath), BooleanResponseHandler())
+    put(buildURI("RENAME", webHdfsPath), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def delete(webHdfsPath: String): Try[Boolean] = {
     addParameter(WebHDFSConstants.DESTINATION, webHdfsPath)
-    delete[BooleanResponseHandler, Boolean](buildURI("DELETE", webHdfsPath), BooleanResponseHandler())
+    delete(buildURI("DELETE", webHdfsPath), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def getFileStatus(webhdfsPath: String): Try[FileStatus] = {
-    getAndConsume[FileStatusResponseHandler, FileStatus](buildURI("GETFILESTATUS", webhdfsPath), FileStatusResponseHandler())
+    getAndConsume(buildURI("GETFILESTATUS", webhdfsPath), FileStatusResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def listStatus(webhdfsPath: String): Try[List[String]] = {
-    getAndConsume[ListStatusResponseHandler, List[String]](buildURI("LISTSTATUS", webhdfsPath), ListStatusResponseHandler(webhdfsPath))
+    getAndConsume(buildURI("LISTSTATUS", webhdfsPath), ListStatusResponseHandler(webhdfsPath))
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def getFileChecksum(webhdfsPath: String): Try[HdfsFileChecksum] = {
-    getAndConsume[ChecksumResponseHandler, HdfsFileChecksum](buildURI("GETFILECHECKSUM", webhdfsPath), ChecksumResponseHandler())
+    getAndConsume(buildURI("GETFILECHECKSUM", webhdfsPath), ChecksumResponseHandler())
   }
 
   @annotation.varargs
@@ -234,15 +302,14 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
               statusCode = e.statusCode
               exceptionReason = e.message
               e.statusCode match {
-                case 401 =>
-                  logger.info("_message=\"executed method: {}\" unauthorized:\"{}\"", method.getName, args)
+                case 401 | 404 =>
+                  logger.info("_message=\"executed method: {}\" code={} reason={} args=\"{}\"", method.getName, e.statusCode.toString, e.message, args)
                 case 403 =>
                   logger.info("_message=\"executed method: {}\" forbidden:\"{}\"", method.getName, args)
                   handleForbidden()
-                case 404 =>
-                  logger.info("_message=\"executed method: {}\" file not found:\"{}\"", method.getName, args)
                 case 500 =>
-                  logResponse(e, method.getName, attempts, args: _*)
+                  logger.warn("_message=\"{} failed\" responseCode={} responseMessage={} attempts={} args={}", method.getName, statusCode.toString, e.message, attempts.toString, args)
+                  SleepUninterrupted(SLEEP_TIME, attempts)
                   attempts -= 1
               }
           }
@@ -251,7 +318,7 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
           case e: Throwable => {
             exceptionReason = e.getMessage
             logger.warn("_message=\"{} failed with exception:\"", method.getName, e)
-            sleepUninterrupted(attempts)
+            SleepUninterrupted(SLEEP_TIME, attempts)
           }
         }
       } while (!isSuccess && attempts < maxAttempts)
@@ -266,17 +333,5 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
   }
 
   val SLEEP_TIME = 3000
-
-  private def logResponse(e: WebHdfsException, message: String, attempts: Int, args: AnyRef*) {
-    val statusCode = e.statusCode
-    logger.warn("_message=\"{} failed\" responseCode={} responseMessage={} attempts={} args={}", message, statusCode.toString, e.message, attempts.toString, args)
-    sleepUninterrupted(attempts)
-  }
-
-  private def sleepUninterrupted(attempts: Int) {
-    TryAndGiveUp()(() => {
-      Thread.sleep(SLEEP_TIME * (attempts + 1))
-    })
-  }
 }
 

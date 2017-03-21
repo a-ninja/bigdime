@@ -159,3 +159,11 @@ object TryWithCloseable {
     }
   }
 }
+
+object SleepUninterrupted {
+  def apply(ms: Long, factor: Int) {
+    TryAndGiveUp()(() => {
+      Thread.sleep(ms * (factor + 1))
+    })
+  }
+}
