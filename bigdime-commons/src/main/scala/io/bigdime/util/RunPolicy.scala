@@ -14,7 +14,7 @@ trait RunPolicy {
 object RunPolicy {
   val MAX_ATTEMPTS: Int = 100
 
-  def noop(): Unit = {}
+  def noop(t: Throwable): Unit = {}
 }
 
 //final case class RetryAndHandleUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit) extends RunPolicy {
@@ -23,7 +23,7 @@ object RunPolicy {
 //  }
 //}
 
-final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: () => Unit = RunPolicy.noop) extends RunPolicy {
+final case class RetryUntilSuccessful(retriables: List[Class[_ <: Throwable]], handle: (Throwable) => Unit = RunPolicy.noop) extends RunPolicy {
   override def apply[T](block: () => T): Option[T] = {
     Retry(RunPolicy.MAX_ATTEMPTS, retriables, handle = handle)(block)
   }
@@ -58,7 +58,7 @@ object Retry {
 }
 
 
-final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000, handle: () => Unit = RunPolicy.noop, toThrow: Class[_ <: Throwable] = classOf[RetriesExhaustedException]) extends RunPolicy {
+final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]], delay: Long = 3000, handle: (Throwable) => Unit = RunPolicy.noop, toThrow: Class[_ <: Throwable] = classOf[RetriesExhaustedException]) extends RunPolicy {
 
   import Retry.logger
 
@@ -83,7 +83,7 @@ final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]]
           if (retriables.filter(r => r.isInstance(e)).nonEmpty) {
             if (attempt < maxAttempts) {
               Thread.sleep(attempt * delay)
-              handle()
+              handle(e)
             }
             else {
               if (toThrow.isInstanceOf[RetriesExhaustedException]) throw RetriesExhaustedException(causes.toList)

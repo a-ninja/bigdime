@@ -283,11 +283,13 @@ public class WebHdfs {
     return redirectLocation;
   }
 
+  @Deprecated
   protected HttpClientContext httpContext() {
     return null;
   }
 
   // LISTSTATUS, OPEN, GETFILESTATUS, GETCHECKSUM,
+  @Deprecated
   protected HttpResponse get() throws ClientProtocolException, IOException {
     httpRequest = new HttpGet(uri);
     logger.debug("File status request: {}", httpRequest.getURI());
@@ -296,6 +298,7 @@ public class WebHdfs {
     return httpClient.execute(httpRequest, httpContext());
   }
 
+  @Deprecated
   private HttpResponse delete() throws ClientProtocolException, IOException {
     httpRequest = new HttpDelete(uri);
     logger.info("Deleting resource: " + uri);
@@ -313,6 +316,7 @@ public class WebHdfs {
     httpClient = null;
   }
 
+  @Deprecated
   public void openConnection() {
     if (this.host != null) {
       // httpClient.clearResponseInterceptors();

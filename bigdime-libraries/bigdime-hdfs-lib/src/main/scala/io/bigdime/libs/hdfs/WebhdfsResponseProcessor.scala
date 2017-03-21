@@ -29,7 +29,7 @@ trait WebhdfsResponseProcessor[T] extends ResponseHandler[Try[T]] {
   protected def handle(response: HttpResponse) = {
     response.getStatusLine.getStatusCode match {
       case 200 | 201 => Success(true)
-      case _ => Failure(new WebHdfsException(response.getStatusLine.getStatusCode, response.getStatusLine.getReasonPhrase))
+      case x => Failure(new WebHdfsException(x, response.getStatusLine.getReasonPhrase))
     }
   }
 
@@ -89,4 +89,22 @@ case class InputStreamResponseHandler() extends WebhdfsResponseProcessor[InputSt
 
 case class ChecksumResponseHandler() extends WebhdfsResponseProcessor[HdfsFileChecksum] {
   override def handleSuccess(response: HttpResponse): Try[HdfsFileChecksum] = Success(json[WebHdfsGetFileChecksumResponse](response.getEntity.getContent, classOf[WebHdfsGetFileChecksumResponse]).FileChecksum)
+}
+
+case class RedirectLocationHandler() extends WebhdfsResponseProcessor[String] {
+  override protected def handle(response: HttpResponse) = {
+    response.getStatusLine.getStatusCode match {
+      case 307 => Success(true)
+      case x => Failure(new WebHdfsException(x, response.getStatusLine.getReasonPhrase))
+    }
+  }
+
+  override def handleSuccess(response: HttpResponse): Try[String] = {
+    val headers = response.getAllHeaders
+    val location = headers.filter(h => h.getName.equals("Location")).headOption match {
+      case Some(header) => header.getValue
+      case _ => null
+    }
+    Success(location)
+  }
 }
