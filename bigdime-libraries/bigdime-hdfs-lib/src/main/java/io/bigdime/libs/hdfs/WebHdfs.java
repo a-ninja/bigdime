@@ -147,6 +147,7 @@ public class WebHdfs {
   }
 
   // field checking?
+  @Deprecated
   public WebHdfs buildURI(String op, String HdfsPath) {
     try {
       URIBuilder uriBuilder = new URIBuilder();
@@ -173,6 +174,7 @@ public class WebHdfs {
   }
 
   // MKDIR, RENAME
+  @Deprecated
   private HttpResponse put() throws ClientProtocolException, IOException {
     httpRequest = new HttpPut(uri);
     uri = null;
@@ -181,6 +183,7 @@ public class WebHdfs {
   }
 
   // CREATE
+  @Deprecated
   private HttpResponse put(String filePath) throws ClientProtocolException, IOException {
     HttpPut httpRequest1 = new HttpPut(uri);
     uri = null;
@@ -199,6 +202,7 @@ public class WebHdfs {
   }
 
   // CREATE
+  @Deprecated
   private HttpResponse put(InputStream in) throws ClientProtocolException, IOException {
     HttpPut httpRequest1 = new HttpPut(uri);
     uri = null;
@@ -218,6 +222,7 @@ public class WebHdfs {
   }
 
   // APPEND
+  @Deprecated
   private HttpResponse post(String filePath) throws ClientProtocolException, IOException {
     HttpPost httpRequest1 = new HttpPost(uri);
     uri = null;
@@ -236,6 +241,7 @@ public class WebHdfs {
   }
 
   // APPEND
+  @Deprecated
   private HttpResponse post(InputStream in) throws ClientProtocolException, IOException {
     HttpPost httpRequest1 = new HttpPost(uri);
     uri = null;
@@ -268,6 +274,7 @@ public class WebHdfs {
    */
   // Need to check for permission!
   // TODO: pass in a method parameter: e.g.
+  @Deprecated
   private String temporaryRedirectURI(HttpRequestBase request) throws ClientProtocolException, IOException {
     HttpResponse response = httpClient.execute(request);
     request.releaseConnection();
@@ -334,22 +341,26 @@ public class WebHdfs {
   // (most others).
   // Should not release connection becuase stream may be needed to see
   // response
+  @Deprecated
   public HttpResponse createAndWrite(String hdfsPath, InputStream in) throws ClientProtocolException, IOException {
     logger.info("HDFS path: " + hdfsPath + " size " + in.available());
     HttpResponse response = buildURI("CREATE", hdfsPath).put(in);
     return response;
   }
 
+  @Deprecated
   public HttpResponse createAndWrite(String hdfsPath, String filePath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("CREATE", hdfsPath).put(filePath);
     return response;
   }
 
+  @Deprecated
   public HttpResponse append(String hdfsPath, InputStream in) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("APPEND", hdfsPath).post(in);
     return response;
   }
 
+  @Deprecated
   public HttpResponse append(String hdfsPath, String filePath) throws ClientProtocolException, IOException {
     HttpResponse response = buildURI("APPEND", hdfsPath).post(filePath);
     return response;

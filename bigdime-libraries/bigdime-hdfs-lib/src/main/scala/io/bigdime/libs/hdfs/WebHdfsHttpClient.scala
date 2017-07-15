@@ -133,7 +133,7 @@ object WebHdfsHttpClient extends AbstractWebHdfsHttpClient with LazyLogging {
 
 object WebHdfsHttpClientWithKerberos extends AbstractWebHdfsHttpClient with LazyLogging {
   private val DEFAULT_KRB5_CONFIG_LOCATION = "/etc/krb5.conf"
-  private val DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/bigdime/login.conf"
+  private val DEFAULT_LOGIN_CONFIG_LOCATION = "/opt/credentials/login.conf"
 
   val initConfig = {
     val (krb5ConfigPath, loginConfigPath) = (Option(System.getProperty("java.security.krb5.conf")).getOrElse(DEFAULT_KRB5_CONFIG_LOCATION),

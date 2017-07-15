@@ -106,7 +106,7 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
     * @param HdfsPath
     * @return
     */
-  protected def buildURI(op: String, HdfsPath: String): URI = {
+  protected def buildURI(op: String)(implicit HdfsPath: String): URI = {
     try {
       val uriBuilder = new URIBuilder
       val uri = new URI(activeHost)
@@ -148,7 +148,7 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
   @throws[ClientProtocolException]
   @throws[IOException]
   private def put[T](uri: URI, filePath: String, proc: WebhdfsResponseProcessor[T]) = update(classOf[HttpPut], uri, filePath, proc)
-  
+
   // CREATE
   @throws[ClientProtocolException]
   @throws[IOException]
@@ -226,8 +226,26 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def createAndWrite(webhdfsPath: String, inputStream: InputStream): Try[Boolean] = {
-    put(buildURI("CREATE", webhdfsPath), inputStream, BooleanResponseHandler())
+  def createAndWrite(implicit webhdfsPath: String, in: InputStream): Try[Boolean] = {
+    put(buildURI("CREATE"), in, BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def createAndWrite(webhdfsPath: String, filePath: String): Try[Boolean] = {
+    put(buildURI("CREATE")(webhdfsPath), filePath, BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def append(implicit webhdfsPath: String, in: InputStream): Try[Boolean] = {
+    post(buildURI("CREATE"), in, BooleanResponseHandler())
+  }
+
+  @throws[ClientProtocolException]
+  @throws[IOException]
+  def append(webhdfsPath: String, filePath: String): Try[Boolean] = {
+    post(buildURI("CREATE")(webhdfsPath), filePath, BooleanResponseHandler())
   }
 
   /**
@@ -241,46 +259,46 @@ case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION 
     */
   @throws[ClientProtocolException]
   @throws[IOException]
-  def open(webhdfsPath: String): Try[InputStream] = {
-    InputStreamResponseHandler().handleResponse(get(buildURI("OPEN", webhdfsPath)))
+  def open(implicit webhdfsPath: String): Try[InputStream] = {
+    InputStreamResponseHandler().handleResponse(get(buildURI("OPEN")))
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def mkdirs(hdfsPath: String): Try[Boolean] = {
-    put(buildURI("MKDIRS", hdfsPath), BooleanResponseHandler())
+  def mkdirs(implicit hdfsPath: String): Try[Boolean] = {
+    put(buildURI("MKDIRS"), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def rename(webHdfsPath: String, toHdfsPath: String): Try[Boolean] = {
     addParameter(WebHDFSConstants.DESTINATION, toHdfsPath)
-    put(buildURI("RENAME", webHdfsPath), BooleanResponseHandler())
+    put(buildURI("RENAME")(webHdfsPath), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def delete(webHdfsPath: String): Try[Boolean] = {
+  def delete(implicit webHdfsPath: String): Try[Boolean] = {
     addParameter(WebHDFSConstants.DESTINATION, webHdfsPath)
-    delete(buildURI("DELETE", webHdfsPath), BooleanResponseHandler())
+    delete(buildURI("DELETE"), BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def getFileStatus(webhdfsPath: String): Try[FileStatus] = {
-    getAndConsume(buildURI("GETFILESTATUS", webhdfsPath), FileStatusResponseHandler())
+  def getFileStatus(implicit webhdfsPath: String): Try[FileStatus] = {
+    getAndConsume(buildURI("GETFILESTATUS"), FileStatusResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def listStatus(webhdfsPath: String): Try[List[String]] = {
-    getAndConsume(buildURI("LISTSTATUS", webhdfsPath), ListStatusResponseHandler(webhdfsPath))
+  def listStatus(implicit webhdfsPath: String): Try[List[String]] = {
+    getAndConsume(buildURI("LISTSTATUS"), ListStatusResponseHandler(webhdfsPath))
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
-  def getFileChecksum(webhdfsPath: String): Try[HdfsFileChecksum] = {
-    getAndConsume(buildURI("GETFILECHECKSUM", webhdfsPath), ChecksumResponseHandler())
+  def getFileChecksum(implicit webhdfsPath: String): Try[HdfsFileChecksum] = {
+    getAndConsume(buildURI("GETFILECHECKSUM"), ChecksumResponseHandler())
   }
 
   @annotation.varargs

@@ -86,7 +86,7 @@ final case class Retry(maxAttempts: Int, retriables: List[Class[_ <: Throwable]]
               handle(e)
             }
             else {
-              if (toThrow.isInstanceOf[RetriesExhaustedException]) throw RetriesExhaustedException(causes.toList)
+              if (toThrow == classOf[RetriesExhaustedException]) throw RetriesExhaustedException(causes.toList)
               else throw toThrow.getConstructor(classOf[Throwable]).newInstance(e)
             }
           } else

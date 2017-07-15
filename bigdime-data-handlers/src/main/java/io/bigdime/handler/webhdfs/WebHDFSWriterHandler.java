@@ -3,26 +3,7 @@
  */
 package io.bigdime.handler.webhdfs;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
 import com.google.common.base.Preconditions;
-
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
@@ -48,6 +29,23 @@ import io.bigdime.handler.constants.WebHDFSWriterHandlerConstants;
 import io.bigdime.libs.hdfs.WebHDFSConstants;
 import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.libs.hdfs.WebHdfsWriter;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WebHDFSWriterHandler implements process method to write to HDFS.
@@ -83,6 +81,8 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 	@Autowired
 	private RuntimeInfoStore<RuntimeInfo> runtimeInfoStore;
 
+	@Autowired
+	WebHdfsWriter webHdfsWriter;
 	private String handlerPhase;
 	private String channelDesc;
 	/**
@@ -376,7 +376,7 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 					.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
 					.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
 		}
-		writer.write(webHdfs, detokenizedHdfsPath, payload, hdfsFileName);
+		writer.write(detokenizedHdfsPath, payload, hdfsFileName);
 		webHdfs = null;
 		logger.debug(handlerPhase, "wrote to hdfs");
 		String partitionNames = null;
@@ -508,9 +508,8 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 						.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
 						.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
 			}
-			WebHdfsWriter webHdfsWriter = new WebHdfsWriter();
 			logger.info(handlerPhase, "\"creating directory\" toPathDir={}", toPathDir);
-			webHdfsWriter.createDirectory(webHdfs, toPathDir);
+			webHdfsWriter.createDirectory(toPathDir);
 
 			if (toPathDir.startsWith("/webhdfs/v"))
 				toPathDir = toPathDir.substring(11);
