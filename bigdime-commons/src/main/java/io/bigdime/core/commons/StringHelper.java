@@ -3,6 +3,11 @@
  */
 package io.bigdime.core.commons;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
+
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,12 +15,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
-
-import com.google.common.base.Preconditions;
 
 /**
  * Helper class for various String related operations.F
@@ -223,6 +222,14 @@ public final class StringHelper {
         return outputString;
     }
 
+    /**
+     *
+     * @param inputString filePath
+     * @param outPattern format of the desired output path
+     * @param inPattern format of the input path
+     * @param properties
+     * @return
+     */
     public static String replaceTokens(final String inputString, final String outPattern, final Pattern inPattern,
                                        Map<String, String> properties) {
         String val = replaceTokens(inputString, outPattern, inPattern);
