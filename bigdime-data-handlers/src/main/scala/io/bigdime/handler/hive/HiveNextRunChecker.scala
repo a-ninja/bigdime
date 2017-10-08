@@ -20,6 +20,11 @@ case class TouchFileLookupConfig(goBackDays: Int, minGoBack: Long, filePath: Str
     this(handlerConfig.getGoBackDays, handlerConfig.getMinGoBack, handlerConfig.getTouchFile, handlerConfig.getLatency)
   }
 
+  /**
+    * Constructor to use when goBackDays is same as minGoBack.
+    * @param goBackDays
+    * @param filePath
+    */
   def this(goBackDays: Int, filePath: String) = {
     this(goBackDays, goBackDays.toLong, filePath, 0l)
   }
