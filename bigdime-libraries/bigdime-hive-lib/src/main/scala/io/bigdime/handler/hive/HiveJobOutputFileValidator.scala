@@ -21,7 +21,7 @@ class HiveJobOutputFileValidator {
 
   import HiveJobOutputFileValidator.logger
 
-  @Autowired private val webHdfsReader: WebHdfsReader = null
+  @Autowired private var webHdfsReader: WebHdfsReader = _
 
   /**
     * Check if the file/directory specified by filePath exists in HDFS.

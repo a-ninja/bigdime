@@ -57,7 +57,7 @@ public class WebHdfs {
   protected URI uri = null;
   protected HttpRequestBase httpRequest = null;
   private ObjectNode jsonParameters = null;
-  protected RoundRobinStrategy$ roundRobinStrategy = RoundRobinStrategy$.MODULE$;
+  protected RoundRobinStrategy roundRobinStrategy = null;
   private List<Header> headers;
 
 
@@ -116,7 +116,7 @@ public class WebHdfs {
 
     try {
       final URI uri = new URI(host);
-      if (uri.getScheme().equalsIgnoreCase("https")) {
+      if (uri.getScheme() !=null && uri.getScheme().equalsIgnoreCase("https")) {
         connMgr = getConnectionManagerWithDefaultSSL();
         this.httpClient = HttpClients.custom().setConnectionManager(connMgr)
                 .build();
@@ -127,7 +127,7 @@ public class WebHdfs {
     } catch (Exception e) {
       logger.warn("_message=\"{} failed to create httpClient\" ", e);
     }
-    roundRobinStrategy.setHosts(host);
+    roundRobinStrategy=RoundRobinStrategy$.MODULE$.withHosts(host);
   }
 
   protected WebHdfs(String host, int port) {
@@ -329,7 +329,7 @@ public class WebHdfs {
       // httpClient.clearResponseInterceptors();
       ObjectMapper mapper = new ObjectMapper();
       this.jsonParameters = mapper.createObjectNode();
-      roundRobinStrategy.setHosts(this.host);
+      roundRobinStrategy = RoundRobinStrategy$.MODULE$.withHosts(this.host);
 //      if (roundRobinStrategy.hostList == null) {
 //        roundRobinStrategy.setHosts(this.host);
 //      }

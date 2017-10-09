@@ -1,7 +1,7 @@
 package io.bigdime.handler.hive;
 
-import java.util.Properties;
-
+import io.bigdime.libs.hdfs.WebHdfsReader;
+import io.bigdime.libs.hdfs.WebhdfsFacade;
 import io.bigdime.libs.hive.job.HiveJobStatusFetcher;
 import io.bigdime.libs.hive.job.JobClientFactory;
 import org.apache.hadoop.mapred.JobClient;
@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 
-import io.bigdime.libs.hdfs.WebHdfsReader;
+import java.util.Properties;
 
 @Configuration
 public class HiveJobStatusFetcherTestConfig {
@@ -49,6 +49,11 @@ public class HiveJobStatusFetcherTestConfig {
     @Bean
     public WebHdfsReader getWebHdfsReader() {
         return Mockito.mock(WebHdfsReader.class);
+    }
+    @Bean
+
+    public WebhdfsFacade getWebHdfsFacade() {
+        return Mockito.mock(WebhdfsFacade.class);
     }
 
     @Bean

@@ -3,7 +3,7 @@ package io.bigdime.libs.hdfs
 import java.io.{ByteArrayInputStream, IOException, InputStream}
 
 import com.typesafe.scalalogging.LazyLogging
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
@@ -19,6 +19,9 @@ object WebHdfsWriter {
 class WebHdfsWriter extends LazyLogging {
 
   import WebHdfsWriter.FORWARD_SLASH
+
+  @Autowired
+  private var webHdfsFacade: WebhdfsFacade = _
 
   private val sleepTime = 3000
   @Value("${hdfs_hosts}")
@@ -40,6 +43,7 @@ class WebHdfsWriter extends LazyLogging {
 
   /**
     * Check to see whether the file exists or not.
+    * TODO: how is it returning false?
     *
     * @param filePath
     * absolute filepath
@@ -49,9 +53,9 @@ class WebHdfsWriter extends LazyLogging {
   @throws[WebHDFSSinkException]
   private def fileExists(filePath: String) = {
     try {
-      val facade = new WebhdfsFacade(hostNames, port, authOption)
+      //      val facade = new WebhdfsFacade(hostNames, port, authOption)
       val method = classOf[WebhdfsFacade].getMethod("getFileStatus", classOf[String])
-      facade.invokeWithRetry(method, 1, filePath)
+      webHdfsFacade.invokeWithRetry(method, 1, filePath)
       true
     } catch {
       case e: WebHdfsException => logger.warn("WebHdfs File Status Failed: The Sink or Data Writer could not check the status of the file:\" status={} reason={} error={}", e.statusCode.toString, e.message, e)
@@ -75,10 +79,10 @@ class WebHdfsWriter extends LazyLogging {
     */
   @throws[IOException]
   def createDirectory(folderPath: String) {
-    val facade = WebhdfsFacade(hostNames, port, authOption)
+    //    val facade = WebhdfsFacade(hostNames, port, authOption)
     val method = classOf[WebhdfsFacade].getMethod("mkdirs", classOf[String])
     try {
-      facade.invokeWithRetry[Boolean](method, maxAttempts, folderPath)
+      webHdfsFacade.invokeWithRetry[Boolean](method, maxAttempts, folderPath)
     } catch {
       case e: WebHdfsException => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
       case e: Any => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reason=" + e.getMessage)
@@ -89,13 +93,13 @@ class WebHdfsWriter extends LazyLogging {
   private def writeToWebHDFS(filePath: String, payload: Array[Byte], appendMode: Boolean) {
     var is: InputStream = new ByteArrayInputStream(payload)
     try {
-      val facade = WebhdfsFacade(hostNames, port, authOption)
+      //      val facade = WebhdfsFacade(hostNames, port, authOption)
       val method = if (appendMode) {
         classOf[WebhdfsFacade].getMethod("append", classOf[String], classOf[InputStream])
       } else {
         classOf[WebhdfsFacade].getMethod("createAndWrite", classOf[String], classOf[InputStream])
       }
-      facade.invokeWithRetry[Boolean](method, maxAttempts, filePath, is)
+      webHdfsFacade.invokeWithRetry[Boolean](method, maxAttempts, filePath, is)
     }
     catch {
       case e: WebHdfsException => throw new WebHDFSSinkException("unable to write to hdfs:" + filePath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
@@ -122,7 +126,13 @@ class WebHdfsWriter extends LazyLogging {
   def write(baseDir: String, payload: Array[Byte], hdfsFileName: String) {
     createDirectory(baseDir)
     val filePath = baseDir + FORWARD_SLASH + hdfsFileName
-    val fileCreated = fileExists(filePath)
+    val fileCreated = try {
+      fileExists(filePath)
+      true
+    }
+    catch {
+      case e: Exception => false
+    }
     writeToWebHDFS(filePath, payload, fileCreated)
   }
 }

@@ -10,12 +10,7 @@ public class RoundRobinStrategyTest {
 
   @Test
   public void testGetNextServiceHost() {
-//		RoundRobinStrategy1$.MODULE$.apply("a,b,c,d");
-    RoundRobinStrategy$ roundRobinStrategy = RoundRobinStrategy$.MODULE$;
-//		String h = inst.getNextServiceHost();
-//		System.out.println("h="+h);
-//		RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
-    roundRobinStrategy.setHosts("a,b,c,d");
+    RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy$.MODULE$.withHosts("a,b,c,d");
     String nextHost = roundRobinStrategy.getNextServiceHost();
     Assert.assertEquals(nextHost, "a");
 
@@ -34,15 +29,11 @@ public class RoundRobinStrategyTest {
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void testGetNextServiceHostWithNullHost() {
-//		RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
-    RoundRobinStrategy$ roundRobinStrategy = RoundRobinStrategy$.MODULE$;
-    roundRobinStrategy.setHosts(null);
+    RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy$.MODULE$.withHosts(null);
   }
 
   @Test(expectedExceptions = IllegalArgumentException.class)
   public void testGetNextServiceHostWithEmptyHost() {
-//		RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy.getInstance();
-    RoundRobinStrategy$ roundRobinStrategy = RoundRobinStrategy$.MODULE$;
-    roundRobinStrategy.setHosts("");
+    RoundRobinStrategy roundRobinStrategy = RoundRobinStrategy$.MODULE$.withHosts("");
   }
 }

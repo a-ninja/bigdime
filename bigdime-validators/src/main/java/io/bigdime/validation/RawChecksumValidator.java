@@ -26,6 +26,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.http.client.ClientProtocolException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import scala.util.Try;
@@ -46,6 +47,7 @@ import java.net.URISyntaxException;
  */
 public class RawChecksumValidator implements Validator {
 
+  @Autowired
   private WebhdfsFacade webHdfsFacade;
   private static final Logger logger = LoggerFactory.getLogger(RawChecksumValidator.class);
   private String name;
@@ -103,7 +105,7 @@ public class RawChecksumValidator implements Validator {
     }
     try {
       int port = Integer.parseInt(portString);
-      webHdfsFacade = new WebhdfsFacade(host, port, HDFS_AUTH_OPTION.PASSWORD);
+//      webHdfsFacade = new WebhdfsFacade(host, port, HDFS_AUTH_OPTION.PASSWORD);
       webHdfsFacade.addParameter(WebHDFSConstants.USER_NAME, "hdfs");
     } catch (NumberFormatException e) {
       logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), "NumberFormatException",

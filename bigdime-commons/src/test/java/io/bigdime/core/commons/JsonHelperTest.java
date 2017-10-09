@@ -6,6 +6,7 @@ package io.bigdime.core.commons;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +39,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     String notTextualRequiredNodeKey = "notTextualRequiredNodeKey";
     JsonNode notTextualRequiredNode = Mockito.mock(JsonNode.class);
     Mockito.when(node.get(notTextualRequiredNodeKey)).thenReturn(notTextualRequiredNode);
-    Mockito.when(notTextualRequiredNode.isTextual()).thenReturn(false);
+    Mockito.when(notTextualRequiredNode.getNodeType()).thenReturn(JsonNodeType.ARRAY);
+//    Mockito.when(notTextualRequiredNode.isTextual()).thenReturn(false);
     jsonHelper.getRequiredStringProperty(node, notTextualRequiredNodeKey);
     Mockito.verify(node, Mockito.times(1)).get(notTextualRequiredNodeKey);
   }
@@ -53,7 +55,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     String textualRequiredNodeKey = "textualRequiredNodeKey";
     JsonNode textualRequiredNode = Mockito.mock(JsonNode.class);
     Mockito.when(node.get(textualRequiredNodeKey)).thenReturn(textualRequiredNode);
-    Mockito.when(textualRequiredNode.isTextual()).thenReturn(true);
+    Mockito.when(textualRequiredNode.getNodeType()).thenReturn(JsonNodeType.STRING);
+//    Mockito.when(textualRequiredNode.isTextual()).thenReturn(true);
     Mockito.when(textualRequiredNode.asText()).thenReturn("textualRequiredNodeValue");
     String propertyValue = jsonHelper.getRequiredStringProperty(node, textualRequiredNodeKey);
 
@@ -97,7 +100,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     JsonNode requiredArrayNode = Mockito.mock(JsonNode.class);
     String requiredNodeKey = "requiredArrayNode";
     Mockito.when(node.get(requiredNodeKey)).thenReturn(requiredArrayNode);
-    Mockito.when(requiredArrayNode.isArray()).thenReturn(true);
+    Mockito.when(requiredArrayNode.getNodeType()).thenReturn(JsonNodeType.ARRAY);
+//    Mockito.when(requiredArrayNode.isArray()).thenReturn(true);
     JsonNode actualNode = jsonHelper.getRequiredArrayNode(node, requiredNodeKey);
     Assert.assertEquals(actualNode, requiredArrayNode);
     Mockito.verify(node, Mockito.times(1)).get(requiredNodeKey);
@@ -113,7 +117,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     JsonNode requiredArrayNode = Mockito.mock(JsonNode.class);
     String requiredNodeKey = "requiredArrayNode";
     Mockito.when(node.get(requiredNodeKey)).thenReturn(requiredArrayNode);
-    Mockito.when(requiredArrayNode.isArray()).thenReturn(false);
+    Mockito.when(requiredArrayNode.getNodeType()).thenReturn(JsonNodeType.STRING);
+//    Mockito.when(requiredArrayNode.isArray()).thenReturn(false);
     JsonNode actualNode = jsonHelper.getRequiredArrayNode(node, requiredNodeKey);
     Assert.assertEquals(actualNode, requiredArrayNode);
     Mockito.verify(node, Mockito.times(1)).get(requiredNodeKey);
@@ -157,7 +162,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     String booleanNodeKey = "booleanNodeKey";
     JsonNode booleanNode = Mockito.mock(JsonNode.class);
     Mockito.when(node.get(booleanNodeKey)).thenReturn(booleanNode);
-    Mockito.when(booleanNode.isTextual()).thenReturn(true);
+    Mockito.when(booleanNode.getNodeType()).thenReturn(JsonNodeType.STRING);
+//    Mockito.when(booleanNode.isTextual()).thenReturn(true);
     Mockito.when(booleanNode.asText()).thenReturn("true");
     boolean propertyValue = jsonHelper.getBooleanProperty(node, booleanNodeKey);
 
@@ -175,7 +181,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     String booleanNodeKey = "booleanNodeKey";
     JsonNode booleanNode = Mockito.mock(JsonNode.class);
     Mockito.when(node.get(booleanNodeKey)).thenReturn(booleanNode);
-    Mockito.when(booleanNode.isTextual()).thenReturn(true);
+    Mockito.when(booleanNode.getNodeType()).thenReturn(JsonNodeType.STRING);
+//    Mockito.when(booleanNode.isTextual()).thenReturn(true);
     Mockito.when(booleanNode.asText()).thenReturn("false");
     boolean propertyValue = jsonHelper.getBooleanProperty(node, booleanNodeKey);
     Assert.assertFalse(propertyValue);
@@ -192,7 +199,8 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     String booleanNodeKey = "booleanNodeKey";
     JsonNode booleanNode = Mockito.mock(JsonNode.class);
     Mockito.when(node.get(booleanNodeKey)).thenReturn(booleanNode);
-    Mockito.when(booleanNode.isTextual()).thenReturn(true);
+    Mockito.when(booleanNode.getNodeType()).thenReturn(JsonNodeType.STRING);
+//    Mockito.when(booleanNode.isTextual()).thenReturn(true);
     Mockito.when(booleanNode.asText()).thenReturn("unit-string-1");
     boolean propertyValue = jsonHelper.getBooleanProperty(node, booleanNodeKey);
     Assert.assertFalse(propertyValue);
@@ -247,23 +255,26 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     Long nodeLongValue = 100l;
     Boolean nodeBooleanValue = true;
     long nodeNumberValue = 111;
-    double nodeDoubleValue = 11.101;
+//    double nodeDoubleValue = 11.101;
     String nodeStringValue = "testnodeStringValue";
 
     JsonNode node = Mockito.mock(JsonNode.class);
     String notTextualRequiredNodeKey = "notTextualRequiredNodeKey";
     JsonNode notTextualRequiredNode = Mockito.mock(JsonNode.class);
-    Mockito.when(notTextualRequiredNode.isBoolean()).thenReturn(true).thenReturn(false);
-    Mockito.when(notTextualRequiredNode.isNumber()).thenReturn(true).thenReturn(false);
-    Mockito.when(notTextualRequiredNode.isLong()).thenReturn(true).thenReturn(false);
-    Mockito.when(notTextualRequiredNode.isDouble()).thenReturn(true).thenReturn(false);
-    Mockito.when(notTextualRequiredNode.isTextual()).thenReturn(true).thenReturn(false);
+    Mockito.when(notTextualRequiredNode.getNodeType()).thenReturn(JsonNodeType.BOOLEAN).thenReturn(JsonNodeType.NUMBER).thenReturn(JsonNodeType.NUMBER).thenReturn(JsonNodeType.NUMBER);
+
+//    Mockito.when(notTextualRequiredNode.isBoolean()).thenReturn(true).thenReturn(false);
+//    Mockito.when(notTextualRequiredNode.isNumber()).thenReturn(true).thenReturn(false);
+//    Mockito.when(notTextualRequiredNode.isLong()).thenReturn(true).thenReturn(false);
+//    Mockito.when(notTextualRequiredNode.isDouble()).thenReturn(true).thenReturn(false);
+//    Mockito.when(notTextualRequiredNode.getNodeType()).thenReturn(JsonNodeType.STRING).thenReturn(JsonNodeType.ARRAY);
+//    Mockito.when(notTextualRequiredNode.isTextual()).thenReturn(true).thenReturn(false);
 
     Mockito.when(notTextualRequiredNode.asText()).thenReturn(nodeStringValue);
-    Mockito.when(notTextualRequiredNode.asLong()).thenReturn(nodeLongValue);
+//    Mockito.when(notTextualRequiredNode.asLong()).thenReturn(nodeLongValue).thenReturn(nodeNumberValue);
     Mockito.when(notTextualRequiredNode.asBoolean()).thenReturn(nodeBooleanValue);
-    Mockito.when(notTextualRequiredNode.asLong()).thenReturn(nodeNumberValue);
-    Mockito.when(notTextualRequiredNode.asDouble()).thenReturn(nodeDoubleValue);
+    Mockito.when(notTextualRequiredNode.asLong()).thenReturn(nodeNumberValue).thenReturn(nodeLongValue);
+//    Mockito.when(notTextualRequiredNode.asDouble()).thenReturn(nodeDoubleValue);
     Mockito.when(notTextualRequiredNode.asText()).thenReturn(nodeStringValue);
 
     Mockito.when(node.get(notTextualRequiredNodeKey)).thenReturn(notTextualRequiredNode);
@@ -274,13 +285,13 @@ public class JsonHelperTest extends AbstractTestNGSpringContextTests {
     Assert.assertEquals(object, nodeNumberValue);
     object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
     Assert.assertEquals(object, nodeLongValue);
-    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
-    Assert.assertEquals(object, nodeDoubleValue);
-    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
-    Assert.assertEquals(object, nodeStringValue);
-    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
-    Assert.assertEquals(object, nodeStringValue);
-    Mockito.verify(node, Mockito.times(6)).get(notTextualRequiredNodeKey);
+//    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+//    Assert.assertEquals(object, nodeDoubleValue);
+//    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+//    Assert.assertEquals(object, nodeStringValue);
+//    object = jsonHelper.getRequiredProperty(node, notTextualRequiredNodeKey);
+//    Assert.assertEquals(object, nodeStringValue);
+    Mockito.verify(node, Mockito.times(3)).get(notTextualRequiredNodeKey);
   }
 
 

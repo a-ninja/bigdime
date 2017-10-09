@@ -5,7 +5,7 @@ import javax.annotation.PostConstruct
 
 import com.typesafe.scalalogging.LazyLogging
 import io.bigdime.core.commons.StringHelper
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
@@ -22,6 +22,9 @@ object WebHdfsReader {
 class WebHdfsReader extends LazyLogging {
 
   import WebHdfsReader._
+
+  @Autowired
+  private var webHdfsFacade: WebhdfsFacade = _
 
   @Value("${hdfs_hosts}")
   private var hostNames: String = _
@@ -62,9 +65,8 @@ class WebHdfsReader extends LazyLogging {
     if (StringHelper.isBlank(hdfsFilePath)) throw new IllegalArgumentException("invalid filePath: empty or null")
     val webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath)
     try {
-      val facade = WebhdfsFacade(hostNames, port, authOption)
       val method = classOf[WebhdfsFacade].getMethod("open", classOf[String])
-      facade.invokeWithRetry[InputStream](method, maxAttempts, webhdfsFilePath)
+      webHdfsFacade.invokeWithRetry[InputStream](method, maxAttempts, webhdfsFilePath)
     } catch {
       case e@(_: NoSuchMethodException | _: SecurityException) => {
         logger.error("method not found", e)
@@ -102,9 +104,8 @@ class WebHdfsReader extends LazyLogging {
     val webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath)
     fileType(webhdfsFilePath) match {
       case "DIRECTORY" => try {
-        val facade = new WebhdfsFacade(hostNames, port, authOption)
         val method = classOf[WebhdfsFacade].getMethod("listStatus", classOf[String])
-        facade.invokeWithRetry[List[String]](method, maxAttempts, webhdfsFilePath)
+        webHdfsFacade.invokeWithRetry[List[String]](method, maxAttempts, webhdfsFilePath)
       } catch {
         case e@(_: NoSuchMethodException | _: SecurityException) => {
           throw new WebHdfsException("method invocation threw exception:", e)
@@ -154,9 +155,8 @@ class WebHdfsReader extends LazyLogging {
     if (StringHelper.isBlank(hdfsFilePath)) throw new IllegalArgumentException("invalid filePath: empty or null")
     val webhdfsFilePath = prependWebhdfsPrefixAndAppendSlash(hdfsFilePath)
     try {
-      val webhdfsFacade = new WebhdfsFacade(hostNames, port, authOption)
       val method = classOf[WebhdfsFacade].getMethod("getFileStatus", classOf[String])
-      val fileStatus = webhdfsFacade.invokeWithRetry[FileStatus](method, maxAttempts, webhdfsFilePath)
+      val fileStatus = webHdfsFacade.invokeWithRetry[FileStatus](method, maxAttempts, webhdfsFilePath)
       fileStatus
     } catch {
       case e@(_: NoSuchMethodException | _: SecurityException) => {

@@ -15,7 +15,7 @@ import org.testng.annotations.{AfterTest, Test}
 class WebHdfsHttpClientIntegrationTest {
   @Test
   def testListStatus = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val r2 = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[List[String]](obj.getClass.getMethod("listStatus", classOf[String]), 1, "/webhdfs/v1/data/bigdime/adaptor/adaptor1")
     Assert.assertTrue(r2.head.equals("/webhdfs/v1/data/bigdime/adaptor/adaptor1user-adaptor1.txt"))
     val r3 = new WebHdfsReader("http://sandbox.hortonworks.com", 50070, null, HDFS_AUTH_OPTION.PASSWORD).list("/webhdfs/v1/data/bigdime/adaptor/adaptor1", false)
@@ -24,7 +24,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testGetFileStatus = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val r2 = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[FileStatus](obj.getClass.getMethod("getFileStatus", classOf[String]), 1, "/webhdfs/v1/data/bigdime/adaptor/adaptor1/user-adaptor1.txt")
     Assert.assertNotNull(r2)
     Assert.assertTrue(r2.`type`.equals("FILE"))
@@ -32,7 +32,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testOpenFile = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val r2 = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[InputStream](obj.getClass.getMethod("open", classOf[String]), 1, "/webhdfs/v1/data/bigdime/adaptor/adaptor1/user-adaptor1.txt")
     val content = scala.io.Source.fromInputStream(r2).mkString
     println(content)
@@ -40,7 +40,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testGetFileChecksum = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50075, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50075, HDFS_AUTH_OPTION.PASSWORD.toString)
     val r2 = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[HdfsFileChecksum](obj.getClass.getMethod("getFileChecksum", classOf[String]), 1, "/webhdfs/v1/data/bigdime/adaptor/adaptor1/user-adaptor1.txt")
     println(s"algorithm=${r2.algorithm}, ${r2.bytes}, ${r2.length}")
 
@@ -50,7 +50,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testMkdirs = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val r2 = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[Boolean](obj.getClass.getMethod("mkdirs", classOf[String]), 1, "/webhdfs/v1/data/bigdime/adaptor/adaptor1/ad")
     println(s"response=$r2")
     Assert.assertNotNull(r2)
@@ -59,7 +59,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testRename = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val mk = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[Boolean](obj.getClass.getMethod("mkdirs", classOf[String]), 1, "/webhdfs/v1/data/bigdime/torename")
     Assert.assertEquals(mk, true)
 
@@ -75,7 +75,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testDelete = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val mk = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[Boolean](obj.getClass.getMethod("mkdirs", classOf[String]), 1, "/webhdfs/v1/data/bigdime/testDelete")
     Assert.assertEquals(mk, true)
 
@@ -87,7 +87,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @Test
   def testCreateAndWrite = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val create = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[Boolean](obj.getClass.getMethod("createAndWrite", classOf[String], classOf[InputStream]), 1, "/webhdfs/v1/data/bigdime/todel", new ByteArrayInputStream("uni-test".getBytes()))
     val ls = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[FileStatus](obj.getClass.getMethod("getFileStatus", classOf[String]), 1, "/webhdfs/v1/data/bigdime/todel")
     Assert.assertNotNull(ls)
@@ -96,7 +96,7 @@ class WebHdfsHttpClientIntegrationTest {
 
   @AfterTest
   def cleanup = {
-    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD)
+    val obj = new WebhdfsFacade("http://sandbox.hortonworks.com", 50070, HDFS_AUTH_OPTION.PASSWORD.toString)
     val del = obj.addParameter("namenoderpcaddress", "sandbox.hortonworks.com:8020").invokeWithRetry[Boolean](obj.getClass.getMethod("delete", classOf[String]), 1, "/webhdfs/v1/data/bigdime/todel")
   }
 

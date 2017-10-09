@@ -12,6 +12,9 @@ import org.apache.http.client.methods._
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.entity.{AbstractHttpEntity, BasicHttpEntity, FileEntity}
 import org.apache.http.{Header, HttpResponse}
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Scope
+import org.springframework.stereotype.Component
 
 import scala.util.{Failure, Success, Try}
 
@@ -20,7 +23,10 @@ import scala.util.{Failure, Success, Try}
   * Created by neejain on 3/21/17.
   */
 //not a threadsafe implementation
-case class WebhdfsFacade(hosts: String, port: Int, authOption: HDFS_AUTH_OPTION = HDFS_AUTH_OPTION.KERBEROS) extends LazyLogging {
+@Component
+@Scope ("prototype")
+case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_port}") port: Int, @Value("${webhdfs.auth.choice:kerberos}") authChoice: String) extends LazyLogging {
+  private val authOption = HDFS_AUTH_OPTION.getByName(authChoice)
   private var jsonParameters = (new ObjectMapper).createObjectNode
   private var httpRequest: HttpRequestBase = _
 

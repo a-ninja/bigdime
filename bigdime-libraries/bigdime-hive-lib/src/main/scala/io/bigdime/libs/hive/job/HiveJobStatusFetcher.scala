@@ -40,7 +40,7 @@ class HiveJobStatusFetcher extends JobStatusFetcher[HiveJobSpec, HiveJobStatus] 
   @Value("${yarn.site.xml.path}") private val yarnSiteXml: String = null
   @Value("${hive.jdbc.user.name}") private val userName: String = null
   @Value("${hive.jdbc.secret}") private val password: String = null
-  @Autowired private val hiveJobOutputFileValidator: HiveJobOutputFileValidator = null
+  @Autowired private var hiveJobOutputFileValidator: HiveJobOutputFileValidator = null
   private var conf: Configuration = _
 
   @PostConstruct
