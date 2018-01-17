@@ -166,7 +166,7 @@ class WebHdfsWriter extends LazyLogging {
     */
   @throws[IOException]
   def write(baseDir: String, payload: Array[Byte], hdfsFileName: String, headers: java.util.Map[String, String] = null, params: java.util.Map[String, String] = null) {
-    createDirectory(baseDir)
+    createDirectory(baseDir, params)
     val filePath = baseDir + FORWARD_SLASH + hdfsFileName
     val fileCreated = try {
       fileExists(filePath)
