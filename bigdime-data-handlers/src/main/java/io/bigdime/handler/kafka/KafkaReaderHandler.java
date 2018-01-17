@@ -60,14 +60,14 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 	//	protected CounterService counterService;
 	private TimeManager timeManager = TimeManager.getInstance();
 	private static final String DF = "yyyyMMdd";
-	private static final String HOUR_FORMAT = "HH";	
+	private static final String HOUR_FORMAT = "HH";
 	private static final DateTimeZone timeZone = DateTimeZone.forID("UTC");
-	
+
 	private static final DateTimeFormatter hourFormatter = DateTimeFormat.forPattern(HOUR_FORMAT).withZone(timeZone);
 	private static final DateTimeFormatter formatter = DateTimeFormat.forPattern(DF).withZone(timeZone);
-	private final String TIMESTAMP = "DT";
-	private final String HOUR = "HOUR";
-	private static  final String PARTITION = "PARTITION";
+	private final String TIMESTAMP = "dt";
+	private final String HOUR = "hour";
+	private static  final String PARTITION = "partition";
 	private String entityName = null;
 	/**
 	 * KakfaConsumer component that's used to fetch data from Kafka.
@@ -104,18 +104,18 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 
 		@SuppressWarnings("unchecked")
 		Entry<Object, String> srcDescInputs = (Entry<Object, String>) getPropertyMap().get(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC);
-		
+
 		@SuppressWarnings("unchecked")
 		Map<String,Object>  inputMetadata = (Map<String,Object>) srcDescInputs.getKey();
-		
+
 		inputDescriptor = new KafkaInputDescriptor();
 		try {
 			inputDescriptor.parseDescriptor(inputMetadata);
 		} catch (IllegalArgumentException ex) {
 			throw new InvalidValueConfigurationException(
-					 "incorrect value specified in src-desc "+ ex.getMessage());
+					"incorrect value specified in src-desc "+ ex.getMessage());
 		}
-		
+
 		entityName = inputDescriptor.getEntityName();
 		// if entityName not found, assign the topic name to entity.
 		if(entityName == null){
@@ -126,7 +126,7 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 			currentOffset = getOffsetFromRuntimeInfo(runtimeInfoStore,inputDescriptor.getEntityName(), String.valueOf(inputDescriptor.getPartition()), KAFKA_MESSAGE_READER_OFFSET);
 			if(currentOffset > 0){
 				currentOffset++;
-			}	
+			}
 		} catch (RuntimeInfoStoreException e) {
 			throw new AdaptorConfigurationException(e);
 		}
@@ -179,7 +179,7 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 				logger.alert(ALERT_TYPE.INGESTION_FAILED, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR, ALERT_SEVERITY.BLOCKER,
 						"\"kafka reader exception\" error={}", e.toString());
 				throw new HandlerException("Unable to read the messages from Kafka", e);
-			}			
+			}
 			if (kafkaMessages == null || kafkaMessages.isEmpty()) {
 				logger.info(handlerPhase, "no data in the kafka , will BACKOFF topicName={} partition={} currentOffset={}",inputDescriptor.getTopic(),inputDescriptor.getPartition(),currentOffset);
 				return Status.BACKOFF;
@@ -198,11 +198,11 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 			 * we need to start from 31st message. So, we just subtract the
 			 * offset of the first message from the offset we receive from
 			 * runtime info store.
-			 * 
+			 *
 			 * If, the offset of the first message in the list is greater than
 			 * kafkaMessageOffsetFromRuntimeInfo, then we'd load the first
 			 * message.
-			 * 
+			 *
 			 * If the offset from runtime store is bigger than the offset of the
 			 * last message from kafka, no need to process any message, so
 			 * BACKOFF.
@@ -250,8 +250,8 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.INPUT_DESCRIPTOR,
 				String.valueOf(inputDescriptor.getPartition()));
 		actionEvent.getHeaders().put(PARTITION,
-				String.valueOf(inputDescriptor.getPartition()));		
-		
+				String.valueOf(inputDescriptor.getPartition()));
+
 		actionEvent.getHeaders().put(KAFKA_MESSAGE_READER_OFFSET, String.valueOf(messageOffset));
 
 		DateTime dt = timeManager.getLocalDateTime();
@@ -259,7 +259,7 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 		String hour = hourFormatter.print(dt);
 		actionEvent.getHeaders().put(TIMESTAMP, dateFormat);
 		actionEvent.getHeaders().put(HOUR, hour);
-		
+
 		processChannelSubmission(actionEvent);
 
 		// default behavior is hour partition.
@@ -281,8 +281,8 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 	 * @return
 	 */
 	protected long getOffsetFromRuntimeInfo(final RuntimeInfoStore<RuntimeInfo> runtimeInfoStore,
-			final String entityName, final String descriptor, final String offsetPropertyName)
-					throws RuntimeInfoStoreException {
+											final String entityName, final String descriptor, final String offsetPropertyName)
+			throws RuntimeInfoStoreException {
 		try {
 			RuntimeInfo runtimeInfo = runtimeInfoStore.get(AdaptorConfig.getInstance().getName(), entityName,
 					descriptor);
