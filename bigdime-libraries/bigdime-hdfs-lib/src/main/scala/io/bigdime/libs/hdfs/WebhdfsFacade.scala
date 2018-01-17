@@ -182,6 +182,7 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
   private def update[T](clazz: Class[_ <: HttpEntityEnclosingRequestBase], uri: URI, filePath: String, proc: WebhdfsResponseProcessor[T]) = {
     val httpRequest = clazz.getConstructor(classOf[URI]).newInstance(uri)
     val httpReq = getRedirectedRequest(httpRequest)(clazz, new FileEntity(new File(filePath)))
+    headers.foreach(h => httpReq.addHeader(h))
     execute(httpReq, proc)
   }
 
@@ -193,6 +194,7 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
     val entity = new BasicHttpEntity
     entity.setContent(in)
     val httpReq = getRedirectedRequest(httpRequest)(clazz, entity)
+    headers.foreach(h => httpReq.addHeader(h))
     execute(httpReq, proc)
   }
 
