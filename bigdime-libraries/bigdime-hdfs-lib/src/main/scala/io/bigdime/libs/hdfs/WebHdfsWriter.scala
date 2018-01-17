@@ -7,6 +7,7 @@ import org.apache.http.Header
 import org.springframework.beans.factory.annotation.{Autowired, Value}
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
+import scala.collection.JavaConversions._
 
 /**
   * Created by neejain on 3/17/17.
@@ -69,6 +70,31 @@ class WebHdfsWriter extends LazyLogging {
   }
 
   /**
+    * Create the directory specifed by folderPath parameter. Also apply special params such as user.name
+    *
+    * @param folderPath
+    * absolute path representing the directory that needs to be
+    * created
+    * @throws IOException
+    * if there was any problem in executing mkdir command or if the
+    * command returned anything by 200 or 201
+    */
+  @throws[IOException]
+  def createDirectory(folderPath: String, params: java.util.Map[String, String] = null) {
+    val method = classOf[WebhdfsFacade].getMethod("mkdirs", classOf[String])
+    try {
+      logger.debug("is webhdfsFacade null=" + (webHdfsFacade == null))
+      Option(params) match {
+        case Some(_params) => _params.foreach(kv => webHdfsFacade.addParameter(kv._1, kv._2))
+      }
+      webHdfsFacade.invokeWithRetry[Boolean](method, maxAttempts, folderPath)
+    } catch {
+      case e: WebHdfsException => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
+      case e: Any => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reason=" + e.getMessage)
+    }
+  }
+
+  /**
     * Create the directory specifed by folderPath parameter.
     *
     * @param folderPath
@@ -80,22 +106,36 @@ class WebHdfsWriter extends LazyLogging {
     */
   @throws[IOException]
   def createDirectory(folderPath: String) {
-    //    val facade = WebhdfsFacade(hostNames, port, authOption)
-    val method = classOf[WebhdfsFacade].getMethod("mkdirs", classOf[String])
+    createDirectory(folderPath, null)
+  }
+
+  /**
+    *
+    * @param source
+    * @param destination
+    * @throws IOException
+    */
+  @throws[IOException]
+  def rename(source: String, destination: String): Unit = {
     try {
-      logger.debug("webhdfsFaade="+webHdfsFacade)
-      webHdfsFacade.invokeWithRetry[Boolean](method, maxAttempts, folderPath)
+      webHdfsFacade.rename(source, destination)
     } catch {
-      case e: WebHdfsException => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
-      case e: Any => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reason=" + e.getMessage)
+      case e: WebHdfsException => throw new WebHDFSSinkException("unable to rename \"" + source + "\" to \"" + destination + "\", reasonCode=" + e.statusCode + ", reason=" + e.message)
+      case e: Any => throw new WebHDFSSinkException("unable to rename \"" + source + "\" to \"" + destination + "\", reason=" + e.getMessage)
     }
   }
 
+  /**
+    *
+    * @param filePath
+    * @param payload
+    * @param appendMode
+    * @throws IOException
+    */
   @throws[IOException]
   private def writeToWebHDFS(filePath: String, payload: Array[Byte], appendMode: Boolean) {
     var is: InputStream = new ByteArrayInputStream(payload)
     try {
-      //      val facade = WebhdfsFacade(hostNames, port, authOption)
       val method = if (appendMode) {
         classOf[WebhdfsFacade].getMethod("append", classOf[String], classOf[InputStream])
       } else {
@@ -105,7 +145,7 @@ class WebHdfsWriter extends LazyLogging {
     }
     catch {
       case e: WebHdfsException => throw new WebHDFSSinkException("unable to write to hdfs:" + filePath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
-      case e: Any => throw new WebHDFSSinkException("unable to create directory:" + filePath + ", reason=" + e.getMessage)
+      case e: Any => throw new WebHDFSSinkException("unable to write to hdfs:" + filePath + ", reason=" + e.getMessage)
     }
     finally if (is != null) is.close()
   }
@@ -125,7 +165,7 @@ class WebHdfsWriter extends LazyLogging {
     * if there was any problem in writing the data
     */
   @throws[IOException]
-  def write(baseDir: String, payload: Array[Byte], hdfsFileName: String, headers:java.util.Map[String, String]=null, params:java.util.Map[String, String]=null) {
+  def write(baseDir: String, payload: Array[Byte], hdfsFileName: String, headers: java.util.Map[String, String] = null, params: java.util.Map[String, String] = null) {
     createDirectory(baseDir)
     val filePath = baseDir + FORWARD_SLASH + hdfsFileName
     val fileCreated = try {
@@ -135,12 +175,12 @@ class WebHdfsWriter extends LazyLogging {
     catch {
       case e: Exception => false
     }
-    import scala.collection.JavaConversions._
+
     Option(headers) match {
-      case Some(_map) => _map.foreach(kv=>webHdfsFacade.addHeader(kv._1, kv._2))
+      case Some(_map) => _map.foreach(kv => webHdfsFacade.addHeader(kv._1, kv._2))
     }
     Option(params) match {
-      case Some(_params) => _params.foreach(kv=>webHdfsFacade.addParameter(kv._1, kv._2))
+      case Some(_params) => _params.foreach(kv => webHdfsFacade.addParameter(kv._1, kv._2))
     }
     writeToWebHDFS(filePath, payload, fileCreated)
   }
