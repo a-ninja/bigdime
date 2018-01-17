@@ -40,7 +40,7 @@
         <module>bigdime-monitoring</module>
         <module>bigdime-management-console</module>
         <module>bigdime-reference-adaptors</module>
-       <!-- <module>dist</module> -->
+        <module>dist</module>
     </modules>
     <properties>
         <!-- test -->

@@ -65,9 +65,9 @@ public class KafkaReaderHandler extends AbstractSourceHandler {
 	
 	private static final DateTimeFormatter hourFormatter = DateTimeFormat.forPattern(HOUR_FORMAT).withZone(timeZone);
 	private static final DateTimeFormatter formatter = DateTimeFormat.forPattern(DF).withZone(timeZone);
-	private final String TIMESTAMP = "dt";
-	private final String HOUR = "hour";
-	private static  final String PARTITION = "partition";
+	private final String TIMESTAMP = "DT";
+	private final String HOUR = "HOUR";
+	private static  final String PARTITION = "PARTITION";
 	private String entityName = null;
 	/**
 	 * KakfaConsumer component that's used to fetch data from Kafka.
