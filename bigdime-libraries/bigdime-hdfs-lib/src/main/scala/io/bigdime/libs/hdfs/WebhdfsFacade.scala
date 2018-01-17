@@ -26,7 +26,7 @@ import scala.util.{Failure, Success, Try}
   */
 //not a threadsafe implementation
 @Component
-@Scope ("prototype")
+@Scope("prototype")
 case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_port}") port: Int, @Value("${webhdfs.auth.choice:kerberos}") authChoice: String) extends LazyLogging {
   private val authOption = HDFS_AUTH_OPTION.getByName(authChoice)
   private var jsonParameters = (new ObjectMapper).createObjectNode
@@ -127,8 +127,9 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
         val valueStr = value.asText()
         if (valueStr != null) uriBuilder.addParameter(key, valueStr)
       }
-
-      uriBuilder.build
+      val newUri = uriBuilder.build()
+      logger.debug("after build, uri={}", newUri.toString)
+      newUri
     }
     catch {
       case e: URISyntaxException => {
