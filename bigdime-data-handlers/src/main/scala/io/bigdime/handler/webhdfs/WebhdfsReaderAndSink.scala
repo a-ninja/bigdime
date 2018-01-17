@@ -294,7 +294,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @throws[RuntimeInfoStoreException]
   @throws[HandlerException]
   override def initDescriptorForNormal() {
-    logger.info(getHandlerPhase, "initializing a clean record")
+    logger.info(getHandlerPhase, "initializing a clean record, entity_name={}" + entityName)
     processingDirty = false
 
     if (recordList == null || recordList.isEmpty) {
@@ -332,9 +332,12 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @throws[IOException]
   @throws[WebHdfsException]
   private def isReadyFilePresent(directoryPath: String) = {
+    logger.info(getHandlerPhase, "will check for ready file directoryPath=\"{}\" waitForFileName=\"{}\"", directoryPath, waitForFileName)
     Option(waitForFileName) match {
-      case Some(str)
-      => webHdfsReader.getFileStatus(directoryPath, waitForFileName) != null
+      case Some(str) =>
+        val fileStatus = webHdfsReader.getFileStatus(directoryPath, waitForFileName)
+        logger.info(getHandlerPhase, "after checking ready file directoryPath=\"{}\" waitForFileName=\"{}\", file_status_not_null={}", directoryPath, waitForFileName, (fileStatus!=null).toString)
+        fileStatus != null
       case _ => true
     }
   }
@@ -361,6 +364,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
       val parentRecordValid: java.lang.Boolean = parentRuntimeRecordValid
       if (parentRecordValid && isReadyFilePresent(directoryPath)) {
         val fileNames = webHdfsReader.list(directoryPath, false)
+        logger.info(getHandlerPhase, "will queue {} records", fileNames.size.toString)
         for (fileName <- fileNames) {
           val properties = new java.util.HashMap[String, String]
           recordsFound = true
