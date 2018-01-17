@@ -18,6 +18,7 @@ import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.runtime.ObjectEntityMapper;
 import io.bigdime.runtimeinfo.DTO.RuntimeInfoDTO;
 
+
 /**
  * Bigdime's implementation of RuntimeStore interface.
  * 
@@ -60,7 +61,7 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 	@Override
 	public synchronized boolean delete(RuntimeInfo adaptorRuntimeInfo) {
 		if (adaptorRuntimeInfo == null) {
-			logger.warn(SOURCENAME, "delete entry", "Unable to create entry due to invalid arguments");
+			logger.warn(SOURCENAME, "delete entry", "Unable to delete entry due to invalid arguments");
 			throw new IllegalArgumentException("Provided argument is not valid");
 		} else {
 			RuntimeInfoDTO runtimeInfoDTO = runtimeInfoRepositoryService.get(adaptorRuntimeInfo.getAdaptorName(),
@@ -98,6 +99,26 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 					runtimeInfoList.add(objectEntityMapper.mapObject(adaptorRuntimeInformationDTO));
 		}
 		return runtimeInfoList;
+	}
+
+	@Override
+	public List<RuntimeInfo> getAll(String adaptorName, String entityName, String inputDescriptorPrefix)
+			throws RuntimeInfoStoreException {
+
+		List<RuntimeInfo> runtimeInfoList = null;
+		if (adaptorName == null || entityName == null || inputDescriptorPrefix == null) {
+			logger.warn(SOURCENAME, "get all entry",
+					"Unable to get entries for adaptorName: {}, entityName: {}, inputDescriptorStatus: {} due to invalid arguments",
+					adaptorName, entityName, inputDescriptorPrefix);
+			throw new IllegalArgumentException("Provided argument is not valid");
+		} else {
+			runtimeInfoList = new ArrayList<RuntimeInfo>();
+			for (RuntimeInfoDTO adaptorRuntimeInformationDTO : runtimeInfoRepositoryService.getByStartsWith(adaptorName,
+					entityName, inputDescriptorPrefix))
+				runtimeInfoList.add(objectEntityMapper.mapObject(adaptorRuntimeInformationDTO));
+		}
+		return runtimeInfoList;
+
 	}
 
 	@Override

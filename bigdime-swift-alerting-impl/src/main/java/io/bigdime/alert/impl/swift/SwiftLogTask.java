@@ -63,14 +63,14 @@ public class SwiftLogTask implements Callable<Object> {
 	private void writeSegment(long timestamp) {
 		String segmentName = getSegmentName(timestamp);
 		StoredObject object = container.getObject(segmentName);
-//		object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
+		// object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
 		object.uploadObject(message);
 	}
 
 	private void writeManifest(long timestamp) {
 		String largeObjectName = getObjectName(timestamp);
 		StoredObject object = container.getObject(largeObjectName);
-//		object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
+		// object.setDeleteAfter(TimeUnit.DAYS.toSeconds(14));
 		UploadInstructions uploadInstructions = new UploadInstructions(new byte[] {});
 		uploadInstructions
 				.setObjectManifest(new ObjectManifest(container.getName() + "/" + getPrefixWithDash(timestamp)));
@@ -91,7 +91,8 @@ public class SwiftLogTask implements Callable<Object> {
 	}
 
 	private String getObjectName(long timestamp) {
-		return getPrefixWithoutDash(timestamp) + ".log";
+		return "alerts." + sourceName + ".log" + fileNameDtf.print(timestamp);
+		// return getPrefixWithoutDash(timestamp) + ".log";
 	}
 
 }

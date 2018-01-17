@@ -3,32 +3,11 @@
  */
 package io.bigdime.handler.kafka;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.mockito.Mockito;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import io.bigdime.core.ActionEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.bigdime.core.*;
 import io.bigdime.core.ActionEvent.Status;
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.DataAdaptorException;
-import io.bigdime.core.DataChannel;
-import io.bigdime.core.HandlerException;
-import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.JsonHelper;
 import io.bigdime.core.commons.MapDescriptorParser;
 import io.bigdime.core.config.AdaptorConfigConstants;
@@ -43,6 +22,17 @@ import io.bigdime.handler.constants.KafkaReaderHandlerConstants;
 import io.bigdime.libs.kafka.consumers.KafkaMessage;
 import io.bigdime.libs.kafka.consumers.KafkaSimpleConsumer;
 import io.bigdime.libs.kafka.exceptions.KafkaReaderException;
+import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
 
 public class KafkaReaderHandlerTest {
 

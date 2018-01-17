@@ -3,18 +3,8 @@
  */
 package io.bigdime.handler.kafka.integration;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.bigdime.core.DataAdaptorException;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.Sink;
@@ -25,6 +15,15 @@ import io.bigdime.libs.kafka.consumers.KafkaMessage;
 import io.bigdime.libs.kafka.consumers.KafkaSimpleConsumer;
 import io.bigdime.libs.kafka.exceptions.KafkaReaderException;
 import io.bigdime.testng.BasicTest;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Test(singleThreaded = true)
 public class KafkaReaderHandlerIntegrationTest extends BasicTest {

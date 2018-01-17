@@ -3,18 +3,15 @@
  */
 package io.bigdime.runtimeinfo.impl;
 
-import java.util.List;
-
+import io.bigdime.alert.Logger;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.runtimeinfo.DTO.RuntimeInfoDTO;
 import io.bigdime.runtimeinfo.DTO.RuntimePropertyDTO;
 import io.bigdime.runtimeinfo.repositories.RuntimeInfoRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.alert.Logger;
+import java.util.List;
 
 @Component
 public class RuntimeInfoRepositoryService {
@@ -145,6 +142,16 @@ public class RuntimeInfoRepositoryService {
 
 	}
 
+	public List<RuntimeInfoDTO> getByStartsWith(String adaptorName, String entityName, String descriptor) {
+
+		Assert.notNull(adaptorName);
+		Assert.notNull(entityName);
+		Assert.notNull(descriptor);
+
+		return runtimeInfoRepository.findByAdaptorNameAndEntityNameAndInputDescriptorStartsWith(adaptorName, entityName,
+				descriptor);
+
+	}
 	public RuntimeInfoDTO get(String adaptorName, String entityName, String descriptor) {
 
 		Assert.notNull(adaptorName);

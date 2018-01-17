@@ -10,29 +10,16 @@
 
 	<context:annotation-config />
 	<context:component-scan base-package="io.bigdime" />
-	<context:property-placeholder
-		location="classpath*:application-localhost.properties"
+	<context:property-placeholder location="classpath*:application.properties"
 		ignore-resource-not-found="false" ignore-unresolvable="true" />
 
-
-
-	<!-- <bean id="datasource"
-		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource">
 		<property name="driverClassName" value="${metastore.database.driverClassName}" />
 		<property name="url" value="${metastore.database.url}" />
 		<property name="username" value="${metastore.database.username}" />
 		<property name="password" value="${metastore.database.password}" />
-	</bean> -->
-	
-	
-	<bean id="datasource"
-		class="org.apache.commons.dbcp.BasicDataSource">
-		<property name="driverClassName" value="${metastore.database.driverClassName}" />
-		<property name="url" value="${metastore.database.url}" />
-		<property name="username" value="${metastore.database.username}" />
-		<property name="password" value="${metastore.database.password}" />
-		<property name="initialSize" value="2"/>
-		<property name="maxActive" value = "5"/>
+		<property name="initialSize" value="2" />
+		<property name="maxActive" value="5" />
 	</bean>
 
 	<bean id="entityManagerFactory"

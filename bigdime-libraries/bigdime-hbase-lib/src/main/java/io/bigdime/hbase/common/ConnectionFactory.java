@@ -3,16 +3,11 @@
  */
 package io.bigdime.hbase.common;
 
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.hbase.client.exception.HBaseClientException;
-
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTablePool;
+
+import java.io.IOException;
 
 /**
  * 

@@ -3,17 +3,15 @@
  */
 package io.bigdime.core.config;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.bigdime.core.commons.JsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import io.bigdime.core.commons.JsonHelper;
-import io.bigdime.core.config.ChannelConfigReader;
 
 @Configuration
 @ContextConfiguration(classes = { JsonHelper.class, ChannelConfigReader.class })

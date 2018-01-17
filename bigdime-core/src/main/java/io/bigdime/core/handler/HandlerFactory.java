@@ -32,6 +32,11 @@ public final class HandlerFactory {
 
 	public HandlerFactory() throws AdaptorConfigurationException {
 		String envProperties = System.getProperty("env.properties");
+		if (envProperties == null) {
+			envProperties = "application.properties";
+			logger.info("constructing HandlerFactory with default envProperties", "envProperties=\"{}\"",
+					envProperties);
+		}
 		logger.info("constructing HandlerFactory", "envProperties=\"{}\"", envProperties);
 		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(envProperties)) {
 			appProperties = new Properties();
@@ -49,8 +54,8 @@ public final class HandlerFactory {
 			final Class<? extends Handler> handlerClass = Class.forName(handlerConfig.getHandlerClass())
 					.asSubclass(Handler.class);
 			Handler handler = context.getBean(handlerClass);
-handler.setHandlerClass(handlerClass);
-			
+			handler.setHandlerClass(handlerClass);
+
 			Map<String, Object> handlerProperties = handlerConfig.getHandlerProperties();
 			PropertyHelper.redeemTokensFromAppProperties(handlerProperties, appProperties);
 			handler.setPropertyMap(Collections.unmodifiableMap(handlerConfig.getHandlerProperties()));

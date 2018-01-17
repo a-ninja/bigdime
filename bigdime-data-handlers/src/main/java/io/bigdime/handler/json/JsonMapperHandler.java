@@ -3,25 +3,10 @@
  */
 package io.bigdime.handler.json;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
-
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
@@ -42,6 +27,19 @@ import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.handler.kafka.KafkaInputDescriptor;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * A handler that receives the Json document, and read relevant fields , optionally,
@@ -138,7 +136,6 @@ public class JsonMapperHandler extends AbstractHandler {
 	 * otherwise process the data where is is left off.
 	 * @param entityName
 	 * @param descriptor
-	 * @param offsetPropertyName
 	 * @return
 	 */
 	protected void assginPartitionsFromRunTimeInfo(final String entityName, final String descriptor)
@@ -219,7 +216,6 @@ public class JsonMapperHandler extends AbstractHandler {
 	 * date  = 2016-01-01 hour = 03 totalRecords = 10
 	 * date  = 2016-01-01 hour = 04 totalRecords = 5
 	 * date  = 2016-01-02 hour = 01 totalRecords = 10
-	 * @param accountName
 	 * @param hour
 	 * @param date
 	 * @return

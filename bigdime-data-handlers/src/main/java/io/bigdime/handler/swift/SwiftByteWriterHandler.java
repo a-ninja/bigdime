@@ -21,7 +21,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 @Component
 @Scope("prototype")
-public final class SwiftByteWriterHandler extends SwiftAbstractByteWriterHandler {
+public final class SwiftByteWriterHandler extends AbstractByteWriterHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(SwiftByteWriterHandler.class));
 

@@ -3,41 +3,25 @@
  */
 package io.bigdime.hbase.client;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
+import com.google.common.base.Preconditions;
 import io.bigdime.hbase.client.admin.TableCreationSpecification;
 import io.bigdime.hbase.client.admin.TableDeletionSpecification;
 import io.bigdime.hbase.client.exception.HBaseClientException;
 import io.bigdime.hbase.common.ConnectionFactory;
 import io.bigdime.hbase.common.HBaseConfigConstants;
-
-import javax.annotation.PostConstruct;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import com.google.common.base.Preconditions;
+import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * 

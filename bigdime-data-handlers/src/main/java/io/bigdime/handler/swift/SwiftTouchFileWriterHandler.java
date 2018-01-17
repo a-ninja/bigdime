@@ -23,7 +23,7 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 
 @Component
 @Scope("prototype")
-public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHandler {
+public final class SwiftTouchFileWriterHandler extends AbstractByteWriterHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(SwiftTouchFileWriterHandler.class));
 
@@ -84,7 +84,7 @@ public final class SwiftTouchFileWriterHandler extends SwiftAbstractByteWriterHa
 			String swiftPrefix = StringHelper.replaceTokens(sourceFileName, filePathPrefixPattern, inputPattern,
 					actionEvent.getHeaders());
 
-			Collection<DirectoryOrObject> swiftDirListing = container.listDirectory(swiftPrefix, null, null, -1);
+			Collection<DirectoryOrObject> swiftDirListing = swiftClient.container().listDirectory(swiftPrefix, null, null, -1);
 			logger.debug(getHandlerPhase(), "_message=\"swiftDirListing\" swiftDirListing_null={} swiftPrefix={}",
 					(swiftDirListing == null), swiftPrefix);
 			if (swiftDirListing != null) {

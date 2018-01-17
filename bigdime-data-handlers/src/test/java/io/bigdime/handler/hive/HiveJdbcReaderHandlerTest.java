@@ -21,7 +21,6 @@ import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
-import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
@@ -54,6 +53,11 @@ public class HiveJdbcReaderHandlerTest {
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2016-07-28");
 		time = 1438217256170l;
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2015-07-29");
+
+		Map<String, String> hiveConfigurations = hiveJdbcReaderHandler.getHiveConfigurations();
+
+		Assert.assertNotNull(hiveConfigurations);
+
 	}
 
 	@Test(threadPoolSize = 1, enabled = false)
@@ -157,20 +161,20 @@ public class HiveJdbcReaderHandlerTest {
 		return hiveJdbcReaderHandler;
 	}
 
-	private List<ActionEvent> getTestEvents(int num) {
-		List<ActionEvent> contextEventList = new ArrayList<>(num);
-		for (int i = 0; i < num; i++) {
-			ActionEvent event = new ActionEvent();
-			event.setBody(
-					("/webhdfs/v1/root/johndoe/bigdime/20160101/entityName/fileName01.ext\n/webhdfs/v1/root/johndoe/bigdime/newdir/20160101/entityName/fileName0"
-							+ num + ".ext").getBytes());
-
-			event.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME,
-					"/webhdfs/v1/root/johndoe/bigdime/20160101/entityName/fileName01.ext");
-			contextEventList.add(event);
-		}
-		return contextEventList;
-	}
+	// private List<ActionEvent> getTestEvents(int num) {
+	// List<ActionEvent> contextEventList = new ArrayList<>(num);
+	// for (int i = 0; i < num; i++) {
+	// ActionEvent event = new ActionEvent();
+	// event.setBody(
+	// ("/webhdfs/v1/root/johndoe/bigdime/20160101/entityName/fileName01.ext\n/webhdfs/v1/root/johndoe/bigdime/newdir/20160101/entityName/fileName0"
+	// + num + ".ext").getBytes());
+	//
+	// event.getHeaders().put(ActionEventHeaderConstants.SOURCE_FILE_NAME,
+	// "/webhdfs/v1/root/johndoe/bigdime/20160101/entityName/fileName01.ext");
+	// contextEventList.add(event);
+	// }
+	// return contextEventList;
+	// }
 }
 
 class ReturnStatus {

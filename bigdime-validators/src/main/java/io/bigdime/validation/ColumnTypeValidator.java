@@ -3,28 +3,16 @@
  */
 package io.bigdime.validation;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-
-import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hive.hcatalog.common.HCatException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Attribute;
 import io.bigdime.adaptor.metadata.model.Entitee;
 import io.bigdime.adaptor.metadata.model.Metasegment;
 import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.commons.DataConstants;
 import io.bigdime.core.config.AdaptorConfig;
@@ -32,13 +20,20 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.validation.DataValidationException;
 import io.bigdime.core.validation.Factory;
 import io.bigdime.core.validation.ValidationResponse;
-import io.bigdime.core.validation.Validator;
 import io.bigdime.core.validation.ValidationResponse.ValidationResult;
+import io.bigdime.core.validation.Validator;
 import io.bigdime.libs.hive.common.Column;
 import io.bigdime.libs.hive.common.SqlTypes2HiveTypes;
 import io.bigdime.libs.hive.metadata.TableMetaData;
 import io.bigdime.libs.hive.table.HiveTableManger;
 import io.bigdime.validation.common.AbstractValidator;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hive.hcatalog.common.HCatException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
 
 @Factory(id = "column_type", type = ColumnTypeValidator.class)
 @Component
@@ -113,7 +108,7 @@ public class ColumnTypeValidator implements Validator {
 									.getAdaptorName(),
 							ALERT_TYPE.OTHER_ERROR,
 							ALERT_CAUSE.VALIDATION_ERROR,
-							ALERT_SEVERITY.MAJOR,
+							ALERT_SEVERITY.MAJOR, null,
 							"No such metasegment for table {} found in {} database in metastore",
 							hiveTableName, hiveDBName);
 					validationPassed

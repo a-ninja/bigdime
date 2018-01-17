@@ -91,6 +91,20 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 	public List<T> getAll(String adaptorName, String entityName, Status status) throws RuntimeInfoStoreException;
 
 	/**
+	 * Get all the RuntimeInfo records for the given adaptorName, entityName and
+	 * inputDescriptorPrefix. If the table doesn't have the index on these
+	 * columns, this call could be very slow.
+	 *
+	 * @param adaptorName
+	 * @param entityName
+	 * @param inputDescriptorPrefix
+	 * @return
+	 * @throws RuntimeInfoStoreException
+	 */
+	public List<T> getAll(String adaptorName, String entityName, String inputDescriptorPrefix)
+			throws RuntimeInfoStoreException;
+
+	/**
 	 * Gets the RuntimeInfo object for the jobs for given adaptor, entity, and
 	 * descriptor.
 	 * 

@@ -96,7 +96,7 @@ public class MultipleLoggerFactoryTest {
 			Logger logger = LoggerFactory.getLogger("MultipleLoggerFactoryTest.class");
 
 			logger.alert("unit-test-source", ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
-					ALERT_SEVERITY.BLOCKER, "field_1={} field_2={}", "field1", "field2");
+					ALERT_SEVERITY.BLOCKER, null, "field_1={} field_2={}", "field1", "field2");
 		} catch (Exception e) {
 			Assert.fail(e.getMessage());
 		}

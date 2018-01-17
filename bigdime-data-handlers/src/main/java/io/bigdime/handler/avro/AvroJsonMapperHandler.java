@@ -3,16 +3,8 @@
  */
 package io.bigdime.handler.avro;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.List;
-
-import org.codehaus.jackson.JsonNode;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Preconditions;
-
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
@@ -24,6 +16,12 @@ import io.bigdime.core.handler.AbstractHandler;
 import io.bigdime.core.handler.HandlerJournal;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.libs.avro.AvroMessageEncoderDecoder;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * A handler that receives the avro document, converts to json and, optionally,

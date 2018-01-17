@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import io.bigdime.core.commons.CollectionUtil;
-
 @Component
 public class YarnJobHelper {
 	private static final Logger logger = LoggerFactory.getLogger(YarnJobHelper.class);

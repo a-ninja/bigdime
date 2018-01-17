@@ -3,12 +3,7 @@
  */
 package io.bigdime.core.config;
 
-import java.util.Map;
-
-import org.codehaus.jackson.JsonNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
@@ -17,6 +12,10 @@ import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.JsonHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.ChannelConfigConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 /**
  * Reads the channel config from the json.
@@ -36,12 +35,12 @@ public final class ChannelConfigReader {
 	 * build a {@link ChannelConfig} object
 	 *
 	 * @return new ChannelConfig object with information needed to build a
-	 *         {@link DataChannel} object.
+	 *         {@link io.bigdime.core.DataChannel} object.
 	 * @throws AdaptorConfigurationException
 	 *             if there was a problem in reading the configuration.
 	 * 
 	 *             TODO: Throw
-	 *             {@link RequiredParameterMissingConfigurationException}
+	 *             {@link io.bigdime.core.RequiredParameterMissingConfigurationException}
 	 *             wherever applicable
 	 */
 	public ChannelConfig readChannelConfig(final JsonNode channelNode) throws AdaptorConfigurationException {

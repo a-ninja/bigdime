@@ -44,6 +44,11 @@ public final class ChannelFactory {
 
 	public ChannelFactory() throws AdaptorConfigurationException {
 		String envProperties = System.getProperty("env.properties");
+		if (envProperties == null) {
+			envProperties = "application.properties";
+			logger.info("constructing ChannelFactory with default envProperties", "envProperties=\"{}\"",
+					envProperties);
+		}
 		logger.info("constructing ChannelFactory", "envProperties=\"{}\"", envProperties);
 		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(envProperties)) {
 			appProperties = new Properties();

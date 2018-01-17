@@ -39,3 +39,13 @@ dist/config/application.properties
 dist/config/application.properties_*
 dist/config/META-INF/adaptor.json_*
 dist/config/log4j.properties
+pom.xml.n
+r.sh
+*.iml
+*.cache-main
+*.cache-tests
+.idea
+*.java.1
+*.scala.1
+pom.*
+bigdime-swift-alerting-impl/

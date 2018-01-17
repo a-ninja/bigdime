@@ -3,25 +3,9 @@
  */
 package io.bigdime.adaptor.metadata.utils;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.apache.commons.lang3.StringUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Attribute;
@@ -30,6 +14,14 @@ import io.bigdime.adaptor.metadata.model.Metasegment;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.commons.JsonHelper;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * 

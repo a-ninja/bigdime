@@ -3,17 +3,15 @@
  */
 package io.bigdime.libs.avro;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map.Entry;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import io.bigdime.libs.avro.AvroMessageEncoderDecoder;
 
 public class AvroMessageDecoderTest {
 	@Test(expectedExceptions = IllegalArgumentException.class)
@@ -38,19 +36,19 @@ public class AvroMessageDecoderTest {
 		JsonNode m = buildJsonMessage(msg);
 		byte[] avroMsg = avroMessageDecoder.encode(m);
 		JsonNode jn = avroMessageDecoder.decode(avroMsg);
-		Iterator<Entry<String, JsonNode>> entryIterator = jn.getFields();
+		Iterator<Entry<String, JsonNode>> entryIterator = jn.fields();
 		Entry<String, JsonNode> entry = entryIterator.next();
 
 		Assert.assertEquals(entry.getKey(), "name");
-		Assert.assertEquals(entry.getValue().getTextValue(), "John Doe");
+		Assert.assertEquals(entry.getValue().asText(), "John Doe");
 
 		entry = entryIterator.next();
 		Assert.assertEquals(entry.getKey(), "favorite_number");
-		Assert.assertEquals(entry.getValue().getIntValue(), 421);
+		Assert.assertEquals(entry.getValue().asInt(), 421);
 
 		entry = entryIterator.next();
 		Assert.assertEquals(entry.getKey(), "favorite_color");
-		Assert.assertEquals(entry.getValue().getTextValue(), "Blue");
+		Assert.assertEquals(entry.getValue().asText(), "Blue");
 	}
 
 	public static JsonNode buildJsonMessage(String str) {

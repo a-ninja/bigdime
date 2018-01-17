@@ -3,13 +3,6 @@
  */
 package io.bigdime.core.handler;
 
-import java.util.Map.Entry;
-import java.nio.charset.Charset;
-import java.util.Set;
-
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
@@ -18,7 +11,12 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.Charset;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * @author Neeraj Jain
@@ -40,7 +38,8 @@ public class DummyConcreteHandler extends AbstractHandler {
 	public Status process() throws HandlerException {
 
 		if (getHandlerContext().getEventList() == null || getHandlerContext().getEventList().isEmpty())
-			return null;
+			return Status.BACKOFF;
+//			return null;
 		ActionEvent actionEvent = getHandlerContext().getEventList().get(0);
 		actionEvent.getHeaders().put(AdaptorConfigConstants.SourceConfigConstants.SRC_DESC, inputSrcDescName);
 		actionEvent.getHeaders().put("channel", outputChannelName);

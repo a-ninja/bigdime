@@ -3,27 +3,9 @@
  */
 package io.bigdime.metadata.utils;
 
-import static org.mockito.MockitoAnnotations.initMocks;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Attribute;
@@ -31,6 +13,17 @@ import io.bigdime.adaptor.metadata.model.Entitee;
 import io.bigdime.adaptor.metadata.model.Metasegment;
 import io.bigdime.adaptor.metadata.utils.MetaDataJsonUtils;
 import io.bigdime.core.commons.JsonHelper;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.testng.Assert;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.*;
+
+import static org.mockito.MockitoAnnotations.initMocks;
 
 public class MetaDataJsonUtilsTest {
 	@Mock

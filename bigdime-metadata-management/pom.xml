@@ -13,65 +13,28 @@
 	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime</artifactId>
-		<version>0.9.2-SNAPSHOT</version>
+		<version>0.9.3-SNAPSHOT</version>
 	</parent>
 
 	<dependencies>
-		<dependency>
-			<groupId>org.testng</groupId>
-			<artifactId>testng</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-all</artifactId>
-			<scope>test</scope>
-		</dependency>
-
 		<dependency>
 			<groupId>io.bigdime</groupId>
 			<artifactId>bigdime-commons</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-test</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-beans</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-entitymanager</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-validator-annotation-processor</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
+			<scope>test</scope>
 		</dependency>
-
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-annotations</artifactId>
-		</dependency>
-
 		<!-- MySQL database driver -->
 		<dependency>
 			<groupId>mysql</groupId>
@@ -90,13 +53,21 @@
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-api</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<artifactId>bigdime-alerting-impl</artifactId>
+			<groupId>io.bigdime</groupId>
+			<version>${project.version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>commons-dbcp</groupId>
 			<artifactId>commons-dbcp</artifactId>
 		</dependency>
-
-
 	</dependencies>
 
 

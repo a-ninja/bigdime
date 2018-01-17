@@ -3,15 +3,12 @@
  */
 package io.bigdime.hbase.client;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
-
 import org.apache.hadoop.hbase.client.Delete;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 

@@ -8,6 +8,7 @@ import java.util.List;
 import org.apache.commons.lang.NotImplementedException;
 import org.springframework.stereotype.Component;
 
+
 /**
  * Bigdime's implementation of RuntimeStore interface.
  * 
@@ -31,6 +32,11 @@ public class AdaptorRuntimeInfoStoreImpl implements RuntimeInfoStore<RuntimeInfo
 	@Override
 	public List<RuntimeInfo> getAll(String adaptorName, String entityName, Status status)
 			throws RuntimeInfoStoreException {
+		throw new NotImplementedException();
+	}
+
+	@Override
+	public List<RuntimeInfo> getAll(String adaptorName, String entityName, String inputDescriptor) throws RuntimeInfoStoreException {
 		throw new NotImplementedException();
 	}
 

@@ -3,14 +3,7 @@
  */
 package io.bigdime.core.config;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-
-import org.codehaus.jackson.JsonNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
@@ -20,6 +13,12 @@ import io.bigdime.core.InvalidDataTypeConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.JsonHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.SinkConfigConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 
 @Component
 public final class SinkConfigReader {
@@ -45,7 +44,7 @@ public final class SinkConfigReader {
 			final Collection<String> channelDescs = new HashSet<>();
 			for (JsonNode channelDesc : channelDescArray) {
 				if (channelDesc.isTextual()) {
-					channelDescs.add(channelDesc.getTextValue());
+					channelDescs.add(channelDesc.asText());
 				} else {
 					logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INVALID_ADAPTOR_CONFIGURATION,
 							ALERT_SEVERITY.BLOCKER, "{} param must be specified", SinkConfigConstants.CHANNEL_DESC);

@@ -3,38 +3,26 @@
  */
 package io.bigdime.core.adaptor;
 
-import org.quartz.CronScheduleBuilder;
-import org.quartz.CronTrigger;
-import org.quartz.DisallowConcurrentExecution;
-import org.quartz.Job;
-import org.quartz.JobBuilder;
-import org.quartz.JobDetail;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
-import org.quartz.ScheduleBuilder;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.SimpleScheduleBuilder;
-import org.quartz.Trigger;
-import org.quartz.TriggerBuilder;
-import org.quartz.impl.DirectSchedulerFactory;
-import org.quartz.simpl.RAMJobStore;
-import org.quartz.simpl.SimpleThreadPool;
-import org.quartz.spi.JobStore;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportResource;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
-
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.DataAdaptorException;
 import io.bigdime.core.commons.AdaptorLogger;
+import org.quartz.*;
+import org.quartz.impl.DirectSchedulerFactory;
+import org.quartz.simpl.RAMJobStore;
+import org.quartz.simpl.SimpleThreadPool;
+import org.quartz.spi.JobStore;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportResource;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Job that actually invokes the start method on Adaptor.
@@ -42,10 +30,12 @@ import io.bigdime.core.commons.AdaptorLogger;
  * @author Neeraj Jain
  *
  */
-@Controller
+//@Controller
+@RestController
+@EnableAutoConfiguration
 @EnableJpaRepositories
 @ComponentScan("io.bigdime")
-@Configuration
+//@Configuration
 @ImportResource({ "classpath*:application-context.xml", "classpath*:META-INF/application-context.xml" })
 
 @Component
@@ -57,6 +47,11 @@ public class DataAdaptorJob implements Job {
 
 	public DataAdaptorJob() {
 		logger.info("DataAdaptorJob constructor", "DataAdaptorJob");
+	}
+
+	@RequestMapping("/")
+	String getName() {
+		return "DataAdaptorJob";
 	}
 
 	/**

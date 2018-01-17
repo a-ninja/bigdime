@@ -3,25 +3,10 @@
  */
 package io.bigdime.handler.json;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.mockito.Mockito;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
@@ -36,6 +21,20 @@ import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
 import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
 import io.bigdime.handler.constants.KafkaReaderHandlerConstants;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class JsonMapperHandlerTest {

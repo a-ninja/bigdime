@@ -86,7 +86,7 @@ public class DateNaturalLanguageExpressionParser {
 		Pattern p = Pattern.compile(pattern);
 		Matcher m = p.matcher(expression);
 		while (m.find()) {
-			returnVal[0] = Integer.valueOf(m.group(1));
+			returnVal[0] = Long.valueOf(m.group(1));
 			returnVal[1] = TIME_UNIT_NAME.getByValue(m.group(2));
 		}
 		return returnVal;
@@ -100,7 +100,7 @@ public class DateNaturalLanguageExpressionParser {
 	 */
 	public static long toMillis(final String expression) {
 		Object[] durationAndTimeUnit = getDurationAndTimeUnitFromExpression(expression);
-		int duration = Integer.valueOf((Integer) durationAndTimeUnit[0]);
+		long duration = Long.valueOf((Long) durationAndTimeUnit[0]);
 		TimeUnit timeUnit = (TimeUnit) durationAndTimeUnit[1];
 		return timeUnit.toMillis(duration);
 	}

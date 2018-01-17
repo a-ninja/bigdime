@@ -21,4 +21,5 @@ public class WebHDFSConstants {
 	public final static String FORWARD_SLASH = "/";
 	public final static String HOST = "host";
 	public final static String PORT = "port";
+	public final static String DESTINATION = "destination";
 }
