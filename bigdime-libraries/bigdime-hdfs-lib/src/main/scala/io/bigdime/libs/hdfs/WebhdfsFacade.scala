@@ -11,11 +11,13 @@ import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods._
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.entity.{AbstractHttpEntity, BasicHttpEntity, FileEntity}
+import org.apache.http.message.BasicHeader
 import org.apache.http.{Header, HttpResponse}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -30,7 +32,7 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
   private var jsonParameters = (new ObjectMapper).createObjectNode
   private var httpRequest: HttpRequestBase = _
 
-  private var headers: List[Header] = _
+  private var headers: ListBuffer[Header] = new ListBuffer[Header]()
   private var activeHost: String = rotateHost()
   private val scheme = new URI(activeHost).getScheme
   private val webhdfsHttpClient = WebHdfsHttpClientFactory(authOption)
@@ -54,9 +56,10 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
     initConnection()
   }
 
-  def addHeaders(headers: List[Header]) = {
-    this.headers = headers
+  def addHeader(key: String, value: String): Unit = {
+    headers.append(new BasicHeader(key, value))
   }
+
 
   def addParameter(key: String, value: String): WebhdfsFacade = {
     jsonParameters.put(key, value)
@@ -124,10 +127,12 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
         val valueStr = value.asText()
         if (valueStr != null) uriBuilder.addParameter(key, valueStr)
       }
+
       uriBuilder.build
     }
     catch {
       case e: URISyntaxException => {
+        logger.error("mkdirs failed ", e)
         null
       }
     }

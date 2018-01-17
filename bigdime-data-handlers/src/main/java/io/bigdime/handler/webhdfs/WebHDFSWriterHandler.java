@@ -363,7 +363,6 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 	private ActionEvent writeToHdfs(String hdfsPath12, byte[] payload, String hdfsFileName,
 			HdfsFilePathBuilder hdfsFilePathBuilder1, ActionEvent inputEvent)
 			throws IOException, RuntimeInfoStoreException, HandlerException {
-		final WebHdfsWriter writer = new WebHdfsWriter();
 		HdfsFilePathBuilder hdfsFilePathBuilder = new HdfsFilePathBuilder();
 		String detokenizedHdfsPath = hdfsFilePathBuilder.withActionEvent(inputEvent).withHdfsPath(hdfsPath)
 				.withTokenHeaderMap(tokenToHeaderNameMap).withCase(hdfsPathCaseEnum).build();
@@ -371,13 +370,13 @@ public class WebHDFSWriterHandler extends AbstractHandler {
 		logger.debug(handlerPhase, "journal={}", journal);
 		logger.debug(handlerPhase, "_message=\"writing to hdfs\" hdfsPath={} hdfsFileName={} hdfsUser={}",
 				detokenizedHdfsPath, hdfsFileName, hdfsUser);
-		if (webHdfs == null) {
-			webHdfs = WebHdfs.getInstance(hostNames, port)
-					.addHeader(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM)
-					.addParameter(WebHDFSConstants.USER_NAME, hdfsUser);
-		}
-		writer.write(detokenizedHdfsPath, payload, hdfsFileName);
-		webHdfs = null;
+
+		final Map<String, String> webhdfsHeaders = new HashMap();
+		webhdfsHeaders.put(WebHDFSConstants.CONTENT_TYPE, WebHDFSConstants.APPLICATION_OCTET_STREAM);
+		final Map<String, String> params = new HashMap();
+		params.put(WebHDFSConstants.USER_NAME, hdfsUser);
+
+		webHdfsWriter.write(detokenizedHdfsPath, payload, hdfsFileName, webhdfsHeaders, params);
 		logger.debug(handlerPhase, "wrote to hdfs");
 		String partitionNames = null;
 		String partitionValues = null;
