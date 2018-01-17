@@ -64,7 +64,6 @@ public class WebHDFSWriterHandler extends AbstractHandler {
   private String hdfsUser;
   private String hdfsOverwrite;
   private String hdfsPermission;
-//	private WebHdfs webHdfs;
 
   /**
    * Allow user to specify whether to convert the whole hdfs path to lower or
