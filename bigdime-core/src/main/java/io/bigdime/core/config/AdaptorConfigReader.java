@@ -3,17 +3,8 @@
  */
 package io.bigdime.core.config;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
+//import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
@@ -21,6 +12,13 @@ import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.JsonHelper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * AdaptorConfigReader implements methods to validate and read the adaptor
@@ -105,13 +103,14 @@ public class AdaptorConfigReader {
 	private JsonNode parseJsonFile() throws AdaptorConfigurationException {
 		logger.info("reading config", "CONFIG_FILE_LOCATION=\"{}\"", CONFIG_FILE_LOCATION);
 		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(CONFIG_FILE_LOCATION)) {
-			final ObjectMapper mapper = new ObjectMapper();
-			return mapper.readTree(is);
-		} catch (JsonProcessingException e) {
-			logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INVALID_ADAPTOR_CONFIGURATION,
-					ALERT_SEVERITY.BLOCKER, "adaptor configuration file could not be parsed");
-			throw new AdaptorConfigurationException(e);
-		} catch (IOException e) {
+			return jsonHelper.readStream(is);
+		}
+//		catch (JsonProcessingException e) {
+//			logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INVALID_ADAPTOR_CONFIGURATION,
+//					ALERT_SEVERITY.BLOCKER, "adaptor configuration file could not be parsed");
+//			throw new AdaptorConfigurationException(e);
+//		}
+		catch (IOException e) {
 			logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INVALID_ADAPTOR_CONFIGURATION,
 					ALERT_SEVERITY.BLOCKER, "adaptor configuration file could not be found or could not be read");
 			throw new AdaptorConfigurationException(e);

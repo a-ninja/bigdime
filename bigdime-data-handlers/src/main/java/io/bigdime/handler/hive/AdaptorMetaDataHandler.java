@@ -3,30 +3,16 @@
  */
 package io.bigdime.handler.hive;
 
-import static io.bigdime.core.commons.DataConstants.SCHEMA_FILE_NAME;
-import static io.bigdime.core.commons.DataConstants.ENTITY_NAME;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Metasegment;
 import io.bigdime.adaptor.metadata.utils.MetaDataJsonUtils;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
 import io.bigdime.core.HandlerException;
@@ -35,29 +21,41 @@ import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.handler.AbstractHandler;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static io.bigdime.core.commons.DataConstants.ENTITY_NAME;
+import static io.bigdime.core.commons.DataConstants.SCHEMA_FILE_NAME;
 
 @Component
 @Scope("prototype")
 /**
  * This class responsible to load the schema from a file system to bigdime metastore.
- * 
+ *
  * @author mnamburi
  *
  */
 public class AdaptorMetaDataHandler  extends AbstractHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(AdaptorMetaDataHandler.class));
-	
+
 	private static String hiveSchemaFileName = null;
 	private static String entityName = null;
-	private ObjectMapper objectMapper;	
+	private ObjectMapper objectMapper;
 	private String handlerPhase;
-	
+
 	@Autowired private MetadataStore metadataStore;
 	@Autowired private MetaDataJsonUtils metaDataJsonUtils;
-	
+
 	/**
 	 * <p>
-	 * The build method being called only once by the framework ( bootstrap), upon startup of the Adaptor 
+	 * The build method being called only once by the framework ( bootstrap), upon startup of the Adaptor
 	 * the builder method will read a schema file from class path and persist the object to metadata.
 	 * the method expects ENTITY_NAME,SCHEMA_FILE_NAME. It will throw Runtime Exception in case it didn't find ENTITY_NAME,SCHEMA_FILE_NAME.
 	 */
@@ -65,7 +63,7 @@ public class AdaptorMetaDataHandler  extends AbstractHandler {
 	public void build() throws AdaptorConfigurationException{
 		super.build();
 		handlerPhase = "building AdaptorMetaDataHandler";
-		
+
 		Metasegment metaSegment = null;
 
 		hiveSchemaFileName = PropertyHelper.getStringProperty(getPropertyMap(), SCHEMA_FILE_NAME);
@@ -93,14 +91,14 @@ public class AdaptorMetaDataHandler  extends AbstractHandler {
 		}
 	}
 	/**
-	 * Returns an Metasegment object that can be used to persist the object to the metastore. 
+	 * Returns an Metasegment object that can be used to persist the object to the metastore.
 	 * <p>
 	 * This method reads schema file from the local file system and use the MetaDataJsonUtils to convert to Metasegment Object.
 	 * if the file is not readable it throws IOException and log an alert to the system.
-	 * 
+	 *
 	 * @return
 	 * @throws IOException
-	 */	
+	 */
 	private Metasegment buildMetaSegment() throws IOException {
 		logger.debug(handlerPhase, "reading the schema from config location, schemaFileName={}",hiveSchemaFileName);
 		JsonNode jsonNode = null;
@@ -119,7 +117,7 @@ public class AdaptorMetaDataHandler  extends AbstractHandler {
 		}
 		return metaSegment;
 	}
-	
+
 	/**
 	 * always send as a Ready, we need to add an enhancement to framework to not to call this process method.
 	 */

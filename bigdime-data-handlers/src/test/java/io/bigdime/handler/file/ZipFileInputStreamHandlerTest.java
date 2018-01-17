@@ -12,6 +12,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -31,6 +36,7 @@ import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.FileHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.SourceConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
 import io.bigdime.core.handler.HandlerJournal;
 import io.bigdime.core.runtimeinfo.RuntimeInfo;
@@ -42,17 +48,18 @@ public class ZipFileInputStreamHandlerTest {
 			LoggerFactory.getLogger(ZipFileInputStreamHandlerTest.class));
 
 	/**
-	 * If there is status STARTED file in Runtime Info, it need to be processed, make sure that process
-	 * method returns action event with Status.READY since buffer size is larger than file size.
-	 * @throws IOException 
-	 * @throws HandlerException 
-	 * @throws RuntimeInfoStoreException 
-	 * @throws AdaptorConfigurationException 
+	 * If there is status STARTED file in Runtime Info, it need to be processed,
+	 * * make sure that process method returns action event with Status.READY
+	 * since buffer size is larger than file size.
+	 * 
+	 * @throws IOException
+	 * @throws HandlerException
+	 * @throws RuntimeInfoStoreException
+	 * @throws AdaptorConfigurationException
 	 * 
 	 */
 	@Test
-	public void testProcessWithStartedStatus() throws IOException, 
-			AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException {
+	public void testProcessWithStartedStatus() throws Throwable {
 		String writeData = "unit-test-testProcesstestProcessWithStartedStatus";
 		File[] tempFiles = createZipFile(writeData);
 		List<RuntimeInfo> runtimeInfoList = new ArrayList<>();
@@ -60,16 +67,19 @@ public class ZipFileInputStreamHandlerTest {
 		runtimeInfo.setInputDescriptor(tempFiles[1].getAbsolutePath());
 		runtimeInfo.setStatus(RuntimeInfoStore.Status.STARTED);
 		runtimeInfoList.add(runtimeInfo);
-		Status outputStatuts;
-		outputStatuts = setupzfirhWithStarted(runtimeInfoList, tempFiles[1].getParent());
+		ReturnStatus returnStatus = setupzfirhWithStarted(runtimeInfoList, tempFiles[1].getParent());
+		Status outputStatuts = returnStatus.getStatus();
+
 		Assert.assertEquals(outputStatuts, Status.READY);
-		HandlerContext handlerContext = HandlerContext.get();
-		List<ActionEvent> actionEvents = handlerContext.getEventList();
+		// HandlerContext handlerContext = HandlerContext.get();
+		List<ActionEvent> actionEvents = returnStatus.getEventList();
 		Assert.assertNotNull(actionEvents);
-		if(tempFiles[0].delete() && tempFiles[1].delete()){
-			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
-		}else{
-			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
+		if (tempFiles[0].delete() && tempFiles[1].delete()) {
+			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
+		} else {
+			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
 			throw new HandlerException("unable to delete file");
 		}
 	}
@@ -77,15 +87,12 @@ public class ZipFileInputStreamHandlerTest {
 	/**
 	 * If there is no new file to be processed, make sure that process method
 	 * returns action event with Status.BACKOFF.
-	 * @throws IOException 
-	 * @throws HandlerException 
-	 * @throws RuntimeInfoStoreException 
-	 * @throws AdaptorConfigurationException 
+	 * 
+	 * @throws Throwable
 	 * 
 	 */
 	@Test
-	public void testProcessWithNoFileToProcess() throws IOException, AdaptorConfigurationException, 
-			RuntimeInfoStoreException, HandlerException{
+	public void testProcessWithNoFileToProcess() throws Throwable {
 		String writeData = "unit-test-testProcessWithNoFileToProcess";
 		File[] tempFiles = createZipFile(writeData);
 		List<RuntimeInfo> runtimeInfoList = new ArrayList<>();
@@ -97,29 +104,33 @@ public class ZipFileInputStreamHandlerTest {
 		runtimeInfo1.setInputDescriptor(tempFiles[1].getAbsolutePath());
 		runtimeInfo1.setStatus(RuntimeInfoStore.Status.VALIDATED);
 		runtimeInfoList.add(runtimeInfo1);
-		Status status = setupzfirh(runtimeInfoList, tempFiles[1].getParent());
+		ReturnStatus returnStatus = setupzfirh(runtimeInfoList, tempFiles[1].getParent());
+		Status status = returnStatus.getStatus();
 		logger.debug("running testProcessWithNoFileToProcess", "status={}", status);
-		Assert.assertTrue((status==Status.BACKOFF));
-		if(tempFiles[0].delete() && tempFiles[1].delete()){
-			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
-		}else{
-			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
+		Assert.assertTrue((status == Status.BACKOFF));
+		if (tempFiles[0].delete() && tempFiles[1].delete()) {
+			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
+		} else {
+			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
 			throw new HandlerException("unable to delete file");
 		}
 	}
-	
+
 	/**
-	 * If there is status QUEUED file in Runtime Info, it need to be processed, make sure that process
-	 * method returns action event with Status.CALLBACK since buffer size is smaller than file size.
-	 * @throws IOException 
-	 * @throws HandlerException 
-	 * @throws RuntimeInfoStoreException 
-	 * @throws AdaptorConfigurationException 
+	 * If there is status QUEUED file in Runtime Info, it need to be processed,
+	 * make sure that process method returns action event with Status.CALLBACK
+	 * since buffer size is smaller than file size.
+	 * 
+	 * @throws IOException
+	 * @throws HandlerException
+	 * @throws RuntimeInfoStoreException
+	 * @throws AdaptorConfigurationException
 	 * 
 	 */
 	@Test
-	public void testProcessWithQueuedStatus() throws IOException, 
-			AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException {
+	public void testProcessWithQueuedStatus() throws Throwable {
 		String writeData = "unit-test-testProcessWithQueuedStatus";
 		File[] tempFiles = createZipFile(writeData);
 		List<RuntimeInfo> runtimeInfoList = new ArrayList<>();
@@ -127,29 +138,34 @@ public class ZipFileInputStreamHandlerTest {
 		runtimeInfo.setInputDescriptor(tempFiles[1].getAbsolutePath());
 		runtimeInfo.setStatus(RuntimeInfoStore.Status.QUEUED);
 		runtimeInfoList.add(runtimeInfo);
-		Status outputStatuts;
-		outputStatuts = setupzfirhWithQueued(runtimeInfoList, tempFiles[1].getParent());
-		Assert.assertEquals(outputStatuts, Status.CALLBACK);
-		if(tempFiles[0].delete() && tempFiles[1].delete()){
-			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
-		}else{
-			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
+
+		ReturnStatus returnStatus = setupzfirhWithQueued(runtimeInfoList, tempFiles[1].getParent());
+		Status outputStatus = returnStatus.getStatus();
+		Assert.assertEquals(outputStatus, Status.CALLBACK);
+		if (tempFiles[0].delete() && tempFiles[1].delete()) {
+			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
+		} else {
+			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
 			throw new HandlerException("unable to delete file");
 		}
 	}
 
 	/**
-	 * If there is status STARTED file in Runtime Info, it need to be processed, make sure that process
-	 * method returns action event with Status.CALLBACK since zip file has more than one file in and buffer size is larger than file size,
-	 * @throws IOException 
-	 * @throws HandlerException 
-	 * @throws RuntimeInfoStoreException 
-	 * @throws AdaptorConfigurationException 
+	 * If there is status STARTED file in Runtime Info, it need to be processed,
+	 * make sure that process method returns action event with Status.CALLBACK
+	 * since zip file has more than one file in and buffer size is larger than
+	 * file size,
+	 * 
+	 * @throws IOException
+	 * @throws HandlerException
+	 * @throws RuntimeInfoStoreException
+	 * @throws AdaptorConfigurationException
 	 * 
 	 */
 	@Test
-	public void testProcessWithMultipleFileInZip() throws IOException,
-			AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException {
+	public void testProcessWithMultipleFileInZip() throws Throwable {
 		String writeData = "unit-test-testProcessWithMultipleFileInZip";
 		File[] tempFiles = createZipFileWithMultipleFiles(writeData);
 		List<RuntimeInfo> runtimeInfoList = new ArrayList<>();
@@ -157,32 +173,32 @@ public class ZipFileInputStreamHandlerTest {
 		runtimeInfo.setInputDescriptor(tempFiles[0].getAbsolutePath());
 		runtimeInfo.setStatus(RuntimeInfoStore.Status.STARTED);
 		runtimeInfoList.add(runtimeInfo);
-		Status outputStatuts;
-		outputStatuts = setupzfirhWithStarted(runtimeInfoList, tempFiles[0].getParent());
+		ReturnStatus returnStatus = setupzfirhWithStarted(runtimeInfoList, tempFiles[0].getParent());
+		Status outputStatuts = returnStatus.getStatus();
 		Assert.assertEquals(outputStatuts, Status.CALLBACK);
-		HandlerContext handlerContext = HandlerContext.get();
-		List<ActionEvent> actionEvents = handlerContext.getEventList();
+		List<ActionEvent> actionEvents = returnStatus.getEventList();
 		Assert.assertNotNull(actionEvents);
-		if(tempFiles[0].delete()){
-			logger.info("delete file successfully", "tempFiles[0]={}",tempFiles[0].getName());
-		}else{
-			logger.info("unable to delete file", "tempFiles[0]={}",tempFiles[0].getName());
+		if (tempFiles[0].delete()) {
+			logger.info("delete file successfully", "tempFiles[0]={}", tempFiles[0].getName());
+		} else {
+			logger.info("unable to delete file", "tempFiles[0]={}", tempFiles[0].getName());
 			throw new HandlerException("unable to delete file");
 		}
 	}
-	
+
 	/**
-	 * If there is status STARTED file in Runtime Info, it need to be processed, make sure that process
-	 * method returns action event with Status.BACKOFF since file size is zero.
-	 * @throws IOException 
-	 * @throws HandlerException 
-	 * @throws RuntimeInfoStoreException 
-	 * @throws AdaptorConfigurationException 
+	 * If there is status STARTED file in Runtime Info, it need to be processed,
+	 * make sure that process method returns action event with Status.BACKOFF
+	 * since file size is zero.
+	 * 
+	 * @throws IOException
+	 * @throws HandlerException
+	 * @throws RuntimeInfoStoreException
+	 * @throws AdaptorConfigurationException
 	 * 
 	 */
 	@Test
-	public void testProcessWithEmptyFileInZip() throws IOException,
-			AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException {
+	public void testProcessWithEmptyFileInZip() throws Throwable {
 		String writeData = "";
 		File[] tempFiles = createZipFile(writeData);
 		List<RuntimeInfo> runtimeInfoList = new ArrayList<>();
@@ -190,25 +206,28 @@ public class ZipFileInputStreamHandlerTest {
 		runtimeInfo.setInputDescriptor(tempFiles[0].getAbsolutePath());
 		runtimeInfo.setStatus(RuntimeInfoStore.Status.QUEUED);
 		runtimeInfoList.add(runtimeInfo);
-		Status outputStatuts;
-		outputStatuts = setupzfirhWithQueued(runtimeInfoList, tempFiles[0].getParent());
+		ReturnStatus returnStatus = setupzfirhWithQueued(runtimeInfoList, tempFiles[0].getParent());
+
+		Status outputStatuts = returnStatus.getStatus();
 		Assert.assertEquals(outputStatuts, Status.BACKOFF);
-		HandlerContext handlerContext = HandlerContext.get();
-		List<ActionEvent> actionEvents = handlerContext.getEventList();
+		List<ActionEvent> actionEvents = returnStatus.getEventList();
 		Assert.assertNotNull(actionEvents);
-		if(tempFiles[0].delete() && tempFiles[1].delete()){
-			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
-		}else{
-			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
+		if (tempFiles[0].delete() && tempFiles[1].delete()) {
+			logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
+		} else {
+			logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+					tempFiles[1].getName());
 			throw new HandlerException("unable to delete file");
 		}
 	}
-	
+
 	/**
-	 * If there is no byte to read, make sure that process
-	 * method returns action event with Status.READY.
-	 * @throws IOException 
-	 * @throws HandlerException 
+	 * If there is no byte to read, make sure that process method returns action
+	 * event with Status.READY.
+	 * 
+	 * @throws IOException
+	 * @throws HandlerException
 	 * 
 	 */
 	@Test
@@ -219,20 +238,21 @@ public class ZipFileInputStreamHandlerTest {
 		fhj.setTotalRead(1);
 		fhj.setTotalSize(2);
 		handlerContext.setJournal(zfirh.getId(), fhj);
-		
+
 		zfirh.incrementInvocationCount();
 		ZipEntry mockZipEntry = Mockito.mock(ZipEntry.class);
 		ReflectionTestUtils.setField(zfirh, "zipFileEntry", mockZipEntry);
 		BufferedInputStream bufferedInputStream = Mockito.mock(BufferedInputStream.class);
 		ReflectionTestUtils.setField(zfirh, "bufferedInputStream", bufferedInputStream);
 		Mockito.when(bufferedInputStream.read(Mockito.any(byte[].class), Mockito.anyInt(), Mockito.anyInt()))
-				.thenReturn(-1);	
+				.thenReturn(-1);
 		Assert.assertEquals(zfirh.process(), Status.READY);
 	}
-	
+
 	/**
 	 * Make sure that IOException is handled and then thrown as
 	 * HandlerException. This test is basically to cover all the branches.
+	 * 
 	 * @throws Throwable
 	 */
 	@Test(expectedExceptions = IOException.class)
@@ -250,7 +270,7 @@ public class ZipFileInputStreamHandlerTest {
 			BufferedInputStream bufferedInputStream = Mockito.mock(BufferedInputStream.class);
 			ReflectionTestUtils.setField(zfirh, "bufferedInputStream", bufferedInputStream);
 			Mockito.when(bufferedInputStream.read(Mockito.any(byte[].class), Mockito.anyInt(), Mockito.anyInt()))
-					.thenThrow(new IOException(""));	
+					.thenThrow(new IOException(""));
 			zfirh.process();
 			Assert.fail("should have thrown IOException");
 		} catch (HandlerException e) {
@@ -261,6 +281,7 @@ public class ZipFileInputStreamHandlerTest {
 	/**
 	 * Make sure that RuntimeInfoStoreException is handled and then thrown as
 	 * HandlerException. This test is basically to cover all the branches.
+	 * 
 	 * @throws Throwable
 	 */
 	@Test(expectedExceptions = RuntimeInfoStoreException.class)
@@ -288,13 +309,15 @@ public class ZipFileInputStreamHandlerTest {
 
 			zfirh.process();
 			Assert.fail("should have thrown RuntimeInfoStoreException");
-			if(tempFiles[0].delete() && tempFiles[1].delete()){
-				logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
-			}else{
-				logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}",tempFiles[0].getName(), tempFiles[1].getName());
+			if (tempFiles[0].delete() && tempFiles[1].delete()) {
+				logger.info("delete file successfully", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+						tempFiles[1].getName());
+			} else {
+				logger.info("unable to delete file", "tempFiles[0]={}, tempFiles[1]={}", tempFiles[0].getName(),
+						tempFiles[1].getName());
 				throw new HandlerException("unable to delete file");
 			}
-			
+
 		} catch (HandlerException e) {
 			throw e.getCause();
 		}
@@ -317,9 +340,9 @@ public class ZipFileInputStreamHandlerTest {
 			zfirh.setPropertyMap(propertyMap);
 			zfirh.build();
 			zfirh.build();// 2nd build call to cover file=null branch
-			if(temp.delete()){
-				logger.info("delete file successfully", "temp={}"+temp.getName());
-			}else{
+			if (temp.delete()) {
+				logger.info("delete file successfully", "temp={}" + temp.getName());
+			} else {
 				logger.info("unable to delete file", "temp={}" + temp.getName());
 				throw new Exception();
 			}
@@ -334,7 +357,7 @@ public class ZipFileInputStreamHandlerTest {
 			Assert.fail(e.getMessage());
 		}
 	}
-	
+
 	@Test(expectedExceptions = InvalidValueConfigurationException.class, expectedExceptionsMessageRegExp = "src-desc can't be null.*")
 	public void testBuildWithNoSrcDesc() throws AdaptorConfigurationException {
 		Map<String, Object> propertyMap = new HashMap<>();
@@ -355,169 +378,214 @@ public class ZipFileInputStreamHandlerTest {
 		zfirh.shutdown();
 
 	}
-	
+
 	private File[] createZipFile(String writeData) throws IOException {
-	    File[] tempFiles = new File[2];
-	    for(int i=0; i<2; i++){
-	    	File f = new File("src/test/resources/test-"+i+".zip");
-	    	ZipOutputStream out = new ZipOutputStream(new FileOutputStream(f));
-	    	tempFiles[i] = f;
-	    	ZipEntry e = new ZipEntry("test-"+i+".txt");
-	    	out.putNextEntry(e);
-	    	byte[] data = writeData.getBytes(Charset.forName("UTF-8"));
-	    	out.write(data, 0, data.length);
-	    	out.closeEntry();
-	    	out.close();
-	    }
-	    return tempFiles;
+		File[] tempFiles = new File[2];
+		for (int i = 0; i < 2; i++) {
+			File f = new File("src/test/resources/test-" + i + ".zip");
+			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(f));
+			tempFiles[i] = f;
+			ZipEntry e = new ZipEntry("test-" + i + ".txt");
+			out.putNextEntry(e);
+			byte[] data = writeData.getBytes(Charset.forName("UTF-8"));
+			out.write(data, 0, data.length);
+			out.closeEntry();
+			out.close();
+		}
+		return tempFiles;
 	}
-	
+
 	private File[] createZipFileWithMultipleFiles(String writeData) throws IOException {
-	    File[] tempFiles = new File[1];
-	    File f = new File("src/test/resources/test.zip");
-    	ZipOutputStream out = new ZipOutputStream(new FileOutputStream(f));
-    	tempFiles[0] = f;
-	    for(int i=0; i<2; i++){
-	    	ZipEntry e = new ZipEntry("test-"+i+".txt");
-	    	out.putNextEntry(e);
-	    	byte[] data = writeData.getBytes(Charset.forName("UTF-8"));
-	    	out.write(data, 0, data.length);
-	    }
-	    out.closeEntry();
-    	out.close();
-	    return tempFiles;
+		File[] tempFiles = new File[1];
+		File f = new File("src/test/resources/test.zip");
+		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(f));
+		tempFiles[0] = f;
+		for (int i = 0; i < 2; i++) {
+			ZipEntry e = new ZipEntry("test-" + i + ".txt");
+			out.putNextEntry(e);
+			byte[] data = writeData.getBytes(Charset.forName("UTF-8"));
+			out.write(data, 0, data.length);
+		}
+		out.closeEntry();
+		out.close();
+		return tempFiles;
 	}
-	
-	private Status setupzfirh(final List<RuntimeInfo> runtimeInfoList, final String fileLocation) 
-			throws AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException{
-		ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
-		HandlerContext context = HandlerContext.get();
-		HandlerJournal fhj = new ZipFileHandlerJournal();
-		fhj.setTotalRead(0);
-		context.setJournal(zfirh.getId(), fhj);
-		Map<String, Object> propertyMap = new HashMap<>();
-		int bufferSize = 10;
 
-		propertyMap.put(
-				FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN,
-				"test.*");
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE,
-				bufferSize);
+	private ReturnStatus setupzfirh(final List<RuntimeInfo> runtimeInfoList, final String fileLocation)
+			throws Throwable {
+		FutureTask<ReturnStatus> futureTask = new FutureTask<>(new Callable<ReturnStatus>() {
+			@Override
+			public ReturnStatus call() throws Exception {
 
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
-		srcDEscEntryMap.put("entity:test.*", "input1");
-		propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap
-				.entrySet().iterator().next());
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH,
-				fileLocation);
+				ReturnStatus returnStatus = new ReturnStatus();
 
-		zfirh.setPropertyMap(propertyMap);
-		zfirh.build();
-		@SuppressWarnings("unchecked")
-		RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito
-				.mock(RuntimeInfoStore.class);
-		Mockito.when(
-				runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
-						"entity")).thenReturn(runtimeInfoList);
-		ReflectionTestUtils.setField(zfirh, "entityName", "entity");
-		ReflectionTestUtils.setField(zfirh, "dirtyRecords", runtimeInfoList);
-		ReflectionTestUtils.setField(zfirh, "runtimeInfoStore",
-				runtimeInfoStore);
-		ReflectionTestUtils.setField(zfirh, "fileInputDescriptor",
-				new FileInputDescriptor());
-		ReflectionTestUtils.setField(zfirh, "fileHelper",
-				FileHelper.getInstance());
-		Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class)))
-				.thenReturn(true);	
-		return zfirh.process();
+				ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
+				HandlerContext context = HandlerContext.get();
+				HandlerJournal fhj = new ZipFileHandlerJournal();
+				fhj.setTotalRead(0);
+				context.setJournal(zfirh.getId(), fhj);
+				Map<String, Object> propertyMap = new HashMap<>();
+				int bufferSize = 10;
+
+				propertyMap.put(FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN, "test.*");
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE, bufferSize);
+
+				Map<String, String> srcDEscEntryMap = new HashMap<>();
+				srcDEscEntryMap.put("entity:test.*", "input1");
+				propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap.entrySet().iterator().next());
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH, fileLocation);
+
+				zfirh.setPropertyMap(propertyMap);
+				zfirh.build();
+				@SuppressWarnings("unchecked")
+				RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
+				Mockito.when(runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), "entity"))
+						.thenReturn(runtimeInfoList);
+				ReflectionTestUtils.setField(zfirh, "entityName", "entity");
+				ReflectionTestUtils.setField(zfirh, "dirtyRecords", runtimeInfoList);
+				ReflectionTestUtils.setField(zfirh, "runtimeInfoStore", runtimeInfoStore);
+				ReflectionTestUtils.setField(zfirh, "fileInputDescriptor", new FileInputDescriptor());
+				ReflectionTestUtils.setField(zfirh, "fileHelper", FileHelper.getInstance());
+				Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class))).thenReturn(true);
+				Status status = zfirh.process();
+				returnStatus.setStatus(status);
+				return returnStatus;
+			}
+		});
+
+		ExecutorService executorService = Executors.newFixedThreadPool(1);
+		executorService.execute(futureTask);
+		try {
+			return futureTask.get();
+		} catch (ExecutionException ex) {
+			throw ex.getCause();
+		}
+
 	}
-	
-	
-	private Status setupzfirhWithStarted(final List<RuntimeInfo> runtimeInfoList, final String fileLocation) 
-			throws AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException{
-		ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
-		HandlerContext context = HandlerContext.get();
-		HandlerJournal fhj = new ZipFileHandlerJournal();
-		fhj.setTotalRead(0);
-		context.setJournal(zfirh.getId(), fhj);
-		Map<String, Object> propertyMap = new HashMap<>();
-		int bufferSize = 50;
 
-		propertyMap.put(
-				FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN,
-				"test.*");
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE,
-				bufferSize);
+	private ReturnStatus setupzfirhWithStarted(final List<RuntimeInfo> runtimeInfoList, final String fileLocation)
+			throws Throwable {
 
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
-		srcDEscEntryMap.put("entity:test.*", "input1");
-		propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap
-				.entrySet().iterator().next());
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH,
-				fileLocation);
+		FutureTask<ReturnStatus> futureTask = new FutureTask<>(new Callable<ReturnStatus>() {
+			@Override
+			public ReturnStatus call() throws Exception {
 
-		zfirh.setPropertyMap(propertyMap);
-		zfirh.build();
-		@SuppressWarnings("unchecked")
-		RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito
-				.mock(RuntimeInfoStore.class);
-		Mockito.when(
-				runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
-						"entity", RuntimeInfoStore.Status.STARTED)).thenReturn(runtimeInfoList);
-		ReflectionTestUtils.setField(zfirh, "dirtyRecords", runtimeInfoList);
-		ReflectionTestUtils.setField(zfirh, "runtimeInfoStore",
-				runtimeInfoStore);
-		ReflectionTestUtils.setField(zfirh, "fileInputDescriptor",
-				new FileInputDescriptor());
-		ReflectionTestUtils.setField(zfirh, "fileHelper",
-				FileHelper.getInstance());
-		Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class)))
-				.thenReturn(true);
-		return zfirh.process();
+				ReturnStatus returnStatus = new ReturnStatus();
+
+				ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
+				HandlerContext context = HandlerContext.get();
+				HandlerJournal fhj = new ZipFileHandlerJournal();
+				fhj.setTotalRead(0);
+				context.setJournal(zfirh.getId(), fhj);
+				Map<String, Object> propertyMap = new HashMap<>();
+				int bufferSize = 50;
+
+				propertyMap.put(FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN, "test.*");
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE, bufferSize);
+
+				Map<String, String> srcDEscEntryMap = new HashMap<>();
+				srcDEscEntryMap.put("entity:test.*", "input1");
+				propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap.entrySet().iterator().next());
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH, fileLocation);
+
+				zfirh.setPropertyMap(propertyMap);
+				zfirh.build();
+				@SuppressWarnings("unchecked")
+				RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
+				Mockito.when(runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), "entity",
+						RuntimeInfoStore.Status.STARTED)).thenReturn(runtimeInfoList);
+				ReflectionTestUtils.setField(zfirh, "dirtyRecords", runtimeInfoList);
+				ReflectionTestUtils.setField(zfirh, "runtimeInfoStore", runtimeInfoStore);
+				ReflectionTestUtils.setField(zfirh, "fileInputDescriptor", new FileInputDescriptor());
+				ReflectionTestUtils.setField(zfirh, "fileHelper", FileHelper.getInstance());
+				Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class))).thenReturn(true);
+				Status status = zfirh.process();
+				returnStatus.setStatus(status);
+				return returnStatus;
+			}
+		});
+
+		ExecutorService executorService = Executors.newFixedThreadPool(1);
+		executorService.execute(futureTask);
+		try {
+			return futureTask.get();
+		} catch (ExecutionException ex) {
+			throw ex.getCause();
+		}
+
 	}
-	
-	private Status setupzfirhWithQueued(final List<RuntimeInfo> runtimeInfoList, final String fileLocation) 
-			throws AdaptorConfigurationException, RuntimeInfoStoreException, HandlerException{
-		ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
-		HandlerContext context = HandlerContext.get();
-		HandlerJournal fhj = new ZipFileHandlerJournal();
-		fhj.setTotalRead(0);
-		context.setJournal(zfirh.getId(), fhj);
-		Map<String, Object> propertyMap = new HashMap<>();
-		int bufferSize = 10;
 
-		propertyMap.put(
-				FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN,
-				"test.*");
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE,
-				bufferSize);
+	private ReturnStatus setupzfirhWithQueued(final List<RuntimeInfo> runtimeInfoList, final String fileLocation)
+			throws Throwable {
+		FutureTask<ReturnStatus> futureTask = new FutureTask<>(new Callable<ReturnStatus>() {
+			@Override
+			public ReturnStatus call() throws Exception {
 
-		Map<String, String> srcDEscEntryMap = new HashMap<>();
-		srcDEscEntryMap.put("entity:test.*", "input1");
-		propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap
-				.entrySet().iterator().next());
-		propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH,
-				fileLocation);
+				ReturnStatus returnStatus = new ReturnStatus();
 
-		zfirh.setPropertyMap(propertyMap);
-		zfirh.build();
-		@SuppressWarnings("unchecked")
-		RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito
-				.mock(RuntimeInfoStore.class);
-		Mockito.when(
-				runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(),
-						"entity", RuntimeInfoStore.Status.QUEUED)).thenReturn(runtimeInfoList);
-		ReflectionTestUtils.setField(zfirh, "dirtyRecords", null);
-		ReflectionTestUtils.setField(zfirh, "runtimeInfoStore",
-				runtimeInfoStore);
-		ReflectionTestUtils.setField(zfirh, "fileInputDescriptor",
-				new FileInputDescriptor());
-		ReflectionTestUtils.setField(zfirh, "fileHelper",
-				FileHelper.getInstance());
-		Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class)))
-				.thenReturn(true);
-		return zfirh.process();
+				ZipFileInputStreamHandler zfirh = new ZipFileInputStreamHandler();
+				HandlerContext context = HandlerContext.get();
+				HandlerJournal fhj = new ZipFileHandlerJournal();
+				fhj.setTotalRead(0);
+				context.setJournal(zfirh.getId(), fhj);
+				Map<String, Object> propertyMap = new HashMap<>();
+				int bufferSize = 10;
+
+				propertyMap.put(FileInputStreamReaderHandlerConstants.FILE_NAME_PATTERN, "test.*");
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BUFFER_SIZE, bufferSize);
+
+				Map<String, String> srcDEscEntryMap = new HashMap<>();
+				srcDEscEntryMap.put("entity:test.*", "input1");
+				propertyMap.put(SourceConfigConstants.SRC_DESC, srcDEscEntryMap.entrySet().iterator().next());
+				propertyMap.put(FileInputStreamReaderHandlerConstants.BASE_PATH, fileLocation);
+				propertyMap.put(ActionEventHeaderConstants.LAST_HANDLER_IN_CHAIN, "false");
+
+				zfirh.setPropertyMap(propertyMap);
+				zfirh.build();
+				@SuppressWarnings("unchecked")
+				RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
+				Mockito.when(runtimeInfoStore.getAll(AdaptorConfig.getInstance().getName(), "entity",
+						RuntimeInfoStore.Status.QUEUED)).thenReturn(runtimeInfoList);
+				ReflectionTestUtils.setField(zfirh, "dirtyRecords", null);
+				ReflectionTestUtils.setField(zfirh, "runtimeInfoStore", runtimeInfoStore);
+				ReflectionTestUtils.setField(zfirh, "fileInputDescriptor", new FileInputDescriptor());
+				ReflectionTestUtils.setField(zfirh, "fileHelper", FileHelper.getInstance());
+				Mockito.when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class))).thenReturn(true);
+				Status status = zfirh.process();
+				returnStatus.setStatus(status);
+				return returnStatus;
+			}
+		});
+
+		ExecutorService executorService = Executors.newFixedThreadPool(1);
+		executorService.execute(futureTask);
+		try {
+			return futureTask.get();
+		} catch (ExecutionException ex) {
+			throw ex.getCause();
+		}
 	}
-	
-	
+
+}
+
+class ReturnStatus {
+	private Status status;
+	private List<ActionEvent> eventList = new ArrayList<>();
+
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setStatus(Status status) {
+		this.status = status;
+	}
+
+	public List<ActionEvent> getEventList() {
+		return eventList;
+	}
+
+	public void setEventList(List<ActionEvent> eventList) {
+		this.eventList = eventList;
+	}
+
 }

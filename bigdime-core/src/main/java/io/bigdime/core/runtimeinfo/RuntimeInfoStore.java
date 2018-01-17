@@ -27,6 +27,14 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		STARTED,
 
 		/**
+		 * Ingestion was started and partially completed, pending for the next
+		 * steps such as staging or validation etc. This is helpful when we dont
+		 * want to restart the processing from first handler in case of an
+		 * error.
+		 */
+		PENDING,
+
+		/**
 		 * Ingestion has failed for the given source.
 		 */
 		FAILED,
@@ -40,8 +48,15 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 		 * Ingestion was failed and the data from the target(hdfs/hbase etc) has
 		 * been cleared.
 		 */
-		ROLLED_BACK
+		ROLLED_BACK,
+
+		/**
+		 * Record not valid anymore
+		 */
+		INVALID
 	};
+
+	public T getById(int runtimeInfoId) throws RuntimeInfoStoreException;
 
 	/**
 	 * Gets the collection of RuntimeInfo objects for the jobs for given
@@ -74,6 +89,20 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 	 *             store
 	 */
 	public List<T> getAll(String adaptorName, String entityName, Status status) throws RuntimeInfoStoreException;
+
+	/**
+	 * Get all the RuntimeInfo records for the given adaptorName, entityName and
+	 * inputDescriptorPrefix. If the table doesn't have the index on these
+	 * columns, this call could be very slow.
+	 *
+	 * @param adaptorName
+	 * @param entityName
+	 * @param inputDescriptorPrefix
+	 * @return
+	 * @throws RuntimeInfoStoreException
+	 */
+	public List<T> getAll(String adaptorName, String entityName, String inputDescriptorPrefix)
+			throws RuntimeInfoStoreException;
 
 	/**
 	 * Gets the RuntimeInfo object for the jobs for given adaptor, entity, and
@@ -118,4 +147,6 @@ public interface RuntimeInfoStore<T extends RuntimeInfo> {
 	 *             if there was any problem in storing RuntimeInfo
 	 */
 	public boolean put(T adaptorRuntimeInfo) throws RuntimeInfoStoreException;
+
+	public boolean delete(T adaptorRuntimeInfo) throws RuntimeInfoStoreException;
 }

@@ -3,15 +3,14 @@
  */
 package io.bigdime.libs.hive.metadata;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.bigdime.libs.hive.common.Column;
 import io.bigdime.libs.hive.common.ColumnMetaDataUtil;
+import org.apache.hive.hcatalog.api.HCatTable;
+import org.apache.hive.hcatalog.data.schema.HCatFieldSchema;
 
 import java.util.List;
 import java.util.Map;
-
-import org.apache.hive.hcatalog.api.HCatTable;
-import org.apache.hive.hcatalog.data.schema.HCatFieldSchema;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * @author jbrinnand

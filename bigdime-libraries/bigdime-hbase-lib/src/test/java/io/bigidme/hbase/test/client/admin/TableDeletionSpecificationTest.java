@@ -3,10 +3,7 @@
  */
 package io.bigidme.hbase.test.client.admin;
 
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
 import io.bigdime.hbase.client.admin.TableDeletionSpecification;
-
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -21,8 +18,7 @@ import static io.bigdime.constants.TestConstants.TEST;
  */
 
 public class TableDeletionSpecificationTest extends PowerMockTestCase{
-	private static final Logger logger = LoggerFactory.getLogger(TableDeletionSpecificationTest.class);
-	
+
 	TableDeletionSpecification tableDeletionSpecification;
 	TableDeletionSpecification.Builder tableDeletionSpecificationBuilder;
 	@BeforeClass

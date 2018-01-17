@@ -1,0 +1,94 @@
+{
+    "name": "bigdime-ndata-adaptor",
+    "type": "batch",
+    "cron-expression" : "0/30 * * * * ? *",
+    "auto-start" : "true",
+    "namespace": "com.example",
+    "description": "adaptor to ingest the data from bigdime-file into hdfs.",
+    "source": {
+        "name": "bigdime-file-source",
+        "description": "source description",
+        "source-type": "file",
+        "src-desc": {
+            "input1" : {
+                "entity-name": "dw_lstg_gen",
+	            "hive-query": "INSERT OVERWRITE DIRECTORY '${hiveconf:DIRECTORY}' select * from sample_07 DISTRIBUTE BY RAND()"
+	        }
+        },
+        "data-handlers": [
+            {
+                "name": "hive-jdbc-reader",
+                "description": "read data using hive queries specified with src-desc field",
+                "handler-class": "io.bigdime.handler.hive.HiveJdbcReaderHandler",
+                "properties": {
+                    "jdbc-connection-url": "${hive-jdbc-connection-url}",
+                    "driver-class-name" : "org.apache.hive.jdbc.HiveDriver",
+                    "user-name": "${hive-jdbc-user-name}",
+                    "auth-choice" : "password",
+                    "base-output-directory": "${hive-base-output-directory}",
+                    "hive-conf" : {
+                        "hive.insert.into.multilevel.dirs" : "true"
+                    }
+                }
+            },
+            {
+                "name": "hdfs-file-reader",
+                "description": "read data from hdfs files",
+                "handler-class": "io.bigdime.handler.webhdfs.WebHDFSReaderHandler",
+                "properties": {
+                        "hostNames"           : "${hdfs_hosts}",
+                        "port"                : "${hdfs_port}",
+                        "hdfsUser"            : "${hdfs_user}",
+                        "readHdfsPathFrom"    : "headers",
+                        "channel-map"         : "input1:channel1"
+                        
+                    }
+            }
+        ]
+    },
+    "channel": [
+        {
+            "name": "channel1",
+            "description" : "channel for bigdime-file data",
+            "channel-class": "io.bigdime.core.channel.MemoryChannel",
+            "properties": {
+                "print-stats" : "${print_channel_stats}",
+                "print-stats-duration-in-seconds" : "${print_stats_duration_in_seconds}",
+                "channel-capacity" : "${channel_capacity}"
+            }
+        }
+    ],
+    "sink": [
+        {
+            "name": "sink for bigdime-file data adaptor",
+            "description": "hdfs sink for bigdime-file data adaptor",
+            "channel-desc": ["channel1"],
+            "data-handlers": [
+                {
+                    "name": "memory-channel-reader",
+                    "description": "read data from channels",
+                    "handler-class": "io.bigdime.core.handler.MemoryChannelInputHandler",
+                    "properties": {
+                        "batchSize" : "128"
+                    }
+                },
+                {
+                    "name": "swift sink for bigdime-ndata adaptor",
+                    "description": "swift sink for bigdime-ndata adaptor",
+                    "handler-class": "io.bigdime.handler.swift.SwiftWriterHandler",
+                    "properties": {
+                        "user-name"           : "${swift-user-name}",
+                        "password"            : "${swift-password}",
+                        "auth-url"            : "${swift-auth-url}",
+                        "tenant-id"           : "${swift-tenant-id}",
+                        "tenant-name"         : "${swift-tenant-name}",
+                        "container-name"      : "${swift-container-name}",
+                        "upload-object-type"  : "bytes",
+                        "input-file-path-pattern" : "\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/\\w*\\/(\\w*)\\/(\\w*)\\/(\\w*)",
+                        "output-file-path-pattern" : "$1__$2/$3"
+                    }
+                }
+            ]
+        }
+    ]
+}

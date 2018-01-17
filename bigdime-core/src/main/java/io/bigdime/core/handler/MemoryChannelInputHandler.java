@@ -3,6 +3,7 @@
  */
 package io.bigdime.core.handler;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfig;
 import io.bigdime.core.config.AdaptorConfigConstants.SinkConfigConstants;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 
 /**
  * Handler that reads data from memory channel.
@@ -37,40 +39,37 @@ public class MemoryChannelInputHandler extends AbstractHandler {
 
 	private int batchSize;
 
-	private String handlerPhase;
-
 	@Override
 	public void build() throws AdaptorConfigurationException {
 		super.build();
-		handlerPhase = "building MemoryChannelInputHandler";
-		logger.info(handlerPhase, "building MemoryChannelInputHandler");
+		setHandlerPhase("building MemoryChannelInputHandler");
+		logger.info(getHandlerPhase(), "building MemoryChannelInputHandler");
 		final String channelDesc = (String) getPropertyMap().get(SinkConfigConstants.CHANNEL_DESC);
 		final Map<String, DataChannel> channelMap = AdaptorConfig.getInstance().getAdaptorContext().getChannelMap();
 		inputChannel = channelMap.get(channelDesc);
 		batchSize = PropertyHelper.getIntProperty(getPropertyMap(), MemoryChannelInputHandlerConstants.BATCH_SIZE,
 				MemoryChannelInputHandlerConstants.DEFAULT_BATCH_SIZE);
-		logger.info(handlerPhase, "handler_name=\"{}\" channelDesc=\"{}\" inputChannel=\"{}\" batchSize=\"{}\"",
+		logger.info(getHandlerPhase(), "handler_name=\"{}\" channelDesc=\"{}\" inputChannel=\"{}\" batchSize=\"{}\"",
 				getName(), channelDesc, inputChannel, batchSize);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Status process() throws HandlerException {
+	protected Status doProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
 		try {
-			handlerPhase = "processing MemoryChannelInputHandler";
-			logger.debug(handlerPhase,
+			logger.debug(getHandlerPhase(),
 					"consumer_name=\"{}\" channel_name=\"{}\" inputChannel=\"{}\" current_thread=\"{}\"", getName(),
 					inputChannel.getName(), inputChannel, Thread.currentThread().getId());
 			@SuppressWarnings("rawtypes")
 			List took = inputChannel.take(getName(), batchSize);
-			logger.debug(handlerPhase, "consumer_name=\"{}\" channel_name=\"{}\" took_event.size=\"{}\"", getName(),
-					inputChannel.getName(), took.size());
+			logger.debug(getHandlerPhase(), "consumer_name=\"{}\" channel_name=\"{}\" took_event.size=\"{}\"",
+					getName(), inputChannel.getName(), took.size());
 			getHandlerContext().setEventList((List<ActionEvent>) took);
 			return Status.READY;
 		} catch (ChannelException e) {
-			logger.debug(handlerPhase, "_message=\"MemoryChannelInputHandler didn't receive data\"",
-					"consumer_name=\"{}\" channel_name=\"{}\" exception=\"{}\"", getName(), inputChannel.getName(),
-					e.getMessage());
+			logger.debug(getHandlerPhase(),
+					"_message=\"MemoryChannelInputHandler didn't receive data\" consumer_name=\"{}\" channel_name=\"{}\" reason=\"{}\"",
+					getName(), inputChannel.getName(), e.getMessage());
 			return Status.BACKOFF;
 		}
 	}

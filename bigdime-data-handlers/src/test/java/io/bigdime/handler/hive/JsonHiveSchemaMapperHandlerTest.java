@@ -3,31 +3,20 @@
  */
 package io.bigdime.handler.hive;
 
-import static io.bigdime.core.commons.DataConstants.CTRL_A;
-import static io.bigdime.core.commons.DataConstants.EOL;
-import static io.bigdime.core.commons.DataConstants.COLUMN_SEPARATED_BY;
-import static io.bigdime.core.commons.DataConstants.ROW_SEPARATED_BY;
-import static io.bigdime.core.commons.DataConstants.SCHEMA_FILE_NAME;
-import static io.bigdime.core.commons.DataConstants.ENTITY_NAME;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.bigdime.adaptor.metadata.MetadataAccessException;
+import io.bigdime.adaptor.metadata.MetadataStore;
+import io.bigdime.adaptor.metadata.model.Metasegment;
+import io.bigdime.adaptor.metadata.utils.MetaDataJsonUtils;
+import io.bigdime.core.*;
+import io.bigdime.core.commons.JsonHelper;
+import io.bigdime.core.commons.MapDescriptorParser;
+import io.bigdime.core.config.AdaptorConfig;
+import io.bigdime.core.config.AdaptorConfigConstants;
+import io.bigdime.core.handler.HandlerContext;
+import io.bigdime.core.handler.SimpleJournal;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,21 +27,16 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import io.bigdime.adaptor.metadata.MetadataAccessException;
-import io.bigdime.adaptor.metadata.MetadataStore;
-import io.bigdime.adaptor.metadata.model.Metasegment;
-import io.bigdime.adaptor.metadata.utils.MetaDataJsonUtils;
-import io.bigdime.core.ActionEvent;
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.AdaptorContext;
-import io.bigdime.core.DataChannel;
-import io.bigdime.core.HandlerException;
-import io.bigdime.core.commons.JsonHelper;
-import io.bigdime.core.commons.MapDescriptorParser;
-import io.bigdime.core.config.AdaptorConfig;
-import io.bigdime.core.config.AdaptorConfigConstants;
-import io.bigdime.core.handler.HandlerContext;
-import io.bigdime.core.handler.SimpleJournal;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.*;
+
+import static io.bigdime.core.commons.DataConstants.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.*;
+import static org.mockito.MockitoAnnotations.initMocks;
 @ContextConfiguration(classes = { MetaDataJsonUtils.class})
 public class JsonHiveSchemaMapperHandlerTest extends AbstractTestNGSpringContextTests{
 	@Mock

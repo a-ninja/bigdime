@@ -1,1 +1,1 @@
-io.bigdime.alert.multiple.impl.MultipleLoggerFactory
+io.bigdime.alert.impl.AlertLoggerFactoryImpl

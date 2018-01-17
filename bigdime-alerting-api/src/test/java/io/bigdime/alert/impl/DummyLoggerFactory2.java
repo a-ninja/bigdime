@@ -3,12 +3,12 @@
  */
 package io.bigdime.alert.impl;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import io.bigdime.alert.AlertMessage;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.spi.AlertLoggerFactory;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DummyLoggerFactory2 implements AlertLoggerFactory {
 	@Override
@@ -109,7 +109,7 @@ public class DummyLoggerFactory2 implements AlertLoggerFactory {
 		}
 
 		@Override
-		public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity,
+		public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, Throwable e,
 				String format, Object... o) {
 			final StringBuilder sb = new StringBuilder();
 			sb.append(

@@ -3,43 +3,9 @@
  */
 package io.bigdime.handler.hive;
 
-import static io.bigdime.core.commons.DataConstants.COLUMN_SEPARATED_BY;
-import static io.bigdime.core.commons.DataConstants.CTRL_A;
-import static io.bigdime.core.commons.DataConstants.EOL;
-import static io.bigdime.core.commons.DataConstants.ROW_SEPARATED_BY;
-import static io.bigdime.core.commons.DataConstants.SCHEMA_FILE_NAME;
-import static io.bigdime.core.commons.DataConstants.ENTITY_NAME;
-
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.metrics.CounterService;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-
 import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.adaptor.metadata.MetadataStore;
 import io.bigdime.adaptor.metadata.model.Attribute;
@@ -65,6 +31,26 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.AbstractHandler;
 import io.bigdime.core.handler.SimpleJournal;
 import io.bigdime.handler.kafka.KafkaInputDescriptor;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.bigdime.core.commons.DataConstants.*;
 
 /**
  * 
@@ -191,7 +177,7 @@ public class JsonHiveSchemaMapperHandler extends AbstractHandler {
 			actionEvent.getHeaders().put(ACCOUNT, account);
 			JsonNode context = jsonHelper.getRequiredNode(jn, "context");
 			try {
-				String serverTimestamp = context.get("serverTimestamp").getTextValue();
+				String serverTimestamp = context.get("serverTimestamp").asText();
 				DateTime dateTime = new DateTime(serverTimestamp, timeZone);
 				String dt = formatter.print(dateTime);
 				String hour = hourFormatter.print(dateTime);

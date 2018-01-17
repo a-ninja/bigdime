@@ -25,8 +25,8 @@ public class MultipleLoggerFactoryTest {
 		Logger logger = LoggerFactory.getLogger("test");
 		Assert.assertNotNull(logger);
 		System.out.println(logger.getClass().toString());
-		Assert.assertEquals("class io.bigdime.alert.multiple.impl.MultipleLoggerFactory$MultipleLogger",
-				logger.getClass().toString());
+		Assert.assertEquals(logger.getClass().toString(),
+				"class io.bigdime.alert.impl.AlertLoggerFactoryImpl$MultipleLogger");
 
 		Logger loggerDup = LoggerFactory.getLogger("test");
 		Assert.assertNotNull(loggerDup);
@@ -38,8 +38,8 @@ public class MultipleLoggerFactoryTest {
 	public void testGetLogger2() {
 		Logger logger = LoggerFactory.getLogger("test-unit");
 		Assert.assertNotNull(logger);
-		Assert.assertEquals("class io.bigdime.alert.multiple.impl.MultipleLoggerFactory$MultipleLogger",
-				logger.getClass().toString());
+		Assert.assertEquals(logger.getClass().toString(),
+				"class io.bigdime.alert.impl.AlertLoggerFactoryImpl$MultipleLogger");
 
 		Logger loggerDup = LoggerFactory.getLogger("test-unit1");
 		Assert.assertNotNull(loggerDup);
@@ -96,7 +96,7 @@ public class MultipleLoggerFactoryTest {
 			Logger logger = LoggerFactory.getLogger("MultipleLoggerFactoryTest.class");
 
 			logger.alert("unit-test-source", ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.APPLICATION_INTERNAL_ERROR,
-					ALERT_SEVERITY.BLOCKER, "field_1={} field_2={}", "field1", "field2");
+					ALERT_SEVERITY.BLOCKER, null, "field_1={} field_2={}", "field1", "field2");
 		} catch (Exception e) {
 			Assert.fail(e.getMessage());
 		}
@@ -186,7 +186,7 @@ public class MultipleLoggerFactoryTest {
 			Thread.sleep(100);
 		} catch (Exception e) {
 			Assert.fail(e.getMessage());
-		} 
+		}
 	}
 
 	@Test

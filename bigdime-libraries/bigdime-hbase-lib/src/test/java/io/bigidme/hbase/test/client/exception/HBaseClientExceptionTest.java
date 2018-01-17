@@ -4,12 +4,10 @@
 package io.bigidme.hbase.test.client.exception;
 
 
+import io.bigdime.hbase.client.exception.HBaseClientException;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.hbase.client.exception.HBaseClientException;
 import static io.bigdime.constants.TestConstants.TEST;
 /**
  * 
@@ -17,7 +15,6 @@ import static io.bigdime.constants.TestConstants.TEST;
  * 
  */
 public class HBaseClientExceptionTest {
-	private static final Logger logger = LoggerFactory.getLogger(HBaseClientExceptionTest.class);
 
 	HBaseClientException hBaseClientException;
    @Test

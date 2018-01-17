@@ -10,7 +10,7 @@
 
 	<context:annotation-config />
 	<context:component-scan
-		base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo" />
+		base-package="io.bigdime.adaptor.metadata, io.bigdime.runtimeinfo, io.bigdime.ext" />
 	<context:property-placeholder location="classpath:${env.properties}"
 		 ignore-resource-not-found="false" ignore-unresolvable="true" />
 		
@@ -40,7 +40,7 @@
 </bean>
 
 
-	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource">
+	<bean id="datasource" class="org.apache.commons.dbcp.BasicDataSource" primary="true">
 		<property name="driverClassName" value="${metastore.database.driverClassName}" />
 		<property name="url" value="${metastore.database.url}" />
 		<property name="username" value="${metastore.database.username}" />

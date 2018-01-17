@@ -10,11 +10,10 @@
 
 	<context:annotation-config />
 	<context:component-scan base-package="io.bigdime.runtimeinfo" />
-	<context:property-placeholder
-		location="classpath*:application-localhost.properties"
+	<context:property-placeholder location="classpath*:application.properties"
 		ignore-resource-not-found="false" ignore-unresolvable="true" />
 
-	 <bean id="datasource"
+	<bean id="datasource"
 		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
 		<property name="driverClassName" value="${runtimestore.database.driverClassName}" />
 		<property name="url" value="${runtimestore.database.url}" />
@@ -26,11 +25,9 @@
 		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
 		<property name="dataSource" ref="datasource" />
 		<property name="persistenceUnitName" value="${runtimestore.persistence}" />
-	</bean> 
+	</bean>
 
 	<!-- Database -->
-<!-- 	 <jdbc:embedded-database id="datasource" type="H2"></jdbc:embedded-database>
- -->
 	<!-- Transaction Manager -->
 	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
 		<property name="entityManagerFactory" ref="entityManagerFactory" />

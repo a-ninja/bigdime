@@ -53,9 +53,22 @@ public class ActionEvent extends SimpleEvent {
 		CALLBACK,
 
 		/**
-		 * No data available, cool off.
+		 * No data available, cool off. Wait until more data is available from
+		 * data source; be it a channel or database or kafka etc. This should be
+		 * renamed to BACKOFF_WAIT.
 		 */
-		BACKOFF
+		BACKOFF,
+
+		/**
+		 * No data available to process with the current handler, but may be
+		 * available in other handlers prior to this. So, go back, immediately,
+		 * without having to wait for the data to be available. Difference
+		 * between BACKOFF and BACKOFF_NOW is that BACKOFF will cause handler
+		 * manager to wait for sometime before continuing while BACKOFF_NOW will
+		 * continue immediately.
+		 */
+		BACKOFF_NOW
+
 	}
 
 	public Status getStatus() {

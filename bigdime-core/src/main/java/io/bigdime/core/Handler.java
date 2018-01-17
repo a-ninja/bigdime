@@ -46,6 +46,11 @@ public interface Handler extends NamedComponent {
 
 	public void shutdown();
 
+	/**
+	 * The propertyMap is an unmodifiable Map.
+	 * 
+	 * @param propertyMap
+	 */
 	public void setPropertyMap(Map<String, Object> propertyMap);
 
 	public void handleException();
@@ -63,6 +68,21 @@ public interface Handler extends NamedComponent {
 	 * @param index
 	 */
 	public void setIndex(int index);
+
+	/**
+	 * Concrete Class object that represents the handler. Can be used for
+	 * printing purposes.
+	 * 
+	 * @param clazz
+	 */
+	public void setHandlerClass(Class<? extends Handler> clazz);
+
+	/**
+	 * Get the complete class name.
+	 * 
+	 * @return
+	 */
+	public String getHandlerClass();
 
 	public enum State {
 		/**

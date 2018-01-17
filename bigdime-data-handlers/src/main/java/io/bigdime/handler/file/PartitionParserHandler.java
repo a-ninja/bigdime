@@ -28,7 +28,7 @@ import io.bigdime.core.HandlerException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
+import io.bigdime.core.handler.AbstractSourceHandler;
 
 /**
  * 
@@ -48,7 +48,7 @@ import io.bigdime.core.handler.AbstractHandler;
  */
 @Component
 @Scope("prototype")
-public class PartitionParserHandler extends AbstractHandler {
+public class PartitionParserHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(PartitionParserHandler.class));
 	private String regex;

@@ -3,22 +3,8 @@
  */
 package io.bigdime.validation;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
@@ -28,12 +14,11 @@ import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.validation.DataValidationException;
 import io.bigdime.core.validation.Factory;
 import io.bigdime.core.validation.ValidationResponse;
-import io.bigdime.core.validation.Validator;
 import io.bigdime.core.validation.ValidationResponse.ValidationResult;
+import io.bigdime.core.validation.Validator;
 import io.bigdime.libs.hdfs.WebHDFSConstants;
 import io.bigdime.libs.hdfs.WebHdfs;
 import io.bigdime.validation.common.AbstractValidator;
-
 import org.apache.commons.io.FileDeleteStrategy;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -46,11 +31,15 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Factory(id = "unzip_raw_checksum", type = UnzipRawChecksumValidator.class)
 @Component

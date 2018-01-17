@@ -13,7 +13,7 @@
 	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime-reference-adaptors</artifactId>
-		<version>0.0.10-SNAPSHOT</version>
+		<version>0.9.2-SNAPSHOT</version>
 	</parent>
 <build>
 		<plugins>
@@ -52,7 +52,7 @@
 		<dependency>
 			<groupId>io.bigdime</groupId>
 			<artifactId>bigdime-runtimeinfo-management</artifactId>
-			<version>0.0.10-SNAPSHOT</version>
+			<version>0.9.2-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 	

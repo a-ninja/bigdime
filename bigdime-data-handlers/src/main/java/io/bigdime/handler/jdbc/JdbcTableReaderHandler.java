@@ -19,27 +19,6 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
-import io.bigdime.adaptor.metadata.MetadataAccessException;
-import io.bigdime.adaptor.metadata.MetadataStore;
-import io.bigdime.adaptor.metadata.model.Metasegment;
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.alert.Logger.ALERT_CAUSE;
-import io.bigdime.alert.Logger.ALERT_SEVERITY;
-import io.bigdime.alert.Logger.ALERT_TYPE;
-import io.bigdime.core.ActionEvent;
-import io.bigdime.core.ActionEvent.Status;
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.HandlerException;
-import io.bigdime.core.InvalidValueConfigurationException;
-import io.bigdime.core.commons.AdaptorLogger;
-import io.bigdime.core.config.AdaptorConfig;
-import io.bigdime.core.config.AdaptorConfigConstants;
-import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
-import io.bigdime.core.runtimeinfo.RuntimeInfo;
-import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
-import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 //import org.apache.commons.lang3.SerializationUtils;
@@ -50,6 +29,27 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.google.common.base.Preconditions;
+
+import io.bigdime.adaptor.metadata.MetadataAccessException;
+import io.bigdime.adaptor.metadata.MetadataStore;
+import io.bigdime.adaptor.metadata.model.Metasegment;
+import io.bigdime.alert.Logger.ALERT_CAUSE;
+import io.bigdime.alert.Logger.ALERT_SEVERITY;
+import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
+import io.bigdime.core.ActionEvent;
+import io.bigdime.core.ActionEvent.Status;
+import io.bigdime.core.AdaptorConfigurationException;
+import io.bigdime.core.HandlerException;
+import io.bigdime.core.InvalidValueConfigurationException;
+import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.config.AdaptorConfig;
+import io.bigdime.core.config.AdaptorConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
+import io.bigdime.core.handler.AbstractSourceHandler;
+import io.bigdime.core.runtimeinfo.RuntimeInfo;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 
 
 /**
@@ -62,7 +62,7 @@ import com.google.common.base.Preconditions;
 
 @Component
 @Scope("prototype")
-public class JdbcTableReaderHandler extends AbstractHandler {
+public class JdbcTableReaderHandler extends AbstractSourceHandler {
 	
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(JdbcTableReaderHandler.class));
@@ -151,11 +151,7 @@ public class JdbcTableReaderHandler extends AbstractHandler {
 	public void setDataSource(DataSource dataSource) {
 		this.lazyConnectionDataSourceProxy = dataSource;
 	}
-	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
+		
 	/**
 	 * This preProcess method is get table from previous handler or from inputs, format sql query.
 	 * get source metadata from source database, and put into bigdime metastore
@@ -166,7 +162,8 @@ public class JdbcTableReaderHandler extends AbstractHandler {
 	 * @throws RuntimeInfoStoreException
 	 * @throws JdbcHandlerException
 	 */
-	private Status preProcess() throws RuntimeInfoStoreException, JdbcHandlerException {
+	@Override
+	protected Status preProcess() throws RuntimeInfoStoreException, JdbcHandlerException {
 		List<ActionEvent> actionEvents = null;
 		//this is for database level, process tables from a database, check table name, if null, get from event list
 		if(jdbcInputDescriptor.getEntityName() == null && jdbcInputDescriptor.getTargetEntityName() == null){

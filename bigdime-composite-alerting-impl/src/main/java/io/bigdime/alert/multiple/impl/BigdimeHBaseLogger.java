@@ -3,8 +3,18 @@
  */
 package io.bigdime.alert.multiple.impl;
 
+import io.bigdime.alert.AlertMessage;
+import io.bigdime.alert.Logger;
+import io.bigdime.alert.multiple.impl.constants.HBaseAlertSchema.ColumnFamily;
+import io.bigdime.alert.multiple.impl.constants.HBaseAlertSchema.ColumnQualifier;
+import io.bigdime.hbase.client.HbaseManager;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.helpers.FormattingTuple;
+import org.slf4j.helpers.MessageFormatter;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -14,26 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
-
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.slf4j.helpers.FormattingTuple;
-import org.slf4j.helpers.MessageFormatter;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import io.bigdime.alert.AlertMessage;
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.multiple.impl.constants.HBaseAlertSchema.ColumnFamily;
-import io.bigdime.alert.multiple.impl.constants.HBaseAlertSchema.ColumnQualifier;
-import io.bigdime.hbase.client.DataInsertionSpecification;
-import io.bigdime.hbase.client.HbaseManager;
-import io.bigdime.hbase.client.exception.HBaseClientException;
+import java.util.concurrent.*;
 
 /**
  * Class with default visibility, does not really need to be accessible outside
@@ -226,11 +217,11 @@ public class BigdimeHBaseLogger implements Logger {
 	}
 
 	@Override
-	public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity,
+	public void alert(String source, ALERT_TYPE alertType, ALERT_CAUSE alertCause, ALERT_SEVERITY alertSeverity, Throwable t,
 			String format, Object... o) {
 
 		FormattingTuple ft = MessageFormatter.arrayFormat(format, o);
-		alert(source, alertType, alertCause, alertSeverity, ft.getMessage(), (Throwable) null);
+		alert(source, alertType, alertCause, alertSeverity, t, ft.getMessage(), (Throwable) null);
 	}
 
 	@Override

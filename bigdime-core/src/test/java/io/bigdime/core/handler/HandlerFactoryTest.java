@@ -48,7 +48,7 @@ public class HandlerFactoryTest extends AbstractTestNGSpringContextTests {
 	public static synchronized void initHandlerFactory() throws IOException {
 		if (initDone)
 			return;
-		System.setProperty("env.properties", "application-localhost.properties");
+		System.setProperty("env.properties", "application.properties");
 		initDone = true;
 	}
 

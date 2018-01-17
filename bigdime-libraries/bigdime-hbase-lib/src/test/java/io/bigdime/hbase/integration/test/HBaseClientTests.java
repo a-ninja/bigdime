@@ -3,6 +3,31 @@
  */
 package io.bigdime.hbase.integration.test;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
+import io.bigdime.hbase.client.DataDeletionSpecification;
+import io.bigdime.hbase.client.DataInsertionSpecification;
+import io.bigdime.hbase.client.DataRetrievalSpecification;
+import io.bigdime.hbase.client.HbaseManager;
+import io.bigdime.hbase.client.admin.TableCreationSpecification;
+import io.bigdime.hbase.client.admin.TableDeletionSpecification;
+import io.bigdime.hbase.client.exception.HBaseClientException;
+import io.bigdime.hbase.common.HBaseConfigConstants;
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.client.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
+import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,47 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import io.bigdime.alert.Logger;
-import io.bigdime.alert.LoggerFactory;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.testng.Assert;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
-
-import com.google.common.base.Preconditions;
-
-import io.bigdime.hbase.client.DataDeletionSpecification;
-import io.bigdime.hbase.client.DataInsertionSpecification;
-import io.bigdime.hbase.client.DataRetrievalSpecification;
-import io.bigdime.hbase.client.HbaseManager;
-import io.bigdime.hbase.client.admin.TableCreationSpecification;
-import io.bigdime.hbase.client.admin.TableDeletionSpecification;
-import io.bigdime.hbase.client.exception.HBaseClientException;
-import io.bigdime.hbase.common.HBaseConfigConstants;
-
 @ContextConfiguration(locations = { "classpath:hbase-client-context/applicationContext.xml" })
 public class HBaseClientTests extends AbstractTestNGSpringContextTests {
-	Logger logger = LoggerFactory.getLogger(HBaseClientTests.class);
 
 	@Value("${hbase.zookeeper.quorum}")
 	private String hbaseZookeeperQuroum;
@@ -81,7 +67,6 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 
 	@BeforeTest
 	public void setup() {
-		logger.info("HBASE LIBRARY", "Setting the environment", "");
 		System.setProperty("env", "test");
 	}
 
@@ -146,15 +131,15 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		Put put = null;
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
-				Iterator<Entry<String, JsonNode>> userData = user.getFields();
+				Iterator<Entry<String, JsonNode>> userData = user.fields();
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				put = new Put(user.get(columnQualifier).getTextValue()
+						.asText());
+				put = new Put(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				while (userData.hasNext()) {
 					Map.Entry<String, JsonNode> kv = userData.next();
 					put.add(columnFamilyOne.getBytes(StandardCharsets.UTF_8), kv.getKey().getBytes(StandardCharsets.UTF_8),
-							kv.getValue().getTextValue().getBytes(StandardCharsets.UTF_8));
+							kv.getValue().asText().getBytes(StandardCharsets.UTF_8));
 				}
 			}
 		}
@@ -172,15 +157,15 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		Put put = null;
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
-				Iterator<Entry<String, JsonNode>> userData = user.getFields();
+				Iterator<Entry<String, JsonNode>> userData = user.fields();
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				put = new Put(user.get(columnQualifier).getTextValue()
+						.asText());
+				put = new Put(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				while (userData.hasNext()) {
 					Map.Entry<String, JsonNode> kv = userData.next();
 					put.add(columnFamilyOne.getBytes(StandardCharsets.UTF_8), kv.getKey().getBytes(StandardCharsets.UTF_8),
-							kv.getValue().getTextValue().getBytes(StandardCharsets.UTF_8));
+							kv.getValue().asText().getBytes(StandardCharsets.UTF_8));
 				}
 				list.add(put);
 			}
@@ -259,8 +244,8 @@ public class HBaseClientTests extends AbstractTestNGSpringContextTests {
 		if (attributeData.isArray()) {
 			for (JsonNode user : attributeData) {
 				Preconditions.checkNotNull(user.get(columnQualifier)
-						.getTextValue());
-				delete = new Delete(user.get(columnQualifier).getTextValue()
+						.asText());
+				delete = new Delete(user.get(columnQualifier).asText()
 						.getBytes(StandardCharsets.UTF_8));
 				list.add(delete);
 			}

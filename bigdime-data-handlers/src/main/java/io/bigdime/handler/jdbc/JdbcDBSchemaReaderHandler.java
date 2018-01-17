@@ -10,10 +10,18 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
-import io.bigdime.alert.LoggerFactory;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
 import io.bigdime.alert.Logger.ALERT_CAUSE;
 import io.bigdime.alert.Logger.ALERT_SEVERITY;
 import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
 import io.bigdime.core.ActionEvent;
 import io.bigdime.core.ActionEvent.Status;
 import io.bigdime.core.AdaptorConfigurationException;
@@ -22,15 +30,7 @@ import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
 import io.bigdime.core.config.AdaptorConfigConstants;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
-
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Scope;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
+import io.bigdime.core.handler.AbstractSourceHandler;
 
 /**
  * This class process all the table names from a database by using sql query,
@@ -43,7 +43,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Scope("prototype")
-public class JdbcDBSchemaReaderHandler extends AbstractHandler {
+public class JdbcDBSchemaReaderHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(JdbcDBSchemaReaderHandler.class));
 	
@@ -116,10 +116,6 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 		this.lazyConnectionDataSourceProxy = dataSource;		
 	}
 	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
 	/**
 	 * This method is get all tables from a source database based on sql query
 	 * @param sqlQuery
@@ -138,7 +134,8 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 	 * @throws JdbcHandlerException
 	 * @throws HandlerException
 	 */
-	private Status preProcess() throws JdbcHandlerException{
+	@Override
+	protected Status preProcess() throws JdbcHandlerException{
 		String dbSql = jdbcInputDescriptor.formatQuery(jdbcInputDescriptor.getInputType(), jdbcInputDescriptor.getInputValue(), driverName);
 		logger.debug("Formatted Jdbc DB Reader Handler Query", "dbSql={}", dbSql);
 		try{
@@ -192,7 +189,8 @@ public class JdbcDBSchemaReaderHandler extends AbstractHandler {
 	 * if no table needs to process, return BACKOFF, else return READY
 	 * @return Status
 	 */
-	private Status doProcess() {
+	@Override
+	protected Status doProcess() {
 		currentTableToProcess = getNextTableToProcess(processTable);
 		if(currentTableToProcess == null){
 			logger.info("no table need to process", "return BACKOFF");

@@ -3,8 +3,12 @@
  */
 package io.bigdime.core.channel;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Properties;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -20,6 +24,7 @@ import io.bigdime.core.InvalidDataTypeConfigurationException;
 import io.bigdime.core.InvalidValueConfigurationException;
 import io.bigdime.core.RequiredParameterMissingConfigurationException;
 import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.PropertyHelper;
 import io.bigdime.core.config.AdaptorConfigConstants.ChannelConfigConstants;
 import io.bigdime.core.config.ChannelConfig;
 
@@ -35,6 +40,26 @@ public final class ChannelFactory {
 
 	@Autowired
 	private ApplicationContext context;
+	private Properties appProperties;
+
+	public ChannelFactory() throws AdaptorConfigurationException {
+		String envProperties = System.getProperty("env.properties");
+		if (envProperties == null) {
+			envProperties = "application.properties";
+			logger.info("constructing ChannelFactory with default envProperties", "envProperties=\"{}\"",
+					envProperties);
+		}
+		logger.info("constructing ChannelFactory", "envProperties=\"{}\"", envProperties);
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(envProperties)) {
+			appProperties = new Properties();
+			appProperties.load(is);
+			logger.info("constructing ChannelFactory", "properties=\"{}\"", appProperties.toString());
+		} catch (IOException e) {
+			logger.alert(ALERT_TYPE.ADAPTOR_FAILED_TO_START, ALERT_CAUSE.INVALID_ADAPTOR_CONFIGURATION,
+					ALERT_SEVERITY.BLOCKER, e.toString());
+			throw new AdaptorConfigurationException(e);
+		}
+	}
 
 	/**
 	 * Get the collection of {@link DataChannel} for given {@link ChannelConfig}
@@ -79,10 +104,11 @@ public final class ChannelFactory {
 							channelConfig.getName(), i + 1, channelInstances);
 					final Class<? extends DataChannel> channelClass = Class.forName(channelConfig.getChannelClass())
 							.asSubclass(DataChannel.class);
-					// final DataChannel channel =
-					// Class.forName(channelConfig.getChannelClass())
-					// .asSubclass(DataChannel.class).newInstance();
 					final DataChannel channel = context.getBean(channelClass);
+
+					Map<String, Object> channelProperties = channelConfig.getChannelProperties();
+					PropertyHelper.redeemTokensFromAppProperties(channelProperties, appProperties);
+
 					channel.setPropertyMap(channelConfig.getChannelProperties());
 					channel.setName(channelConfig.getName());
 					channel.build();

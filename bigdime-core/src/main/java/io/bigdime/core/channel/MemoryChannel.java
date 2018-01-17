@@ -28,151 +28,147 @@ import io.bigdime.core.config.AdaptorConfigConstants.ChannelConfigConstants;
  * consumed-event-index for each consumer. Once an event at an index has been
  * consumed by all the consumers, the event is freed from the list and space is
  * made available.
- * 
  *
  * @author Neeraj Jain TODO define data structure MultiplexingQueue
  *         MultipleConsumerQueue
- * 
  */
 
 @Component
 @Scope("prototype")
 public class MemoryChannel extends AbstractChannel {
-	private String channelId;
-	private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(MemoryChannel.class));
-	private Set<String> consumerNames = new HashSet<>();
-	/*
-	 * DataChannel maintains the data in an array list, need random access to
-	 * the elements.
-	 */
-	private List<Event> eventList = Collections.synchronizedList(new ArrayList<Event>());
-	// private List<Event> eventList = new ArrayList<Event>();
-	/*
-	 * Maintains a mapping between the consumer and the last index it fetched.
+    private String channelId;
+    private static final AdaptorLogger logger = new AdaptorLogger(LoggerFactory.getLogger(MemoryChannel.class));
+    private Set<String> consumerNames = new HashSet<>();
+    /*
+     * DataChannel maintains the data in an array list, need random access to
+     * the elements.
+     */
+    private List<Event> eventList = Collections.synchronizedList(new ArrayList<Event>());
+    // private List<Event> eventList = new ArrayList<Event>();
+    /*
+     * Maintains a mapping between the consumer and the last index it fetched.
 	 * The take request will return the data from the next index.
 	 */
-	private Map<String, Integer> consumerToTakenIndexMap = new HashMap<>();
-	/*
-	 * Maintains a mapping between the index in the eventList and how many times
-	 * it has been consumed. Once the element has been consumed by all the
-	 * consumers, the take method should remove it from the list.
-	 */
-	private Map<Integer, Integer> indexToTakenCountMap = new HashMap<>();
+    private Map<String, Integer> consumerToTakenIndexMap = new HashMap<>();
+    /*
+     * Maintains a mapping between the index in the eventList and how many times
+     * it has been consumed. Once the element has been consumed by all the
+     * consumers, the take method should remove it from the list.
+     */
+    private Map<Integer, Integer> indexToTakenCountMap = new HashMap<>();
 
-	/*
-	 * Number of elements that have been removed from the eventList. Need this
-	 * to compute the next index.
-	 */
-	private int removedCount;
+    /*
+     * Number of elements that have been removed from the eventList. Need this
+     * to compute the next index.
+     */
+    private int removedCount;
 
-	// private String counterNameTake;
-	// private String counterNamePut;
+    // private String counterNameTake;
+    // private String counterNamePut;
 
-	private boolean printStats;
-	private long printStatsDurationInSeconds;
-	private long putCount;
-	private long takeCount;
-	private long channelSizeInBytes = 0l;
-	private long maxSizeInBytes = 0l;
-	private boolean channelStopped = false;
-	private long channelCapacity;
+    private boolean printStats;
+    private long printStatsDurationInSeconds;
+    private long putCount;
+    private long takeCount;
+    private long channelSizeInBytes = 0l;
+    private long maxSizeInBytes = 0l;
+    private boolean channelStopped = false;
+    private long channelCapacity;
 
-	@Override
-	public void build() {
-		channelId = UUID.randomUUID().toString();
-		printStats = PropertyHelper.getBooleanProperty(getProperties(), ChannelConfigConstants.PRINT_STATS);
-		channelCapacity = PropertyHelper.getLongProperty(getProperties(), ChannelConfigConstants.CHANNEL_CAPACITY,
-				MemoryChannelConstants.DEFAULT_CHANNEL_CAPACITY);
+    @Override
+    public void build() {
+        channelId = UUID.randomUUID().toString();
+        printStats = PropertyHelper.getBooleanProperty(getProperties(), ChannelConfigConstants.PRINT_STATS);
+        channelCapacity = PropertyHelper.getLongProperty(getProperties(), ChannelConfigConstants.CHANNEL_CAPACITY,
+                MemoryChannelConstants.DEFAULT_CHANNEL_CAPACITY);
 
-		printStatsDurationInSeconds = PropertyHelper.getLongProperty(getProperties(),
-				ChannelConfigConstants.PRINT_STATS_DURATION_IN_SECONDS,
-				MemoryChannelConstants.DEFAULT_PRINT_STATS_DURATION_IN_SECONDS);
-		logger.debug("building memory channel-notsync",
-				"channel_name=\"{}\" channel_id=\"{}\" printStats=\"{}\" printStatsDurationInSeconds=\"{}\" channelCapacity=\"{}\"",
-				getName(), channelId, printStats, printStatsDurationInSeconds, channelCapacity);
-		printStatsDurationInSeconds = printStatsDurationInSeconds * 1000;
-	}
+        printStatsDurationInSeconds = PropertyHelper.getLongProperty(getProperties(),
+                ChannelConfigConstants.PRINT_STATS_DURATION_IN_SECONDS,
+                MemoryChannelConstants.DEFAULT_PRINT_STATS_DURATION_IN_SECONDS);
+        logger.debug("building memory channel-notsync",
+                "channel_name=\"{}\" channel_id=\"{}\" printStats=\"{}\" printStatsDurationInSeconds=\"{}\" channelCapacity=\"{}\"",
+                getName(), channelId, printStats, printStatsDurationInSeconds, channelCapacity);
+        printStatsDurationInSeconds = printStatsDurationInSeconds * 1000;
+    }
 
-	/**
-	 * Add a new item to the storage, after ensuring that it can hold more.
-	 * Ensure that the storage has enough capacity to hold more items.
-	 */
-	@Override
-	public void put(Event arg0) {
-		/*
+    /**
+     * Add a new item to the storage, after ensuring that it can hold more.
+     * Ensure that the storage has enough capacity to hold more items.
+     */
+    @Override
+    public void put(Event arg0) {
+        /*
 		 * Put the data in the eventList and notifyAll.
 		 *
 		 */
 
-		logger.debug("putting event on memory channel", "channel_name=\"{}\" channelSizeInBytes=\"{}\"", getName(),
-				channelSizeInBytes);
-		synchronized (this) {
-			while ((channelSizeInBytes + arg0.getBody().length) > channelCapacity) {
-				try {
-					logger.debug("waitingto put event on memory channel", "channel_name=\"{}\" channelCapacity=\"{}\"",
-							getName(), channelCapacity);
-					wait(1000);
-				} catch (InterruptedException e) {
-					// nothing to do here
-				}
-			}
-			channelSizeInBytes = channelSizeInBytes + arg0.getBody().length;
-			if (channelSizeInBytes >= maxSizeInBytes) {
-				maxSizeInBytes = channelSizeInBytes;
-			}
-			eventList.add(arg0);
-			notifyAll();
-		}
-		logger.debug("put event on memory channel", "channel_name=\"{}\" channelSizeInBytes=\"{}\"", getName(),
-				channelSizeInBytes);
-		putCount++;
-	}
+        logger.debug("putting event on memory channel", "channel_name=\"{}\" channelSizeInBytes=\"{}\"", getName(),
+                channelSizeInBytes);
+        synchronized (this) {
+            while ((channelSizeInBytes + arg0.getBody().length) > channelCapacity) {
+                try {
+                    logger.debug("waitingto put event on memory channel", "channel_name=\"{}\" channelCapacity=\"{}\"",
+                            getName(), channelCapacity);
+                    wait(1000);
+                } catch (InterruptedException e) {
+                    // nothing to do here
+                }
+            }
+            channelSizeInBytes = channelSizeInBytes + arg0.getBody().length;
+            if (channelSizeInBytes >= maxSizeInBytes) {
+                maxSizeInBytes = channelSizeInBytes;
+            }
+            eventList.add(arg0);
+            notifyAll();
+        }
+        logger.debug("put event on memory channel", "channel_name=\"{}\" channelSizeInBytes=\"{}\"", getName(),
+                channelSizeInBytes);
+        putCount++;
+    }
 
-	/**
-	 * This method, if used with default bigdime implementation, will throw an
-	 * UnsupportedOperationException since bigdime expects the name of the
-	 * consumer in the request. Consider using
-	 * {@link MemoryChannel#take(String)} method instead.
-	 * 
-	 * @throws ChannelException
-	 *             if the there is no data available on Channel
-	 */
-	@Override
-	public synchronized Event take() {
-		if ((consumerNames == null) || consumerNames.isEmpty()) {
-			return take("default");
-		} else {
-			throw new UnsupportedOperationException(
-					"this channel has registered consumers, invoking take method without parameters is not supported.");
-		}
-	}
+    /**
+     * This method, if used with default bigdime implementation, will throw an
+     * UnsupportedOperationException since bigdime expects the name of the
+     * consumer in the request. Consider using
+     * {@link MemoryChannel#take(String)} method instead.
+     *
+     * @throws ChannelException if the there is no data available on Channel
+     */
+    @Override
+    public synchronized Event take() {
+        if ((consumerNames == null) || consumerNames.isEmpty()) {
+            return take("default");
+        } else {
+            throw new UnsupportedOperationException(
+                    "this channel has registered consumers, invoking take method without parameters is not supported.");
+        }
+    }
 
-	/**
-	 * This method, if used with default bigdime implementation, will throw an
-	 * UnsupportedOperationException since bigdime expects the name of the
-	 * consumer in the request. Consider using {@link MemoryChannel#take(String,
-	 * int))} method instead.
-	 * 
-	 */
-	@Override
-	public synchronized List<Event> take(int size) {
-		if ((consumerNames == null) || consumerNames.isEmpty()) {
-			return take("default", size);
-		} else {
-			throw new UnsupportedOperationException(
-					"this channel has registered consumers, invoking take method without parameters is not supported.");
-		}
-	}
+    /**
+     * This method, if used with default bigdime implementation, will throw an
+     * UnsupportedOperationException since bigdime expects the name of the
+     * consumer in the request. Consider using {@link MemoryChannel#take(String,
+     * int))} method instead.
+     */
+    @Override
+    public synchronized List<Event> take(int size) {
+        if ((consumerNames == null) || consumerNames.isEmpty()) {
+            return take("default", size);
+        } else {
+            throw new UnsupportedOperationException(
+                    "this channel has registered consumers, invoking take method without parameters is not supported.");
+        }
+    }
 
-	@Override
-	public synchronized boolean registerConsumer(String consumerName) {
-		logger.info("registering consumers", "_message=\"before registering\" channel_name=\"{}\" consumers=\"{}\"",
-				getName(), consumerNames);
-		boolean registered = consumerNames.add(consumerName);
-		logger.info("registering consumers", "_message=\"after registering\" channel_name=\"{}\" consumers=\"{}\"",
-				getName(), consumerNames);
-		return registered;
-	}
+    @Override
+    public synchronized boolean registerConsumer(String consumerName) {
+        logger.info("registering consumers", "_message=\"before registering\" channel_name=\"{}\" consumers=\"{}\"",
+                getName(), consumerNames);
+        boolean registered = consumerNames.add(consumerName);
+        logger.info("registering consumers", "_message=\"after registering\" channel_name=\"{}\" consumers=\"{}\"",
+                getName(), consumerNames);
+        return registered;
+    }
 	/*
 	 * @formatter:off
 	 * 1. Who is consuming? The channel needs to maintain a set of consumerNames.
@@ -243,123 +239,124 @@ public class MemoryChannel extends AbstractChannel {
 	 * @formatter:on
 	 */
 
-	@Override
-	public synchronized Event take(String consumerName) {
-		List<Event> events = take(consumerName, 1);
-		return events.get(0);
-	}
+    @Override
+    public synchronized Event take(String consumerName) {
+        List<Event> events = take(consumerName, 1);
+        return events.get(0);
+    }
 
-	@Override
-	public synchronized List<Event> take(final String consumerName, final int size) {
-		// start: update the takenIndex for this consumer
-		Integer takenIndex = consumerToTakenIndexMap.get(consumerName);
-		if (takenIndex == null) {
-			takenIndex = 0;
-		} else {
-			takenIndex++;
-		}
-		int newTakenStartIndex = takenIndex - removedCount;
-		int availableEventsCount = eventList.size() - newTakenStartIndex;
-		if (availableEventsCount == 0) {
-			throw new ChannelException("No data found on channel");
-		}
-		int fetchSize = size;
-		if (availableEventsCount < size) {
-			fetchSize = availableEventsCount;
-		}
-		int newTakenEndIndex = newTakenStartIndex + fetchSize;
-		List<Event> takenEvent = new ArrayList<>(eventList.subList(newTakenStartIndex, newTakenEndIndex));
-		consumerToTakenIndexMap.put(consumerName, (takenIndex + fetchSize) - 1);
+    @Override
+    public synchronized List<Event> take(final String consumerName, final int size) {
+        // start: update the takenIndex for this consumer
+        Integer takenIndex = consumerToTakenIndexMap.get(consumerName);
+        if (takenIndex == null) {
+            takenIndex = 0;
+        } else {
+            takenIndex++;
+        }
+        int newTakenStartIndex = takenIndex - removedCount;
+        int availableEventsCount = eventList.size() - newTakenStartIndex;
+        if (availableEventsCount == 0) {
+            throw new ChannelException("No data found on channel");
+        }
+        int fetchSize = size;
+        if (availableEventsCount < size) {
+            fetchSize = availableEventsCount;
+        }
+        int newTakenEndIndex = newTakenStartIndex + fetchSize;
+        List<Event> takenEvent = new ArrayList<>(eventList.subList(newTakenStartIndex, newTakenEndIndex));
+        consumerToTakenIndexMap.put(consumerName, (takenIndex + fetchSize) - 1);
 
-		// start:update the taken count for this index
-		int toBeRemovedCount = 0;
-		for (int i = 0; i < fetchSize; i++) {
-			Integer takenCount = indexToTakenCountMap.get(takenIndex + i);
-			if (takenCount == null) {
-				takenCount = 0;
-			}
-			takenCount++;
-			if (takenCount == consumerNames.size()) { // newTakenIndex must
-														// always be zero
-				Event removedEvent = eventList.get(i);
-				toBeRemovedCount++;
-				channelSizeInBytes = channelSizeInBytes - removedEvent.getBody().length;
-				indexToTakenCountMap.remove(takenIndex + i);
-				removedCount++;
-			} else {
-				indexToTakenCountMap.put(takenIndex + i, takenCount);
-			}
-		}
-		eventList.subList(0, toBeRemovedCount).clear();
+        // start:update the taken count for this index
+        int toBeRemovedCount = 0;
+        for (int i = 0; i < fetchSize; i++) {
+            Integer takenCount = indexToTakenCountMap.get(takenIndex + i);
+            if (takenCount == null) {
+                takenCount = 0;
+            }
+            takenCount++;
+            if (takenCount == consumerNames.size()) { // newTakenIndex must
+                // always be zero
+                Event removedEvent = eventList.get(i);
+                toBeRemovedCount++;
+                channelSizeInBytes = channelSizeInBytes - removedEvent.getBody().length;
+                indexToTakenCountMap.remove(takenIndex + i);
+                removedCount++;
+            } else {
+                indexToTakenCountMap.put(takenIndex + i, takenCount);
+            }
+        }
+        eventList.subList(0, toBeRemovedCount).clear();
 
-		takeCount++;
-		notifyAll();
-		return takenEvent;
-	}
+        takeCount++;
+        notifyAll();
+        return takenEvent;
+    }
 
-	public long getPutCount() {
-		return putCount;
-	}
+    public long getPutCount() {
+        return putCount;
+    }
 
-	public long getTakeCount() {
-		return takeCount;
-	}
+    public long getTakeCount() {
+        return takeCount;
+    }
 
-	public void printStats() {
-		logger.info("print MemoryChannelStats",
-				"channel_id=\"{}\" channel_name=\"{}\" channelCapacity=\"{}\" total_puts=\"{}\" total_takes=\"{}\" current_list_size=\"{}\" size_in_bytes=\"{}\" max_size_in_bytes=\"{}\" current_consumer_count=\"{}\" consumer_names=\"{}\" this=\"{}\"",
-				getChannelId(), MemoryChannel.this.getName(), channelCapacity, putCount, takeCount, eventList.size(),
-				channelSizeInBytes, maxSizeInBytes, consumerNames.size(), consumerNames, this.getClass());
-	}
+    public void printStats() {
+        logger.info("print MemoryChannelStats",
+                "channel_id=\"{}\" channel_name=\"{}\" channelCapacity=\"{}\" total_puts=\"{}\" total_takes=\"{}\" current_list_size=\"{}\" size_in_bytes=\"{}\" max_size_in_bytes=\"{}\" current_consumer_count=\"{}\" consumer_names=\"{}\" this=\"{}\"",
+                getChannelId(), MemoryChannel.this.getName(), channelCapacity, putCount, takeCount, eventList.size(),
+                channelSizeInBytes, maxSizeInBytes, consumerNames.size(), consumerNames, this.getClass());
+    }
 
-	@Override
-	public void start() {
-		logger.info("starting MemoryChannelStats", "starting MemoryChannel, channel_name=\"{}\" channel_id=\"{}\"",
-				getName(), getChannelId());
-		if (printStats) {
-			logger.info("starting MemoryChannelStats", "starting MemoryChannel");
-			// printStatsDurationInSeconds = printStatsDurationInSeconds * 1000;
-			startStatsThread();
-		}
-		logger.info("starting MemoryChannelStats", "started MemoryChannel, channel_name=\"{}\" channel_id=\"{}\"",
-				getName(), getChannelId());
-	}
+    @Override
+    public void start() {
+        logger.info("starting MemoryChannelStats", "starting MemoryChannel, channel_name=\"{}\" channel_id=\"{}\"",
+                getName(), getChannelId());
+        if (printStats) {
+            logger.info("starting MemoryChannelStats", "starting MemoryChannel");
+            // printStatsDurationInSeconds = printStatsDurationInSeconds * 1000;
+            startStatsThread();
+        }
+        logger.info("starting MemoryChannelStats", "started MemoryChannel, channel_name=\"{}\" channel_id=\"{}\"",
+                getName(), getChannelId());
+    }
 
-	@Override
-	public void stop() {
-		channelStopped = true;
-	}
+    @Override
+    public void stop() {
+        channelStopped = true;
+    }
 
-	/**
-	 * UUID for channel, set during build method. Only used for internal
-	 * purposes.
-	 * 
-	 * @return
-	 */
-	public String getChannelId() {
-		return channelId;
-	}
+    /**
+     * UUID for channel, set during build method. Only used for internal
+     * purposes.
+     *
+     * @return
+     */
+    public String getChannelId() {
+        return channelId;
+    }
 
-	private void startStatsThread() {
-		new Thread() {
-			@Override
-			public void run() {
-				while (!channelStopped) {
-					try {
-						logger.info("heathcheck thread for MemoryChannel", "printing stats, printStatsDuration=\"{}\"",
-								printStatsDurationInSeconds);
-						printStats();
-						sleep(printStatsDurationInSeconds);
-					} catch (Exception e) {
-						logger.warn("heathcheck thread for MemoryChannel",
-								"health check thread received an exception, will duck it. printStatsDurationInSeconds=\"{}\"",
-								printStatsDurationInSeconds, e);
-					}
-				}
-			}
-		}.start();
-		logger.info("started heathcheck thread for MemoryChannel",
-				"channel_id=\"{}\" thread_name=\"{}\" channel_name=\"{}\" ", getChannelId(), getName(),
-				MemoryChannel.this.getName());
-	}
+    private void startStatsThread() {
+        new Thread() {
+            @Override
+            public void run() {
+                Thread.currentThread().setName("healthcheck-" + MemoryChannel.this.getName());
+                while (!channelStopped) {
+                    try {
+                        logger.debug("heathcheck thread for MemoryChannel", "printing stats, printStatsDuration=\"{}\"",
+                                printStatsDurationInSeconds);
+                        printStats();
+                        sleep(printStatsDurationInSeconds);
+                    } catch (Exception e) {
+                        logger.warn("heathcheck thread for MemoryChannel",
+                                "health check thread received an exception, will duck it. printStatsDurationInSeconds=\"{}\"",
+                                printStatsDurationInSeconds, e);
+                    }
+                }
+            }
+        }.start();
+        logger.info("started heathcheck thread for MemoryChannel",
+                "channel_id=\"{}\" thread_name=\"{}\" channel_name=\"{}\" ", getChannelId(), getName(),
+                MemoryChannel.this.getName());
+    }
 }

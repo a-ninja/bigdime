@@ -3,11 +3,17 @@
  */
 package io.bigdime.core.adaptor;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-
+import io.bigdime.alert.LoggerFactory;
+import io.bigdime.core.AdaptorConfigurationException;
+import io.bigdime.core.AdaptorContext;
+import io.bigdime.core.AdaptorPhase;
+import io.bigdime.core.DataAdaptorException;
+import io.bigdime.core.Sink;
+import io.bigdime.core.Source;
+import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.config.AdaptorConfig;
+import io.bigdime.core.config.AdaptorConfigReader;
+import io.bigdime.core.handler.HandlerFactoryTest;
 import org.apache.flume.lifecycle.LifecycleState;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -21,17 +27,10 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.AdaptorContext;
-import io.bigdime.core.AdaptorPhase;
-import io.bigdime.core.DataAdaptorException;
-import io.bigdime.core.Sink;
-import io.bigdime.core.Source;
-import io.bigdime.core.commons.AdaptorLogger;
-import io.bigdime.core.config.AdaptorConfig;
-import io.bigdime.core.config.AdaptorConfigReader;
-import io.bigdime.core.handler.HandlerFactoryTest;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
 
 @Configuration
 @ContextConfiguration({ "classpath*:application-context.xml", "classpath*:META-INF/application-context.xml" })
@@ -55,6 +54,10 @@ public class DataAdaptorTest extends AbstractTestNGSpringContextTests {
 		ReflectionTestUtils.setField(adaptorConfigReader, "CONFIG_FILE_LOCATION", "META-INF/adaptor.json");
 	}
 
+//	@Test
+//	public void testSampleController() {
+//		SpringApplication.run(SampleController.class, "");
+//	}
 	// @Test(priority=1)
 	public void testStart() throws DataAdaptorException {
 		logger.info("unit-test", "Starting DataAdaptor");
@@ -96,6 +99,9 @@ public class DataAdaptorTest extends AbstractTestNGSpringContextTests {
 	public void testStartWithMockData() throws DataAdaptorException {
 		logger.info("unit-test", "Starting DataAdaptor");
 		setMockAdaptor();
+		Mockito.when(
+				dataAdaptor.getAdaptorConfig().getAdaptorContext().getSources().iterator().next().getLifecycleState())
+				.thenReturn(LifecycleState.STOP);
 		ReflectionTestUtils.setField(dataAdaptor, "adaptorCurrentPhase", AdaptorPhase.INIT);
 		dataAdaptor.start();
 		Mockito.verify(dataAdaptor.getAdaptorConfig().getAdaptorContext().getSources().iterator().next(),
@@ -123,9 +129,10 @@ public class DataAdaptorTest extends AbstractTestNGSpringContextTests {
 	 * adaptor when it's in STARTED phase.
 	 * 
 	 * @throws DataAdaptorException
-	 * TODO: refactor this method to another class to run start and stop tests in sequence.
+	 *             TODO: refactor this method to another class to run start and
+	 *             stop tests in sequence.
 	 */
-//	@Test(priority = 3)
+	// @Test(priority = 3)
 	public void testStartFromStartedState() throws DataAdaptorException {
 		logger.info("unit-test", "Starting DataAdaptor");
 		setMockAdaptor();

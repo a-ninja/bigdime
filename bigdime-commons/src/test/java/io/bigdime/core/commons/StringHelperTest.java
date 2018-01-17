@@ -4,7 +4,10 @@
 package io.bigdime.core.commons;
 
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -143,5 +146,67 @@ public class StringHelperTest {
 		String relativePath = StringHelper.getRelativePath("/unit/test/2/testGetRelativePathWithNullBasePath",
 				"/unit/test");
 		Assert.assertEquals(relativePath, "/2/testGetRelativePathWithNullBasePath");
+	}
+
+	@Test
+	public void testGetStringAfterLastToken() {
+		String path = StringHelper.getStringAfterLastToken("/unit/test/2/testGetStringAfterLastToken", "/");
+		Assert.assertEquals(path, "testGetStringAfterLastToken");
+
+	}
+
+	@Test
+	public void testGetStringBeforeLastToken() {
+		String path = StringHelper.getStringBeforeLastToken("/unit/test/2/testGetStringAfterLastToken", "/");
+		Assert.assertEquals(path, "/unit/test/2");
+
+	}
+
+	/**
+	 * 
+	 */
+	@Test
+	public void testReplaceToken() {
+
+		String inputString = "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt";
+
+		Pattern inputPattern = Pattern.compile(".+\\/date=(\\w+-\\w+-\\w+)\\/(\\w+)\\/([\\w\\.\\-_]+)$");
+		String outPattern = "$3";
+		String replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "file_123.txt");
+
+		outPattern = "$1/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "2016-07-01/file_123.txt");
+		outPattern = "$1__$2/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "2016-07-01__path6/file_123.txt");
+	}
+
+	@Test
+	public void testReplaceTokenWithHeaders() {
+
+		String inputString = "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt";
+
+		Map<String, String> map = new HashMap<>();
+		map.put("entityName", "unit-entity-name");
+		Pattern inputPattern = Pattern.compile(".+\\/date=(\\w+-\\w+-\\w+)\\/(\\w+)\\/([\\w\\.\\-_]+)$");
+		String outPattern = "$3";
+		String replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "file_123.txt");
+
+		outPattern = "$1/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern);
+		Assert.assertEquals(replacedString, "2016-07-01/file_123.txt");
+		
+		outPattern = "$1__$2_$entityName/$3";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern, map);
+		Assert.assertEquals(replacedString, "2016-07-01__path6_unit-entity-name/file_123.txt");
+		
+		inputString = "/path1/path2/path3/path4/date=2016-07-01/path6/file_123.txt";
+		outPattern = "$1__$2_$entityName";
+		replacedString = StringHelper.replaceTokens(inputString, outPattern, inputPattern, map);
+		Assert.assertEquals(replacedString, "2016-07-01__path6_unit-entity-name");
+		
 	}
 }

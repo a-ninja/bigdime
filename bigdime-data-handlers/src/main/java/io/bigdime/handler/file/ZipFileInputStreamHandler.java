@@ -3,27 +3,6 @@
  */
 package io.bigdime.handler.file;
 
-import io.bigdime.alert.Logger.ALERT_CAUSE;
-import io.bigdime.alert.Logger.ALERT_SEVERITY;
-import io.bigdime.alert.Logger.ALERT_TYPE;
-import io.bigdime.alert.LoggerFactory;
-import io.bigdime.core.ActionEvent;
-import io.bigdime.core.ActionEvent.Status;
-import io.bigdime.core.AdaptorConfigurationException;
-import io.bigdime.core.HandlerException;
-import io.bigdime.core.InvalidValueConfigurationException;
-import io.bigdime.core.commons.AdaptorLogger;
-import io.bigdime.core.commons.DataConstants;
-import io.bigdime.core.commons.FileHelper;
-import io.bigdime.core.commons.PropertyHelper;
-import io.bigdime.core.config.AdaptorConfigConstants;
-import io.bigdime.core.constants.ActionEventHeaderConstants;
-import io.bigdime.core.handler.AbstractHandler;
-import io.bigdime.core.handler.HandlerJournal;
-import io.bigdime.core.runtimeinfo.RuntimeInfo;
-import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
-import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
-
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +18,27 @@ import org.apache.commons.lang.NotImplementedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import io.bigdime.alert.Logger.ALERT_CAUSE;
+import io.bigdime.alert.Logger.ALERT_SEVERITY;
+import io.bigdime.alert.Logger.ALERT_TYPE;
+import io.bigdime.alert.LoggerFactory;
+import io.bigdime.core.ActionEvent;
+import io.bigdime.core.ActionEvent.Status;
+import io.bigdime.core.AdaptorConfigurationException;
+import io.bigdime.core.HandlerException;
+import io.bigdime.core.InvalidValueConfigurationException;
+import io.bigdime.core.commons.AdaptorLogger;
+import io.bigdime.core.commons.DataConstants;
+import io.bigdime.core.commons.FileHelper;
+import io.bigdime.core.commons.PropertyHelper;
+import io.bigdime.core.config.AdaptorConfigConstants;
+import io.bigdime.core.constants.ActionEventHeaderConstants;
+import io.bigdime.core.handler.AbstractSourceHandler;
+import io.bigdime.core.handler.HandlerJournal;
+import io.bigdime.core.runtimeinfo.RuntimeInfo;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 
 
 /**
@@ -70,7 +70,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Scope("prototype")
-public class ZipFileInputStreamHandler extends AbstractHandler {
+public class ZipFileInputStreamHandler extends AbstractSourceHandler {
 	private static final AdaptorLogger logger = new AdaptorLogger(
 			LoggerFactory.getLogger(ZipFileInputStreamHandler.class));
 	public static final String FILE_LOCATION = "fileLocation";
@@ -184,10 +184,6 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		}
 	}
 	
-	private boolean isFirstRun() {
-		return getInvocationCount() == 1;
-	}
-	
 	long dirtyRecordCount = 0;
 	List<RuntimeInfo> dirtyRecords;
 	private boolean processingDirty = false;
@@ -204,7 +200,8 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		}
 	}
 
-	private Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
+	@Override
+	protected Status preProcess() throws IOException, RuntimeInfoStoreException, HandlerException {
 		
 		if(isFirstRun()){
 			getStartedRecordsFromRuntimeInfos();
@@ -234,7 +231,8 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		return Status.READY;
 	}
 
-	private Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
+	@Override
+	protected Status doProcess() throws IOException, HandlerException, RuntimeInfoStoreException {
 		
 		byte[] data ;
 		long bytesReadCount=0;
@@ -401,7 +399,7 @@ public class ZipFileInputStreamHandler extends AbstractHandler {
 		}
 	}
 	
-	private boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
+	protected boolean findAndAddRuntimeInfoRecords() throws RuntimeInfoStoreException {
 		List<String> availableFiles = getAvailableFiles();
 		if (availableFiles == null || availableFiles.isEmpty()) {
 			return false;
