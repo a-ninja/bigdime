@@ -253,13 +253,13 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
   @throws[ClientProtocolException]
   @throws[IOException]
   def append(implicit webhdfsPath: String, in: InputStream): Try[Boolean] = {
-    post(buildURI("CREATE"), in, BooleanResponseHandler())
+    post(buildURI("APPEND"), in, BooleanResponseHandler())
   }
 
   @throws[ClientProtocolException]
   @throws[IOException]
   def append(webhdfsPath: String, filePath: String): Try[Boolean] = {
-    post(buildURI("CREATE")(webhdfsPath), filePath, BooleanResponseHandler())
+    post(buildURI("APPEND")(webhdfsPath), filePath, BooleanResponseHandler())
   }
 
   /**
