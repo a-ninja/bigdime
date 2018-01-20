@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.bigdime</groupId>
         <artifactId>bigdime</artifactId>
-        <version>0.9.3-SNAPSHOT</version>
+        <version>0.9.4-SNAPSHOT</version>
     </parent>
     <artifactId>bigdime-alerting-impl</artifactId>
     <dependencies>

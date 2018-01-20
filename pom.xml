@@ -5,7 +5,7 @@
     <groupId>io.bigdime</groupId>
     <artifactId>bigdime</artifactId>
     <packaging>pom</packaging>
-    <version>0.9.3-SNAPSHOT</version>
+    <version>0.9.4-SNAPSHOT</version>
     <name>BigDime</name>
     <url>http://www.bigdime.io</url>
     <description>Data Ingestion Eco System Project</description>

@@ -169,7 +169,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
 
   @throws[HandlerException]
   override def process: ActionEvent.Status = {
-    setHandlerPhase("processing WebhdfsReaderAndSink")
+    setHandlerPhase("processing WebhdfsReaderAndSink, entity_name=" + entityName)
     incrementInvocationCount
     init() // initialize cleanup records etc
     initDescriptor()
@@ -294,7 +294,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
   @throws[RuntimeInfoStoreException]
   @throws[HandlerException]
   override def initDescriptorForNormal() {
-    logger.info(getHandlerPhase, "initializing a clean record, entity_name={}" + entityName)
+    logger.info(getHandlerPhase, "initializing a clean record, entity_name={}", entityName)
     processingDirty = false
 
     if (recordList == null || recordList.isEmpty) {
@@ -336,7 +336,7 @@ class WebhdfsReaderAndSink extends AbstractSourceHandler {
     Option(waitForFileName) match {
       case Some(str) =>
         val fileStatus = webHdfsReader.getFileStatus(directoryPath, waitForFileName)
-        logger.info(getHandlerPhase, "after checking ready file directoryPath=\"{}\" waitForFileName=\"{}\", file_status_not_null={}", directoryPath, waitForFileName, (fileStatus!=null).toString)
+        logger.info(getHandlerPhase, "after checking ready file directoryPath=\"{}\" waitForFileName=\"{}\", file_status_not_null={}", directoryPath, waitForFileName, (fileStatus != null).toString)
         fileStatus != null
       case _ => true
     }
