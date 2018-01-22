@@ -42,7 +42,7 @@
         </dependency>
         <dependency>
             <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-hive-lib</artifactId>
+            <artifactId>bigdime-libraries</artifactId>
             <version>${project.version}</version>
             <exclusions>
                 <exclusion>
@@ -55,6 +55,21 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>io.bigdime</groupId>-->
+            <!--<artifactId>bigdime-hive-lib</artifactId>-->
+            <!--<version>${project.version}</version>-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<artifactId>libthrift</artifactId>-->
+                    <!--<groupId>org.apache.thrift</groupId>-->
+                <!--</exclusion>-->
+                <!--<exclusion>-->
+                    <!--<artifactId>jetty-all</artifactId>-->
+                    <!--<groupId>org.eclipse.jetty.aggregate</groupId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka_2.11</artifactId>
@@ -67,14 +82,20 @@
         </dependency>
         <dependency>
             <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-avro-lib</artifactId>
+            <artifactId>bigdime-libraries</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-kafka-lib</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>io.bigdime</groupId>-->
+            <!--<artifactId>bigdime-avro-lib</artifactId>-->
+            <!--<version>${project.version}</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>io.bigdime</groupId>-->
+            <!--<artifactId>bigdime-kafka-lib</artifactId>-->
+            <!--<version>${project.version}</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-jdbc</artifactId>

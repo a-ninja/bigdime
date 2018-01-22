@@ -23,9 +23,14 @@
     <dependencies>
         <dependency>
             <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-hive-lib</artifactId>
+            <artifactId>bigdime-libraries</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--<dependency>-->
+            <!--<groupId>io.bigdime</groupId>-->
+            <!--<artifactId>bigdime-hive-lib</artifactId>-->
+            <!--<version>${project.version}</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>io.bigdime</groupId>
             <artifactId>bigdime-common-test-utils</artifactId>
