@@ -124,6 +124,8 @@ public class RawChecksumValidator implements Validator {
 
       } else {
         sourceFileChecksum = getSourceFileChecksum(sourceFilePath);
+        logger.debug(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), "Local_File_CheckSum",
+                "Local File CheckSum value,sourceFileChecksum={}",sourceFileChecksum);
       }
     } catch (IOException e) {
       logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), "IOException",
@@ -149,6 +151,8 @@ public class RawChecksumValidator implements Validator {
       String hdfsFileChecksum = "";
       try {
         hdfsFileChecksum = getHdfsFileChecksum(hdfsCompletedPath);
+        logger.debug(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), "HDFS_File_CheckSum",
+                "HDFS File CheckSum value,hdfsFileChecksum={}",hdfsFileChecksum);
       } catch (ClientProtocolException e) {
         logger.warn(AdaptorConfig.getInstance().getAdaptorContext().getAdaptorName(), "ClientProtocolException",
                 "Exception occurred while getting hdfs raw checksum, cause: " + e.getCause());
@@ -234,7 +238,9 @@ public class RawChecksumValidator implements Validator {
 //		webHdfs.releaseConnection();
 //		String hdfsFileChecksum = fileChecksum.get("bytes").toString();
     String hdfsFileChecksum = webHdfsFacade.getFileChecksum(hdfsFilePath).get().bytes();
-    hdfsFileChecksum = hdfsFileChecksum.substring(25, 57).replace("\"", "");
+//    hdfsFileChecksum = hdfsFileChecksum.substring(25, 57).replace("\"", "");
+    //Changed the substring from (25,57) t0 (24,56) because we don't have "\"" in the string anymore
+    hdfsFileChecksum = hdfsFileChecksum.substring(24, 56);
     return hdfsFileChecksum;
   }
 
