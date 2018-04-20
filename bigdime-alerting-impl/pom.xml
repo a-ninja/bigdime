@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.bigdime</groupId>
         <artifactId>bigdime</artifactId>
-        <version>0.9.4-SNAPSHOT</version>
+        <version>0.9.5-SNAPSHOT</version>
     </parent>
     <artifactId>bigdime-alerting-impl</artifactId>
     <dependencies>
@@ -25,12 +25,7 @@
         </dependency>
         <dependency>
             <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-hbase-lib</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.bigdime</groupId>
-            <artifactId>bigdime-hdfs-lib</artifactId>
+            <artifactId>bigdime-libraries</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

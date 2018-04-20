@@ -8,7 +8,6 @@ import static io.bigdime.impl.splunkalert.test.constants.TestResourceConstants.E
 import static io.bigdime.impl.splunkalert.test.constants.TestResourceConstants.SOURCE_TYPE;
 
 import java.util.List;
-import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -16,8 +15,6 @@ import io.bigdime.adaptor.metadata.MetadataAccessException;
 import io.bigdime.alert.AlertException;
 import io.bigdime.alert.Logger;
 import io.bigdime.alert.LoggerFactory;
-import io.bigdime.hbase.client.HbaseManager;
-import io.bigdime.hbase.common.ConnectionFactory;
 import io.bigdime.impl.biz.dao.AlertData;
 import io.bigdime.impl.biz.dao.AlertListDao;
 import io.bigdime.impl.biz.dao.Datahandler;
