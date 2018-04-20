@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime</artifactId>
-		<version>0.9.5-SNAPSHOT</version>
+		<version>0.9.5</version>
 	</parent>
 	<artifactId>bigdime-swift-alerting-impl</artifactId>
 

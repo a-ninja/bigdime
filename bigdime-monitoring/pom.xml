@@ -16,7 +16,7 @@
     <parent>
         <groupId>io.bigdime</groupId>
         <artifactId>bigdime</artifactId>
-        <version>0.9.5-SNAPSHOT</version>
+        <version>0.9.5</version>
     </parent>
     <properties>
         <org.apache.cxf.cxf-rt-frontend-jaxws.version>3.1.3</org.apache.cxf.cxf-rt-frontend-jaxws.version>

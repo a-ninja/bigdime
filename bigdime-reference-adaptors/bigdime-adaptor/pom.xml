@@ -13,14 +13,14 @@
     <parent>
         <groupId>io.bigdime</groupId>
         <artifactId>bigdime-reference-adaptors</artifactId>
-        <version>0.9.5-SNAPSHOT</version>
+        <version>0.9.5</version>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>io.bigdime</groupId>
             <artifactId>bigdime-runtimeinfo-management</artifactId>
-            <version>0.9.5-SNAPSHOT</version>
+            <version>0.9.5</version>
             <exclusions>
                 <exclusion>
                     <artifactId>jackson-core-asl</artifactId>
@@ -35,12 +35,12 @@
         <dependency>
             <groupId>io.bigdime</groupId>
             <artifactId>bigdime-data-handlers</artifactId>
-            <version>0.9.5-SNAPSHOT</version>
+            <version>0.9.5</version>
         </dependency>
         <dependency>
             <groupId>io.bigdime</groupId>
             <artifactId>bigdime-validators</artifactId>
-            <version>0.9.5-SNAPSHOT</version>
+            <version>0.9.5</version>
             <exclusions>
                 <exclusion>
                     <artifactId>jackson-core-asl</artifactId>

@@ -49,3 +49,8 @@ r.sh
 *.scala.1
 pom.*
 bigdime-swift-alerting-impl/
+bigdime-libraries/bigdime-hbase-lib.old/
+bigdime-libraries/bigdime-hdfs-lib.old/
+bigdime-libraries/bigdime-hive-lib.old/
+bigdime-libraries/bigdime-kafka-lib.old/
+bigdime-libraries/bigdime-avro-lib.old/
