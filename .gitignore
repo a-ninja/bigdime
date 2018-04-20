@@ -54,3 +54,4 @@ bigdime-libraries/bigdime-hdfs-lib.old/
 bigdime-libraries/bigdime-hive-lib.old/
 bigdime-libraries/bigdime-kafka-lib.old/
 bigdime-libraries/bigdime-avro-lib.old/
+conflicts

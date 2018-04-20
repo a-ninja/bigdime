@@ -166,7 +166,7 @@ public class JdbcTableReaderHandler extends AbstractSourceHandler {
 	protected Status preProcess() throws RuntimeInfoStoreException, JdbcHandlerException {
 		List<ActionEvent> actionEvents = null;
 		//this is for database level, process tables from a database, check table name, if null, get from event list
-		if(jdbcInputDescriptor.getEntityName() == null && jdbcInputDescriptor.getTargetEntityName() == null){
+		if(jdbcInputDescriptor.getInputType().equalsIgnoreCase(JdbcConstants.DB_FLAG)){
 			try{
 				actionEvents = getHandlerContext().getEventList();
 				Preconditions.checkNotNull(actionEvents, "ActionEvents can't be null");

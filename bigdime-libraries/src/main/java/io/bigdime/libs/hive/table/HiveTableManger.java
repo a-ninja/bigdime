@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.hive.hcatalog.api.ObjectNotFoundException;
 import io.bigdime.libs.hive.client.HiveClientProvider;
 import io.bigdime.libs.hive.common.ColumnMetaDataUtil;
 import io.bigdime.libs.hive.common.HiveConfigManager;
@@ -113,6 +114,10 @@ public class HiveTableManger extends HiveConfigManager {
 			HCatTable hcatTable = client.getTable(databaseName, tableName);
 			Assert.hasText(hcatTable.getTableName(), "table is null");
 			tableCreated = true;
+		}catch(HCatException e){
+				if (ObjectNotFoundException.class == e.getClass()) {
+					tableCreated = false;
+				}
 		}finally{
 			HiveClientProvider.closeClient(client);
 		}		

@@ -12,7 +12,11 @@
 	<parent>
 		<groupId>io.bigdime</groupId>
 		<artifactId>bigdime-monitoring</artifactId>
+<<<<<<< HEAD
 		<version>0.9.5</version>
+=======
+		<version>0.9.4-SNAPSHOT</version>
+>>>>>>> f477571bb876754592af7cfd83c58c8e1566a7cc
 	</parent>
 
 	<dependencies>

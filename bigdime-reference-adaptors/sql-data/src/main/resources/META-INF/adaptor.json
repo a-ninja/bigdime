@@ -1,0 +1,82 @@
+{
+	"name": "unified-catalog-sql-adaptor",
+	"type": "batch",
+	"cron-expression": "0/30 * * * * ? *",
+	"auto-start": "true",
+	"namespace": "com.stubhub.bigdata",
+	"description": "Adaptor to ingest the data from relational database into hdfs.",
+	"source": {
+		"name": "sql-data-source",
+		"description": "source description",
+		"source-type": "HIVE",
+		"src-desc": {
+			"input1": "{\"inputType\":\"database\",\"inputValue\":\"sourceDatabase\", \"incrementedBy\":\"incrementedColumn\", \"include\":\"\"}"
+		},
+		"data-handlers": [{
+			"name": "jdbc-db-reader",
+			"description": "get a list of table name from database schema with src-desc field",
+			"handler-class": "io.bigdime.handler.jdbc.JdbcDBSchemaReaderHandler"
+		}, {
+			"name": "jdbc-table-reader",
+			"description": "read data from partitions specified with src-desc field",
+			"handler-class": "io.bigdime.handler.jdbc.JdbcTableReaderHandler",
+			"properties": {
+				"channel-map": "input1:channel1"
+			}
+		}]
+	},
+	"channel": [{
+		"name": "channel1",
+		"description": "channel for jdbc data",
+		"channel-class": "io.bigdime.core.channel.MemoryChannel",
+		"properties": {
+			"print-stats": "true",
+			"channel-capacity" : "${channel-capacity}"
+		}
+	}],
+	"sink": [{
+		"name": "sink for  data adaptor",
+		"description": "hdfs sink for jdbc data adaptor",
+		"channel-desc": ["channel1"],
+		"data-handlers": [{
+			"name": "memory-channel-reader",
+			"description": "read data from channels",
+			"handler-class": "io.bigdime.core.handler.MemoryChannelInputHandler",
+			"properties": {
+				"batchSize": "20000"
+			}
+		}, {
+			"name": "hfds sink",
+			"description": "hfds sink for jdbc data adaptor",
+			"handler-class": "io.bigdime.handler.webhdfs.WebHDFSWriterHandler",
+			"properties": {
+				"hostNames": "${hdfs_hosts}",
+				"port": "${hdfs_port}",
+				"hdfsFileNameExtension": ".txt",
+				"hdfsPath": "${hdfs_path}",
+				"hdfsUser": "${hdfs_user}",
+				"hdfsOverwrite": "true",
+				"hdfsPermissions": "755"
+			}
+		}, {
+			"name": "hive-meta-handler",
+			"description": "hive meta data handler to create hive table and partitions",
+			"handler-class": "io.bigdime.handler.hive.HiveMetaDataHandler",
+			"properties": {
+				"hive.metastore.uris": "${hive_metastore_uris}",
+				"ha.enable" : "${hive_ha_enabled}",
+                "dfs.nameservices" : "${hadoop_ha_service_name}",
+                "dfs.namenode.rpc-address.haservicename.nn1" : "${hadoop_ha_namenode_1}",
+                "dfs.namenode.rpc-address.haservicename.nn2" : "${hadoop_ha_namenode_2}",
+               	"dfs.client.failover.proxy.provider.haservicename" : "${hadoop_ha_configProxyProvider}"
+			}
+		}, {
+			"name": "data-validation-handler",
+			"description": "data-validation-handler for hdfs sink",
+			"handler-class": "io.bigdime.core.handler.DataValidationHandler",
+			"properties": {
+				"validation-type": "${validation_type}"
+			}
+		}]
+	}]
+}

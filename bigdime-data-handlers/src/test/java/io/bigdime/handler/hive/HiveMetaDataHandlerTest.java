@@ -13,6 +13,9 @@ import io.bigdime.core.ActionEvent;
 import io.bigdime.core.HandlerException;
 import io.bigdime.core.constants.ActionEventHeaderConstants;
 import io.bigdime.core.handler.HandlerContext;
+import io.bigdime.core.runtimeinfo.RuntimeInfo;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStore;
+import io.bigdime.core.runtimeinfo.RuntimeInfoStoreException;
 import io.bigdime.libs.hive.database.HiveDBManger;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -65,7 +68,7 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 	}
 	
 	@Test
-	public void testProcess() throws ClientProtocolException, IOException, InterruptedException, MetadataAccessException, HandlerException{
+	public void testProcess() throws ClientProtocolException, IOException, InterruptedException, MetadataAccessException, HandlerException, RuntimeInfoStoreException {
 		cleanUp();
 		HiveMetaDataHandler hiveMetaDataHandler = mockHiveMetaDataHandler();
 		HandlerContext handlerContext = HandlerContext.get();
@@ -77,10 +80,20 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 		headers.put(ActionEventHeaderConstants.HIVE_PARTITION_VALUES, "testaccount,20150101");
 		headers.put(ActionEventHeaderConstants.HIVE_PARTITION_LOCATION, FileUtils.getTempDirectoryPath()+File.separator
 				+headers.get(ActionEventHeaderConstants.ENTITY_NAME)+File.separator+"20150101");
-		
+		headers.put(ActionEventHeaderConstants.DATABASE_CREATED_FLAG, "false");
+		headers.put(ActionEventHeaderConstants.TABLE_CREATED_FLAG, "false");
+		headers.put(ActionEventHeaderConstants.PARTITION_CREATED_FLAG, "false");
+		headers.put(ActionEventHeaderConstants.INPUT_DESCRIPTOR, "testaccount,20150101");
 		actionEvent.setHeaders(headers);
 		actionEvents.add(actionEvent);
 		handlerContext.setEventList(actionEvents);
+		@SuppressWarnings("unchecked")
+		RuntimeInfoStore<RuntimeInfo> runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
+		RuntimeInfo runtimeInfo = Mockito.mock(RuntimeInfo.class);
+		when(runtimeInfoStore.get(anyString(), anyString(), anyString())).thenReturn(null);
+		ReflectionTestUtils.setField(hiveMetaDataHandler, "runtimeInfoStore", runtimeInfoStore);
+		when(runtimeInfoStore.getLatest(anyString(), anyString())).thenReturn(runtimeInfo);
+		when(runtimeInfoStore.put(Mockito.any(RuntimeInfo.class))).thenReturn(true);
 		hiveMetaDataHandler.process();
 	}
 	
@@ -101,5 +114,5 @@ public class HiveMetaDataHandlerTest extends AbstractTestNGSpringContextTests{
 		ReflectionTestUtils.setField(hiveMetaDataHandler, "metadataStore", metadataStore);
 		ReflectionTestUtils.setField(hiveMetaDataHandler, "props", props);
 		return hiveMetaDataHandler;
-	}	
+	}
 }

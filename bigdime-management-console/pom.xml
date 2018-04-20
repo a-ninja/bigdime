@@ -8,6 +8,7 @@
     <name>bigdime management console</name>
     <url>http://www.bigdime.io</url>
 
+<<<<<<< HEAD
     <parent>
         <groupId>io.bigdime</groupId>
         <artifactId>bigdime</artifactId>
@@ -47,6 +48,70 @@
             <scope>provided</scope>
             <version>3.1.0</version>
         </dependency>
+=======
+     <parent>
+		<groupId>io.bigdime</groupId>
+		<artifactId>bigdime</artifactId>
+		<version>0.9.4-SNAPSHOT</version>
+	</parent>
+	<properties>
+		<powermock.version>1.6.2</powermock.version>
+		<org.apache.cxf.cxf-rt-frontend-jaxws.version>3.1.3</org.apache.cxf.cxf-rt-frontend-jaxws.version>
+		<org.apache.cxf.cxf-rt-transports-http.version>3.1.3</org.apache.cxf.cxf-rt-transports-http.version>
+		<org.apache.cxf.cxf-rt-transports-http-jetty.version>3.1.3</org.apache.cxf.cxf-rt-transports-http-jetty.version>
+		<org.apache.cxf.cxf-rt-frontend-jaxrs.version>3.1.3</org.apache.cxf.cxf-rt-frontend-jaxrs.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>4.2.2.RELEASE</version>
+		</dependency>
+    	<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<scope>provided</scope>
+			<version>2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<scope>provided</scope>
+			<version>3.1.0</version>
+		</dependency>
+>>>>>>> f477571bb876754592af7cfd83c58c8e1566a7cc
 
         <dependency>
             <groupId>io.bigdime</groupId>

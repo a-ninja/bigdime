@@ -49,22 +49,38 @@ public class JdbcMetadata implements ResultSetExtractor<Metasegment> {
 			int columnCount = rsmd.getColumnCount();
 			Set<Attribute> AttributesSet = new LinkedHashSet<Attribute>();
 			for (int i = 1; i <= columnCount; i++) {
-
+				String attributeType = rsmd.getColumnTypeName(i);
 				Attribute attribute = new Attribute();
 				attribute.setId(i);
 				attribute.setAttributeName(rsmd.getColumnName(i));
-				attribute.setAttributeType(rsmd.getColumnTypeName(i));
-				attribute.setIntPart(rsmd.getColumnDisplaySize(i) + "");
-				attribute.setFractionalPart("");
+				if(attributeType.equalsIgnoreCase(JdbcConstants.NUMBER)){
+					if(rsmd.getPrecision(i) == 0){
+						attributeType = JdbcConstants.NUMBER2DECIMAL;
+					}
+					if(rsmd.getScale(i) == 0){
+						attributeType = JdbcConstants.NUMBER2BIGINT;
+					}
+					if(rsmd.getPrecision(i) != 0 && rsmd.getScale(i) != 0){
+						attributeType = JdbcConstants.NUMBER2DECIMAL;
+					}
+				}
+				if(attributeType.equalsIgnoreCase(JdbcConstants.CHAR)){
+					if(rsmd.getPrecision(i) > 255){
+						attributeType = JdbcConstants.CHAR2VARCHAR;
+					}
+				}
+				attribute.setAttributeType(attributeType);
+				attribute.setIntPart(rsmd.getPrecision(i)+"");
+				attribute.setFractionalPart(rsmd.getScale(i)+"");
 				attribute.setNullable("NO");
 				attribute.setComment("Not Null");
-				attribute.setFieldType("COLUMN");
+				attribute.setFieldType(JdbcConstants.FILED_TYPE);
 				AttributesSet.add(attribute);
 				
 				tableName = jdbcInputDescriptor.getEntityName();
 				logger.debug("JDBC Reader Handler getting source Metadata ",
 						"table Name: {} columnName:{} columnType:{} size:{}",tableName,
-						rsmd.getColumnName(i), rsmd.getColumnType(i),
+						rsmd.getColumnName(i), attributeType,
 						rsmd.getColumnDisplaySize(i));
 			}
  

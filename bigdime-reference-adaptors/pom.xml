@@ -15,7 +15,6 @@
         <artifactId>bigdime</artifactId>
         <version>0.9.5</version>
     </parent>
-
     <modules>
         <module>bigdime-adaptor</module>
         <!--<module>click-stream</module>-->

@@ -38,10 +38,40 @@ public class JdbcMetadataTest {
 	}
 	
 	@Test
-	public void testExtractData() throws DataAccessException, SQLException{
+	public void testExtractDataWithDataTypeDECIMAL() throws DataAccessException, SQLException{
 		when(resultSet.getMetaData()).thenReturn(resultSetMetadata);
 		when(resultSetMetadata.getColumnCount()).thenReturn(1);
+		when(resultSetMetadata.getColumnTypeName(anyInt())).thenReturn(JdbcConstants.NUMBER);
+		when(resultSetMetadata.getPrecision(anyInt())).thenReturn(0);
+		when(resultSetMetadata.getScale(anyInt())).thenReturn(1);
+		Assert.assertNotNull(jdbcMetadata.extractData(resultSet));
+	}
+	
+	@Test
+	public void testExtractDataWithDataTypeNUMBER() throws DataAccessException, SQLException{
+		when(resultSet.getMetaData()).thenReturn(resultSetMetadata);
+		when(resultSetMetadata.getColumnCount()).thenReturn(1);
+		when(resultSetMetadata.getColumnTypeName(anyInt())).thenReturn(JdbcConstants.NUMBER);
+		when(resultSetMetadata.getPrecision(anyInt())).thenReturn(1);
+		when(resultSetMetadata.getScale(anyInt())).thenReturn(1);
+		Assert.assertNotNull(jdbcMetadata.extractData(resultSet));
+	}
+	
+	@Test
+	public void testExtractDataWithDataTypeBIGINT() throws DataAccessException, SQLException{
+		when(resultSet.getMetaData()).thenReturn(resultSetMetadata);
+		when(resultSetMetadata.getColumnCount()).thenReturn(1);
+		when(resultSetMetadata.getColumnTypeName(anyInt())).thenReturn(JdbcConstants.NUMBER);
+		when(resultSetMetadata.getScale(anyInt())).thenReturn(0);
 		Assert.assertNotNull(jdbcMetadata.extractData(resultSet));
 	}
 
+	@Test
+	public void testExtractDataWithDataTypeCHAR() throws DataAccessException, SQLException{
+		when(resultSet.getMetaData()).thenReturn(resultSetMetadata);
+		when(resultSetMetadata.getColumnCount()).thenReturn(1);
+		when(resultSetMetadata.getColumnTypeName(anyInt())).thenReturn(JdbcConstants.CHAR);
+		when(resultSetMetadata.getPrecision(anyInt())).thenReturn(300);
+		Assert.assertNotNull(jdbcMetadata.extractData(resultSet));
+	}
 }

@@ -40,4 +40,10 @@ public class JdbcConstants {
 	public static String ASC_ORDER = " ASC";
 	public static String SELECT_T_FROM = "SELECT t.* FROM ( ";
 	public static String WHERE_ROWNUM = " ) t WHERE ROWNUM <";
+	public static String NUMBER = "NUMBER";
+	public static String NUMBER2BIGINT = "NUMBER_BIGINT";
+	public static String NUMBER2DECIMAL = "NUMBER_DECIMAL";
+	public static String CHAR = "CHAR";
+	public static String CHAR2VARCHAR = "CHAR_VARCHAR";
+	public static String FILED_TYPE = "COLUMN";
 }

@@ -15,7 +15,6 @@
         <artifactId>bigdime</artifactId>
         <version>0.9.5</version>
     </parent>
-
     <properties>
         <powermock.version>1.6.2</powermock.version>
     </properties>

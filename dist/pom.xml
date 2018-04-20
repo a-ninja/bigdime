@@ -10,7 +10,6 @@
 		<artifactId>bigdime</artifactId>
 		<version>0.9.5</version>
 	</parent>
-
 	<scm>
 		<url>https://github.com/stubhub/bigdime</url>
 		<connection>scm:git:git://github.com:stubhub/bigdime.git</connection>

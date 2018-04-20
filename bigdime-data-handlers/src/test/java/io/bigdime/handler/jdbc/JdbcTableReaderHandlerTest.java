@@ -110,6 +110,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		jdbcTableHandler = new JdbcTableReaderHandler();
 		jdbcTableHandler.setDataSource(dataSource);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		HandlerContext context = HandlerContext.get();
 		context.setEventList(null);
 		jdbcTableHandler.process();
@@ -120,6 +121,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		jdbcTableHandler = new JdbcTableReaderHandler();
 		jdbcTableHandler.setDataSource(dataSource);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		HandlerContext context = HandlerContext.get();
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
@@ -142,6 +144,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
 		eventList.add(actionEvent);
 		context.setEventList(eventList);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
 		when(jdbcInputDescriptor.formatProcessTableQuery(anyString(), anyString(), anyString())).thenReturn("tableSqlQuery");
@@ -164,6 +167,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
         when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.formatProcessTableQuery(anyString(), anyString(), anyString())).thenReturn("tableSqlQuery");
 		PowerMockito.whenNew(JdbcTemplate.class).withArguments((DataSource)any()).thenReturn(jdbcTemplate);
@@ -189,6 +193,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
 		context.createSingleItemEventList(actionEvent);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
 		when(jdbcInputDescriptor.formatProcessTableQuery(anyString(), anyString(), anyString())).thenReturn("tableSqlQuery");
@@ -215,6 +220,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
 		String query = "select t.* from (select * from testDB.testTable where LUD > ? order by LUD asc) where rownum < 5";
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.TABLE_FLAG);
 		when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
 		when(jdbcInputDescriptor.formatProcessTableQuery(anyString(), anyString(), anyString())).thenReturn(query);
@@ -247,6 +253,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
 		String query = "select t.* from (select * from testDB.testTable where LUD > ? order by LUD asc) where rownum < 5";
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
 		when(jdbcInputDescriptor.formatProcessTableQuery(anyString(), anyString(), anyString())).thenReturn(query);
@@ -286,8 +293,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		ActionEvent actionEvent = new ActionEvent();
 		actionEvent.getHeaders().put(ActionEventHeaderConstants.TARGET_ENTITY_NAME, "testTable");
 		context.createSingleItemEventList(actionEvent);
-		doNothing().when(jdbcInputDescriptor).setEntityName("testTable");
-		doNothing().when(jdbcInputDescriptor).setTargetEntityName("testTable");
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.DB_FLAG);
 		String query = "select t.* from (select * from testDB.testTable where LUD > ? order by LUD asc) where rownum < 5";
 		when(jdbcInputDescriptor.getDatabaseName()).thenReturn("testDB");
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
@@ -323,6 +329,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 //		jdbcTableHandler.setDataSource(dataSource);
 //		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
 //		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
+//		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.TABLE_FLAG);
 //		when(jdbcInputDescriptor.getEntityName()).thenReturn("testTable");
 //		when(jdbcInputDescriptor.getTargetEntityName()).thenReturn("testTable");
 //		String query = "select t.* from (select * from testDB.nonPartitionTable where LUD > ? order by LUD asc) where rownum < 5";
@@ -367,6 +374,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		jdbcTableHandler.setDataSource(dataSource);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.TABLE_FLAG);
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("nonPartitionTable");
 		when(jdbcInputDescriptor.getTargetEntityName()).thenReturn("nonPartitionTable");
 		String query = "select t.* from (select * from testDB.nonPartitionTable where ID > 0 order by ID asc) where rownum < 5";
@@ -407,6 +415,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		jdbcTableHandler.setDataSource(dataSource);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.TABLE_FLAG);
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("nonPartitionTable");
 		when(jdbcInputDescriptor.getTargetEntityName()).thenReturn("nonPartitionTable");
 		String query = "select t.* from (select * from testDB.nonPartitionTable where ID > ? order by ID asc) where rownum < 5";
@@ -441,6 +450,7 @@ public class JdbcTableReaderHandlerTest extends PowerMockTestCase {
 		jdbcTableHandler.setDataSource(dataSource);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcInputDescriptor", jdbcInputDescriptor);
 		ReflectionTestUtils.setField(jdbcTableHandler, "jdbcTemplate", jdbcTemplate);
+		when(jdbcInputDescriptor.getInputType()).thenReturn(JdbcConstants.TABLE_FLAG);
 		when(jdbcInputDescriptor.getEntityName()).thenReturn("nonPartitionTable");
 		when(jdbcInputDescriptor.getTargetEntityName()).thenReturn("nonPartitionTable");
 		String query = "select t.* from (select * from testDB.nonPartitionTable where ID > ? order by ID asc) where rownum < 5";
