@@ -344,6 +344,7 @@ case class WebhdfsFacade(@Value("${hdfs_hosts}") hosts: String, @Value("${hdfs_p
                   SleepUninterrupted(SLEEP_TIME, attempts)
                   attempts -= 1
               }
+            case Failure(e: Throwable) => throw new WebHdfsException(-1, e.toString)
           }
         }
         catch {
