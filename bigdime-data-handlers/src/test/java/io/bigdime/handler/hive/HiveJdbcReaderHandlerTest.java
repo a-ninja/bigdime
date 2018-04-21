@@ -50,7 +50,7 @@ public class HiveJdbcReaderHandlerTest {
 		System.out.println(System.currentTimeMillis());
 		long time = 1524211200000l;
 
-		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2016-07-28");
+		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2018-04-20");
 		time = 1438156800000l;
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2015-07-29");
 
