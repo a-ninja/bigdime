@@ -48,10 +48,10 @@ public class HiveJdbcReaderHandlerTest {
 		DateTimeFormatter hdfsOutputPathDtf = hiveJdbcReaderHandler.getHdfsOutputPathDtf();
 		Assert.assertNotNull(hdfsOutputPathDtf);
 		System.out.println(System.currentTimeMillis());
-		long time = 1469753256170l;
+		long time = 1524211200000l;
 
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2016-07-28");
-		time = 1438217256170l;
+		time = 1438156800000l;
 		Assert.assertEquals(hdfsOutputPathDtf.print(time), "2015-07-29");
 
 		Map<String, String> hiveConfigurations = hiveJdbcReaderHandler.getHiveConfigurations();
