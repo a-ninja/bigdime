@@ -46,6 +46,7 @@ object SwiftLogger {
     NetworkInterface.getNetworkInterfaces.foreach(nwInterface => {
       Option(nwInterface.getInetAddresses.takeWhile(inetAddr => inetAddr.getHostAddress.startsWith(IP_INIT_VAL))) match {
         case Some(iter: Iterator[InetAddress]) => if (iter.hasNext) hostIp = iter.next.getHostAddress
+        case _ =>
       }
     })
   }
