@@ -49,7 +49,7 @@ public class WebHdfsWriterTest {
     WebHdfsWriter webHdfsWriter = new WebHdfsWriter();
     WebhdfsFacade webHdfsFacade = Mockito.mock(WebhdfsFacade.class);
     ReflectionTestUtils.setField(webHdfsWriter, "maxAttempts", 2);
-    ReflectionTestUtils.setField(webHdfsWriter, "webHdfsFacade", webHdfsFacade);
+    ReflectionTestUtils.setField(webHdfsWriter, "io$bigdime$libs$hdfs$WebHdfsWriter$$webHdfsFacade", webHdfsFacade);
     Mockito.when(webHdfsFacade.invokeWithRetry(any(Method.class), anyInt(), Matchers.anyObject())).thenReturn(true);
     webHdfsWriter.write("unit-base", "unit-payload".getBytes(), "unit-hdfsfilename");
     Method mkdirsMethod = WebhdfsFacade.class.getMethod("mkdirs", String.class);
@@ -88,7 +88,7 @@ public class WebHdfsWriterTest {
     WebHdfsWriter webHdfsWriter = new WebHdfsWriter();
     WebhdfsFacade webHdfsFacade = Mockito.mock(WebhdfsFacade.class);
     ReflectionTestUtils.setField(webHdfsWriter, "maxAttempts", 2);
-    ReflectionTestUtils.setField(webHdfsWriter, "webHdfsFacade", webHdfsFacade);
+    ReflectionTestUtils.setField(webHdfsWriter, "io$bigdime$libs$hdfs$WebHdfsWriter$$webHdfsFacade", webHdfsFacade);
     WebHdfsException ex = new WebHdfsException(404, "");
     Mockito.when(webHdfsFacade.invokeWithRetry(any(Method.class), anyInt(), Matchers.anyObject())).thenReturn(true);//.thenThrow(ex);
     webHdfsWriter.write("unit-base", "unit-payload".getBytes(), "unit-hdfsfilename");

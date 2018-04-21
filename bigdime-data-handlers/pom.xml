@@ -76,16 +76,6 @@
             <!--</exclusions>-->
         <!--</dependency>-->
         <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.11</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>junit</artifactId>
-                    <groupId>junit</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>io.bigdime</groupId>
             <artifactId>bigdime-libraries</artifactId>
             <version>${project.version}</version>

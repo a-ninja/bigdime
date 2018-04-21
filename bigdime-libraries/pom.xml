@@ -21,8 +21,6 @@
         <org.apache.hive.version>1.2.1</org.apache.hive.version>
         <org.apache.hive.hcatalog.version>1.2.1</org.apache.hive.hcatalog.version>
         <xerces.version>2.9.1</xerces.version>
-        <org.apache.kafka.version>0.8.2.2</org.apache.kafka.version>
-        <!-- <org.apache.kafka.version>0.8.1.1</org.apache.kafka.version> -->
         <curator.version>2.7.0</curator.version>
 
     </properties>
@@ -120,11 +118,6 @@
                 <artifactId>bigdime-common-test-utils</artifactId>
                 <scope>test</scope>
                 <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kafka</groupId>
-                <artifactId>kafka_2.10</artifactId>
-                <version>${org.apache.kafka.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -416,10 +409,6 @@
                     <groupId>org.springframework</groupId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.10</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>

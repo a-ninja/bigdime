@@ -1,0 +1,40 @@
+{
+    "users_test": {
+        "attributes": [
+            {
+                "id": "123471-12321",
+                "name_login": "abc471",
+                "city_id": "BOS",
+                "date_joined": "01/01/2009",
+                "birth_date": "01/01/1976"
+            },                {
+                    "id": "123457",
+                    "name_login": "abc457",
+                    "city_id": "SFO",
+                    "date_joined": "01/01/2013",
+                    "birth_date": "01/01/1981"
+                },
+                {
+                    "id": "123458",
+                    "name_login": "abc548",
+                    "city_id": "SFO",
+                    "date_joined": "01/01/2013",
+                    "birth_date": "01/01/1912"
+                },
+                {
+                    "id": "123459",
+                    "name_login": "abc549",
+                    "city_id": "NYC",
+                    "date_joined": "01/01/2013",
+                    "birth_date": "01/01/1977"
+                },
+                {
+                    "id": "123460",
+                    "name_login": "abc460",
+                    "city_id": "AUS",
+                    "date_joined": "01/01/1980",
+                    "birth_date": "01/01/1979"
+                }
+        ]
+    }
+}

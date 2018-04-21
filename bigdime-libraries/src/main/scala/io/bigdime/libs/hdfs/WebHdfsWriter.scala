@@ -86,11 +86,13 @@ class WebHdfsWriter extends LazyLogging {
       logger.debug("is webhdfsFacade null=" + (webHdfsFacade == null))
       Option(params) match {
         case Some(_params) => _params.foreach(kv => webHdfsFacade.addParameter(kv._1, kv._2))
+        case _ =>
       }
       webHdfsFacade.invokeWithRetry[Boolean](method, maxAttempts, folderPath)
     } catch {
       case e: WebHdfsException => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reasonCode=" + e.statusCode + ", reason=" + e.message)
-      case e: Any => throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reason=" + e.getMessage)
+      case e: Any =>
+        throw new WebHDFSSinkException("unable to create directory:" + folderPath + ", reason=" + e.getMessage + ", e.toString=" + e.toString)
     }
   }
 
@@ -178,9 +180,11 @@ class WebHdfsWriter extends LazyLogging {
 
     Option(headers) match {
       case Some(_map) => _map.foreach(kv => webHdfsFacade.addHeader(kv._1, kv._2))
+      case _ =>
     }
     Option(params) match {
       case Some(_params) => _params.foreach(kv => webHdfsFacade.addParameter(kv._1, kv._2))
+      case _ =>
     }
     writeToWebHDFS(filePath, payload, fileCreated)
   }

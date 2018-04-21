@@ -222,7 +222,7 @@ public class WebHDFSWriterHandlerTest {
   @SuppressWarnings("unchecked")
   private WebHDFSWriterHandler mockWebHDFSWriterHandler()
           throws ClientProtocolException, IOException, InterruptedException {
-    WebHDFSWriterHandler WebHDFSWriterHandler = new WebHDFSWriterHandler();
+    WebHDFSWriterHandler webHDFSWriterHandler = new WebHDFSWriterHandler();
     runtimeInfoStore = Mockito.mock(RuntimeInfoStore.class);
 
     Map<String, String> tokenToHeaderNameMap = new HashMap<>();
@@ -230,15 +230,16 @@ public class WebHDFSWriterHandlerTest {
     tokenToHeaderNameMap.put("${timestamp}", "TIMESTAMP");
     mockWebHdfs = mockWebHdfs(200, 200, 200, false);
     Mockito.doNothing().when(mockWebHdfs).releaseConnection();
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "webHdfs", mockWebHdfs);
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "hdfsPath", "/webhdfs/${account}/${timestamp}");
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "hdfsFileName", "unitFile");
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "tokenToHeaderNameMap", tokenToHeaderNameMap);
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "runtimeInfoStore", runtimeInfoStore);
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "channelDesc", "unit-Channel");
-    ReflectionTestUtils.setField(WebHDFSWriterHandler, "hdfsPathCaseEnum", StringCase.LOWER);
 
-    return WebHDFSWriterHandler;
+    //    ReflectionTestUtils.setField(webHDFSWriterHandler, "webHdfs", mockWebHdfs);
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "hdfsPath", "/webhdfs/${account}/${timestamp}");
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "hdfsFileName", "unitFile");
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "tokenToHeaderNameMap", tokenToHeaderNameMap);
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "runtimeInfoStore", runtimeInfoStore);
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "channelDesc", "unit-Channel");
+    ReflectionTestUtils.setField(webHDFSWriterHandler, "hdfsPathCaseEnum", StringCase.LOWER);
+
+    return webHDFSWriterHandler;
 
   }
 
