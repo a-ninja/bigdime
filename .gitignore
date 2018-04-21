@@ -31,7 +31,6 @@ hs_err_pid*
 
 #Spring
 .springBeans
-database
 .clover
 derby.log
 metastore_db
@@ -55,3 +54,4 @@ bigdime-libraries/bigdime-hive-lib.old/
 bigdime-libraries/bigdime-kafka-lib.old/
 bigdime-libraries/bigdime-avro-lib.old/
 conflicts
+bigdime-core/database/
